@@ -1,8 +1,8 @@
 /*
-    Oscil - Test Runner Handler - Waveform & Settings Tests
+    MultiScoper - Test Runner Handler - Waveform & Settings Tests
 */
 
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "core/Oscillator.h"
 #include "core/Pane.h"
 #include "core/SharedCaptureBuffer.h"
@@ -15,12 +15,12 @@
 
 #include <cmath>
 
-namespace oscil
+namespace multiscoper
 {
 
 namespace
 {
-void ensureTestOscillator(OscilState& state, OscilPluginEditor& editor)
+void ensureTestOscillator(MultiScoperState& state, MultiScoperPluginEditor& editor)
 {
     if (state.getOscillatorCount() > 0)
         return;
@@ -67,7 +67,7 @@ CaptureFrameMetadata testMetadata(int numSamples)
     return m;
 }
 
-WaveformComponent* getFirstWaveform(const OscilPluginEditor& editor)
+WaveformComponent* getFirstWaveform(const MultiScoperPluginEditor& editor)
 {
     const auto& panes = editor.getPaneComponents();
     if (panes.empty() || !panes[0] || panes[0]->getOscillatorCount() == 0)
@@ -75,7 +75,7 @@ WaveformComponent* getFirstWaveform(const OscilPluginEditor& editor)
     return panes[0]->getWaveformAt(0);
 }
 nlohmann::json testSineWaveRendering(const std::shared_ptr<SharedCaptureBuffer>& captureBuffer,
-                                     const OscilPluginEditor& editor)
+                                     const MultiScoperPluginEditor& editor)
 {
     nlohmann::json test;
     test["name"] = "SineWaveRendering";
@@ -96,7 +96,7 @@ nlohmann::json testSineWaveRendering(const std::shared_ptr<SharedCaptureBuffer>&
 }
 
 nlohmann::json testSilenceRendering(const std::shared_ptr<SharedCaptureBuffer>& captureBuffer,
-                                    const OscilPluginEditor& editor)
+                                    const MultiScoperPluginEditor& editor)
 {
     nlohmann::json test;
     test["name"] = "SilenceRendering";
@@ -116,7 +116,7 @@ nlohmann::json testSilenceRendering(const std::shared_ptr<SharedCaptureBuffer>& 
 }
 
 nlohmann::json testHighAmplitudeRendering(const std::shared_ptr<SharedCaptureBuffer>& captureBuffer,
-                                          const OscilPluginEditor& editor)
+                                          const MultiScoperPluginEditor& editor)
 {
     nlohmann::json test;
     test["name"] = "HighAmplitudeRendering";
@@ -134,7 +134,7 @@ nlohmann::json testHighAmplitudeRendering(const std::shared_ptr<SharedCaptureBuf
     return test;
 }
 
-nlohmann::json testToggleSetting(OscilPluginEditor& editor, const char* name, const char* details,
+nlohmann::json testToggleSetting(MultiScoperPluginEditor& editor, const char* name, const char* details,
                                  std::function<void(bool)> setter, std::function<bool()> getter)
 {
     nlohmann::json test;
@@ -150,7 +150,7 @@ nlohmann::json testToggleSetting(OscilPluginEditor& editor, const char* name, co
     return test;
 }
 
-nlohmann::json testGainAdjustment(PaneComponent* pane, WaveformComponent* waveform, OscilPluginEditor& editor)
+nlohmann::json testGainAdjustment(PaneComponent* pane, WaveformComponent* waveform, MultiScoperPluginEditor& editor)
 {
     nlohmann::json test;
     test["name"] = "GainAdjustment";
@@ -166,7 +166,7 @@ nlohmann::json testGainAdjustment(PaneComponent* pane, WaveformComponent* wavefo
     return test;
 }
 
-nlohmann::json testColumnLayoutChange(OscilState& state, OscilPluginEditor& editor)
+nlohmann::json testColumnLayoutChange(MultiScoperState& state, MultiScoperPluginEditor& editor)
 {
     nlohmann::json test;
     test["name"] = "ColumnLayoutChange";
@@ -250,4 +250,4 @@ void TestRunnerHandler::handleRunSettingsTest(const httplib::Request& /*req*/, h
     res.set_content(result.dump(), "application/json");
 }
 
-} // namespace oscil
+} // namespace multiscoper

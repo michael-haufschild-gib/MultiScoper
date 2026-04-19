@@ -1,13 +1,13 @@
 /*
-    Oscil - Radial Blur Effect Implementation
+    MultiScoper - Radial Blur Effect Implementation
     Based on Electric Flower WebGL demo zoom-glow technique
 */
 
 #include "rendering/effects/RadialBlurEffect.h"
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
-namespace oscil
+namespace multiscoper
 {
 
 // Radial blur fragment shader
@@ -85,6 +85,6 @@ void RadialBlurEffect::setUniforms(const Framebuffer& source, float deltaTime)
     juce::OpenGLExtensionFunctions::glUniform1i(samplesLoc_, juce::jlimit(2, 8, settings_.samples));
 }
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

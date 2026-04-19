@@ -1,11 +1,11 @@
 /*
-    Oscil - Visual Configuration Serialization
+    MultiScoper - Visual Configuration Serialization
     ValueTree persistence for VisualConfiguration
 */
 
 #include "rendering/VisualConfiguration.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 static const juce::Identifier VISUAL_CONFIG_TYPE("VisualConfiguration");
@@ -262,4 +262,4 @@ VisualConfiguration VisualConfiguration::fromValueTree(const juce::ValueTree& tr
     return config;
 }
 
-} // namespace oscil
+} // namespace multiscoper

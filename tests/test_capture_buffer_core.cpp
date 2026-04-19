@@ -1,5 +1,5 @@
 /*
-    Oscil - Capture Buffer Tests: Core Operations
+    MultiScoper - Capture Buffer Tests: Core Operations
     Tests for basic buffer operations, capacity, peak/RMS, and metadata
 */
 
@@ -9,8 +9,8 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
-using namespace oscil::test;
+using namespace multiscoper;
+using namespace multiscoper::test;
 
 class CaptureBufferCoreTest : public ::testing::Test
 {

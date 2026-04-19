@@ -1,11 +1,11 @@
 /*
-    Oscil - Oscillator Configuration Dialog Implementation
+    MultiScoper - Oscillator Configuration Dialog Implementation
     Modal dialog for comprehensive oscillator configuration
 */
 
 #include "ui/dialogs/OscillatorConfigDialog.h"
 
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ListItemIcons.h"
 #include "ui/components/ProcessingModeIcons.h"
@@ -16,7 +16,7 @@
 
 #include "rendering/VisualConfiguration.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 void OscillatorConfigDialog::DebounceTimer::timerCallback()
@@ -30,7 +30,7 @@ OscillatorConfigDialog::OscillatorConfigDialog(IThemeService& themeService, IIns
     : ThemedComponent(themeService)
     , instanceRegistry_(instanceRegistry)
 {
-    OSCIL_REGISTER_TEST_ID("configPopup");
+    MULTISCOPER_REGISTER_TEST_ID("configPopup");
     nameDebounce_.onFire = [this]() { handleNameEdit(); };
     setupComponents();
 }
@@ -40,13 +40,14 @@ OscillatorConfigDialog::~OscillatorConfigDialog()
     // Stop any pending debounce *before* member destruction so its callback
     // cannot re-enter a half-destroyed dialog on the message loop.
     nameDebounce_.stopTimer();
-    OSCIL_UNREGISTER_CHILD_TEST_ID(*sourceSelector_, "configPopup_sourceDropdown");
-    OSCIL_UNREGISTER_CHILD_TEST_ID(*modeButtons_, "configPopup_modeSelector");
+    MULTISCOPER_UNREGISTER_CHILD_TEST_ID(*sourceSelector_, "configPopup_sourceDropdown");
+    MULTISCOPER_UNREGISTER_CHILD_TEST_ID(*modeButtons_, "configPopup_modeSelector");
 }
 
 void OscillatorConfigDialog::setupSourceAndMode()
 {
-    nameEditor_ = std::make_unique<OscilTextField>(getThemeService(), TextFieldVariant::Text, "configPopup_nameField");
+    nameEditor_ =
+        std::make_unique<MultiScoperTextField>(getThemeService(), TextFieldVariant::Text, "configPopup_nameField");
     nameEditor_->setPlaceholder("Oscillator Name");
     // Return commits immediately; text changes are coalesced via nameDebounce_
     // so that typing does not trigger a full ValueTree rewrite on every keystroke.
@@ -63,7 +64,7 @@ void OscillatorConfigDialog::setupSourceAndMode()
     sourceSelector_ = std::make_unique<SourceSelectorComponent>(getThemeService(), instanceRegistry_);
     sourceSelector_->onSelectionChanged([this](const SourceId& id) { handleSourceChange(id); });
     addAndMakeVisible(*sourceSelector_);
-    OSCIL_REGISTER_CHILD_TEST_ID(*sourceSelector_, "configPopup_sourceDropdown");
+    MULTISCOPER_REGISTER_CHILD_TEST_ID(*sourceSelector_, "configPopup_sourceDropdown");
 
     modeLabel_ = std::make_unique<juce::Label>("", "Processing Mode");
     addAndMakeVisible(*modeLabel_);
@@ -84,7 +85,7 @@ void OscillatorConfigDialog::setupSourceAndMode()
                                     "configPopup_modeSelector_right");
     modeButtons_->onSelectionChanged = [this](int id) { handleProcessingModeChange(id); };
     addAndMakeVisible(*modeButtons_);
-    OSCIL_REGISTER_CHILD_TEST_ID(*modeButtons_, "configPopup_modeSelector");
+    MULTISCOPER_REGISTER_CHILD_TEST_ID(*modeButtons_, "configPopup_modeSelector");
 }
 
 void OscillatorConfigDialog::setupAppearanceControls()
@@ -92,7 +93,7 @@ void OscillatorConfigDialog::setupAppearanceControls()
     colorLabel_ = std::make_unique<juce::Label>("", "Color");
     addAndMakeVisible(*colorLabel_);
 
-    colorSwatches_ = std::make_unique<OscilColorSwatches>(getThemeService(), "configPopup_colorPicker");
+    colorSwatches_ = std::make_unique<MultiScoperColorSwatches>(getThemeService(), "configPopup_colorPicker");
     colorSwatches_->setColors(getDefaultColors());
     colorSwatches_->onColorSelected = [this](int, juce::Colour color) { handleColorSelect(color); };
     addAndMakeVisible(*colorSwatches_);
@@ -100,14 +101,15 @@ void OscillatorConfigDialog::setupAppearanceControls()
     visualPresetLabel_ = std::make_unique<juce::Label>("", "Visual Preset");
     addAndMakeVisible(*visualPresetLabel_);
 
-    visualPresetDropdown_ = std::make_unique<OscilDropdown>(getThemeService(), "", "configPopup_visualPresetDropdown");
+    visualPresetDropdown_ =
+        std::make_unique<MultiScoperDropdown>(getThemeService(), "", "configPopup_visualPresetDropdown");
     visualPresetDropdown_->setTooltip("Changing preset resets any per-oscillator visual overrides");
     for (const auto& preset : VisualConfiguration::getAvailablePresets())
         visualPresetDropdown_->addItem(preset.second, preset.first);
     visualPresetDropdown_->onSelectionChanged = [this](int) { handleVisualPresetChange(); };
     addAndMakeVisible(*visualPresetDropdown_);
 
-    lineWidthSlider_ = std::make_unique<OscilSlider>(getThemeService(), "configPopup_lineWidthSlider");
+    lineWidthSlider_ = std::make_unique<MultiScoperSlider>(getThemeService(), "configPopup_lineWidthSlider");
     lineWidthSlider_->setLabel("Line Width");
     lineWidthSlider_->setRange(Oscillator::MIN_LINE_WIDTH, Oscillator::MAX_LINE_WIDTH);
     lineWidthSlider_->setStep(0.1);
@@ -116,7 +118,7 @@ void OscillatorConfigDialog::setupAppearanceControls()
     lineWidthSlider_->onValueChanged = [this](double) { handleLineWidthChange(); };
     addAndMakeVisible(*lineWidthSlider_);
 
-    opacitySlider_ = std::make_unique<OscilSlider>(getThemeService(), "configPopup_opacitySlider");
+    opacitySlider_ = std::make_unique<MultiScoperSlider>(getThemeService(), "configPopup_opacitySlider");
     opacitySlider_->setLabel("Opacity");
     opacitySlider_->setRange(0.0, 100.0);
     opacitySlider_->setStep(1.0);
@@ -136,7 +138,7 @@ void OscillatorConfigDialog::setupPaneAndFooter()
     paneSelectorComponent_->onSelectionChanged = [this](const PaneId&, bool) { handlePaneChange(); };
     addAndMakeVisible(*paneSelectorComponent_);
 
-    footerCloseButton_ = std::make_unique<OscilButton>(getThemeService(), "Close", "configPopup_closeBtn");
+    footerCloseButton_ = std::make_unique<MultiScoperButton>(getThemeService(), "Close", "configPopup_closeBtn");
     footerCloseButton_->setVariant(ButtonVariant::Secondary);
     footerCloseButton_->onClick = [this]() { handleClose(); };
     addAndMakeVisible(*footerCloseButton_);
@@ -154,7 +156,7 @@ void OscillatorConfigDialog::setupComponents()
 
 void OscillatorConfigDialog::paint(juce::Graphics& /*g*/)
 {
-    // No custom painting - OscilModal handles the window frame
+    // No custom painting - MultiScoperModal handles the window frame
 }
 
 void OscillatorConfigDialog::resized()
@@ -220,7 +222,7 @@ void OscillatorConfigDialog::showForOscillator(const Oscillator& oscillator)
 {
     updateFromOscillator(oscillator);
 
-    // Defer the focus grab: DialogManager shows the hosting OscilModal synchronously
+    // Defer the focus grab: DialogManager shows the hosting MultiScoperModal synchronously
     // *after* this call returns, so the name editor is not yet on-screen here and a
     // direct grabKeyboardFocus would silently no-op. Post it back through the message
     // loop so it lands once the modal is visible. Use a SafePointer so a quick close
@@ -412,4 +414,4 @@ void OscillatorConfigDialog::addListener(Listener* listener) { listeners_.add(li
 
 void OscillatorConfigDialog::removeListener(Listener* listener) { listeners_.remove(listener); }
 
-} // namespace oscil
+} // namespace multiscoper

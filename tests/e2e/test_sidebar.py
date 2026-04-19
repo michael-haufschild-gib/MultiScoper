@@ -11,7 +11,7 @@ What bugs these tests catch:
 """
 
 import pytest
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 from page_objects import SidebarPage
 
 
@@ -19,7 +19,7 @@ class TestAccordion:
     """Accordion section expand/collapse behavior."""
 
     def test_timing_section_expand_reveals_content(
-        self, editor: OscilTestClient, sidebar_page: SidebarPage
+        self, editor: MultiScoperTestClient, sidebar_page: SidebarPage
     ):
         """
         Bug caught: accordion click handler not toggling content visibility.
@@ -44,7 +44,7 @@ class TestAccordion:
         assert found, "No timing section content became visible after expanding"
 
     def test_timing_section_collapse_hides_content(
-        self, editor: OscilTestClient, sidebar_page: SidebarPage
+        self, editor: MultiScoperTestClient, sidebar_page: SidebarPage
     ):
         """
         Bug caught: accordion not collapsing on second click.
@@ -68,7 +68,7 @@ class TestAccordion:
         editor.wait_for_not_visible(content_id, timeout_s=2.0)
 
     def test_options_section_expand(
-        self, editor: OscilTestClient, sidebar_page: SidebarPage
+        self, editor: MultiScoperTestClient, sidebar_page: SidebarPage
     ):
         """
         Bug caught: options section not wired to accordion.
@@ -96,12 +96,18 @@ class TestOscillatorListSelection:
     """Selecting oscillators in the sidebar list."""
 
     def test_clicking_item_expands_it(
-        self, editor: OscilTestClient, two_oscillators, sidebar_page: SidebarPage
+        self, editor: MultiScoperTestClient, two_oscillators, sidebar_page: SidebarPage
     ):
         """
         Bug caught: click handler not setting selection state, or expanded
         height calculation wrong.
         """
+        # Force item 0 to unselected first by selecting item 1 so the test's
+        # "click should expand" assertion has a meaningful starting state.
+        # Otherwise item 0 might already be selected (fixture-dependent) and
+        # the click is a no-op.
+        sidebar_page.select_oscillator(1)
+
         item0 = sidebar_page.item_id(0)
         el_before = editor.get_element(item0)
         assert el_before is not None, "List item 0 must be registered"
@@ -109,31 +115,64 @@ class TestOscillatorListSelection:
         height_before = el_before.height
 
         sidebar_page.select_oscillator(0)
-        # Wait a moment for expansion animation
-        try:
-            editor.wait_until(
-                lambda: (e := editor.get_element(item0)) and e.height > height_before,
-                timeout_s=2.0,
-                desc="item expansion",
-            )
-        except TimeoutError:
-            pass  # Expansion may not change height if already selected
+        # Old version caught TimeoutError and silently passed, then asserted
+        # only "element still exists" — allowing any regression in the
+        # expand-on-select wiring to slip through. Require that item 0's
+        # height actually grows after the click. If the UI does not expand
+        # selected items (product decision drift), this test SHOULD fail
+        # and the docstring above needs updating accordingly.
+        editor.wait_until(
+            lambda: (e := editor.get_element(item0)) and e.height > height_before,
+            timeout_s=2.0,
+            desc="item 0 to expand after selection",
+        )
 
         el_after = editor.get_element(item0)
         assert el_after is not None
+        assert el_after.height > height_before, (
+            f"Selected item 0 should be taller than when unselected; "
+            f"before={height_before}, after={el_after.height}"
+        )
 
     def test_selecting_different_item_switches_expansion(
-        self, editor: OscilTestClient, two_oscillators, sidebar_page: SidebarPage
+        self, editor: MultiScoperTestClient, two_oscillators, sidebar_page: SidebarPage
     ):
         """
-        Bug caught: multi-select not deselecting previous item.
+        Bug caught: multi-select not deselecting previous item — both rows
+        remain expanded at their selected height. The old version only
+        asserted "item 1 is visible", which was true even in the broken
+        state and couldn't detect the bug it claimed to cover.
         """
         sidebar_page.select_oscillator(0)
-        sidebar_page.select_oscillator(1)
+        editor.wait_until(
+            lambda: (e := editor.get_element(sidebar_page.item_id(0))) and e.height > 0,
+            timeout_s=2.0,
+            desc="item 0 to settle after selection",
+        )
+        item0_selected_height = editor.get_element(sidebar_page.item_id(0)).height
 
-        # Item 1 should now be the selected/expanded one
+        sidebar_page.select_oscillator(1)
+        editor.wait_until(
+            lambda: (e := editor.get_element(sidebar_page.item_id(1)))
+            and e.height >= item0_selected_height,
+            timeout_s=2.0,
+            desc="item 1 to reach selected height after switching",
+        )
+
+        el0 = editor.get_element(sidebar_page.item_id(0))
         el1 = editor.get_element(sidebar_page.item_id(1))
-        assert el1 is not None and el1.visible
+        assert el0 is not None and el1 is not None and el1.visible
+        # Item 1 is now selected, so it MUST be the tall one. Item 0 must
+        # have collapsed back — if both are at the selected height, the
+        # list is multi-expanding (the actual bug).
+        assert el1.height >= item0_selected_height, (
+            f"Newly-selected item 1 must be expanded (got {el1.height}); "
+            f"previously-selected item 0 was {item0_selected_height}"
+        )
+        assert el0.height < item0_selected_height, (
+            f"Previously-selected item 0 must collapse when item 1 is selected; "
+            f"still at height {el0.height} (selected height was {item0_selected_height})"
+        )
 
 
 class TestListItemButtons:
@@ -147,7 +186,7 @@ class TestListItemButtons:
 
     @pytest.mark.parametrize("btn_id,label", BUTTONS)
     def test_button_exists_and_has_size(
-        self, editor: OscilTestClient, oscillator: str, btn_id: str, label: str
+        self, editor: MultiScoperTestClient, oscillator: str, btn_id: str, label: str
     ):
         """
         Bug caught: button not rendered, or has zero width/height due to
@@ -174,7 +213,7 @@ class TestListItemButtons:
 class TestSidebarResize:
     """Sidebar resize via drag handle."""
 
-    def test_drag_changes_width(self, editor: OscilTestClient):
+    def test_drag_changes_width(self, editor: MultiScoperTestClient):
         """
         Bug caught: resize handle not wired, or drag delta not applied to
         sidebar width constraint.
@@ -209,7 +248,7 @@ class TestSidebarResize:
 class TestOscillatorReorder:
     """Drag-to-reorder oscillator list items."""
 
-    def test_reorder_via_api(self, editor: OscilTestClient, two_oscillators):
+    def test_reorder_via_api(self, editor: MultiScoperTestClient, two_oscillators):
         """
         Bug caught: reorder API not updating order indices, or UI not
         reflecting new order after drag.

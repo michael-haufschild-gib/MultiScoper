@@ -14,7 +14,7 @@ What bugs these tests catch:
 """
 
 import pytest
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 from page_objects import AddOscillatorDialog
 
 
@@ -24,7 +24,7 @@ from page_objects import AddOscillatorDialog
 class TestAddOscillator:
     """Full user journey: click Add, fill dialog, confirm, verify state."""
 
-    def test_add_via_dialog(self, editor: OscilTestClient, source_id: str):
+    def test_add_via_dialog(self, editor: MultiScoperTestClient, source_id: str):
         """
         Bug caught: dialog submit handler not wired, or state not updated.
         """
@@ -51,7 +51,7 @@ class TestAddOscillator:
         # Verify the new oscillator appears in the sidebar list
         editor.wait_for_element("sidebar_oscillators_item_0", timeout_s=3.0)
 
-    def test_cancel_does_not_create(self, editor: OscilTestClient):
+    def test_cancel_does_not_create(self, editor: MultiScoperTestClient):
         """
         Bug caught: cancel handler accidentally submitting, or dialog state
         leaking between open/close cycles.
@@ -69,14 +69,14 @@ class TestAddOscillator:
             f"Cancel should not create an oscillator: expected {initial_count}, got {final_count}"
         )
 
-    def test_add_button_exists_and_is_clickable(self, editor: OscilTestClient):
+    def test_add_button_exists_and_is_clickable(self, editor: MultiScoperTestClient):
         """
         Bug caught: sidebar layout regression hiding the add button.
         """
         el = editor.wait_for_visible("sidebar_addOscillator", timeout_s=3.0)
         assert el.width > 0 and el.height > 0, "Add button has zero size"
 
-    def test_dialog_name_field_accepts_text(self, editor: OscilTestClient):
+    def test_dialog_name_field_accepts_text(self, editor: MultiScoperTestClient):
         """
         Bug caught: name field in add dialog not wired to text input handler.
         """
@@ -95,7 +95,7 @@ class TestAddOscillator:
 
         assert result, "Name field must accept text input"
 
-    def test_dialog_color_picker_exists(self, editor: OscilTestClient):
+    def test_dialog_color_picker_exists(self, editor: MultiScoperTestClient):
         """
         Bug caught: color picker/swatches not rendered in add dialog.
         """
@@ -111,7 +111,7 @@ class TestAddOscillator:
             pytest.fail("Color picker not available in add dialog")
 
     def test_dialog_pane_selector_exists(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: pane selector not rendered in add dialog, preventing
@@ -133,7 +133,7 @@ class TestAddOscillator:
         if not exists:
             pytest.fail("Pane selector not available in add dialog")
 
-    def test_dialog_source_dropdown_has_sources(self, editor: OscilTestClient):
+    def test_dialog_source_dropdown_has_sources(self, editor: MultiScoperTestClient):
         """
         Bug caught: source dropdown in add dialog is empty because
         SourceManager not wired to the dialog, so user cannot select
@@ -158,7 +158,7 @@ class TestAddOscillator:
         )
 
     def test_add_multiple_oscillators_increments_count(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: state manager replacing instead of appending oscillators.
@@ -178,7 +178,7 @@ class TestDeleteOscillator:
     """User flows for deleting oscillators."""
 
     def test_delete_from_list_item(
-        self, editor: OscilTestClient, oscillator: str, sidebar_page
+        self, editor: MultiScoperTestClient, oscillator: str, sidebar_page
     ):
         """
         Bug caught: delete button click handler not wired, or state not updated.
@@ -190,7 +190,7 @@ class TestDeleteOscillator:
         editor.wait_for_oscillator_count(0, timeout_s=3.0)
 
     def test_delete_all_one_by_one(
-        self, editor: OscilTestClient, three_oscillators, sidebar_page
+        self, editor: MultiScoperTestClient, three_oscillators, sidebar_page
     ):
         """
         Bug caught: index-based deletion corrupting when list shrinks
@@ -204,7 +204,7 @@ class TestDeleteOscillator:
         assert len(editor.get_oscillators()) == 0
 
     def test_deleted_oscillator_id_gone_from_state(
-        self, editor: OscilTestClient, two_oscillators, sidebar_page
+        self, editor: MultiScoperTestClient, two_oscillators, sidebar_page
     ):
         """
         Bug caught: UI removes list item but state still holds the oscillator.
@@ -229,7 +229,7 @@ class TestEditOscillator:
     """User flows for editing oscillator properties via the config popup."""
 
     def test_settings_button_opens_popup(
-        self, editor: OscilTestClient, oscillator: str, sidebar_page
+        self, editor: MultiScoperTestClient, oscillator: str, sidebar_page
     ):
         """
         Bug caught: settings button click not opening the config popup.
@@ -238,7 +238,7 @@ class TestEditOscillator:
         assert editor.element_visible("configPopup")
 
     def test_popup_closes_on_close_button(
-        self, editor: OscilTestClient, oscillator: str, sidebar_page
+        self, editor: MultiScoperTestClient, oscillator: str, sidebar_page
     ):
         """
         Bug caught: close button not dismissing the popup.
@@ -253,7 +253,7 @@ class TestEditOscillator:
         )
 
     def test_name_change_persists(
-        self, editor: OscilTestClient, oscillator: str, sidebar_page
+        self, editor: MultiScoperTestClient, oscillator: str, sidebar_page
     ):
         """
         Bug caught: name field edit not saved to oscillator state.
@@ -278,7 +278,7 @@ class TestEditOscillator:
         )
 
     def test_slider_adjustment(
-        self, editor: OscilTestClient, oscillator: str, sidebar_page
+        self, editor: MultiScoperTestClient, oscillator: str, sidebar_page
     ):
         """
         Bug caught: slider value not propagating to oscillator properties.
@@ -318,7 +318,7 @@ class TestVisibilityToggle:
     """Toggle oscillator visibility from the sidebar list item."""
 
     def test_toggle_changes_state(
-        self, editor: OscilTestClient, oscillator: str, sidebar_page
+        self, editor: MultiScoperTestClient, oscillator: str, sidebar_page
     ):
         """
         Bug caught: visibility button click not updating oscillator.visible.
@@ -342,7 +342,7 @@ class TestVisibilityToggle:
         assert osc_after["visible"] != initial_visible
 
     def test_toggle_roundtrip(
-        self, editor: OscilTestClient, oscillator: str, sidebar_page
+        self, editor: MultiScoperTestClient, oscillator: str, sidebar_page
     ):
         """
         Bug caught: toggle not idempotent -- second click doesn't restore.
@@ -384,7 +384,7 @@ class TestProcessingMode:
         "Right": 5,
     }
 
-    def test_default_mode_is_full_stereo(self, editor: OscilTestClient, oscillator: str):
+    def test_default_mode_is_full_stereo(self, editor: MultiScoperTestClient, oscillator: str):
         """
         Bug caught: oscillator created with wrong default mode.
         """
@@ -394,7 +394,7 @@ class TestProcessingMode:
         assert mode in ("FullStereo", 0), f"Default mode should be FullStereo, got {mode}"
 
     def test_all_modes_via_config_popup(
-        self, editor: OscilTestClient, oscillator: str, sidebar_page
+        self, editor: MultiScoperTestClient, oscillator: str, sidebar_page
     ):
         """
         Bug caught: mode button click handler not updating state,

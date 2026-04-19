@@ -1,5 +1,5 @@
 /*
-    Oscil - Instance Registry Interface
+    MultiScoper - Instance Registry Interface
     Abstract interface for source registry to enable dependency injection
 */
 
@@ -14,7 +14,7 @@
 #include <optional>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 // Forward declarations
@@ -120,4 +120,4 @@ public:
     virtual void removeListener(InstanceRegistryListener* listener) = 0;
 };
 
-} // namespace oscil
+} // namespace multiscoper

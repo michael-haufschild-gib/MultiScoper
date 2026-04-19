@@ -10,13 +10,13 @@ What bugs these tests catch:
 """
 
 import pytest
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 
 
 class TestMetricsAPI:
     """Verify the metrics collection API works."""
 
-    def test_metrics_current_returns_data(self, client: OscilTestClient):
+    def test_metrics_current_returns_data(self, client: MultiScoperTestClient):
         """
         Bug caught: metrics endpoint returning empty or malformed data.
         """
@@ -28,7 +28,7 @@ class TestMetricsAPI:
             f"Metrics should contain fps or cpuPercent, got keys: {list(metrics.keys())}"
         )
 
-    def test_metrics_start_stop_cycle(self, client: OscilTestClient):
+    def test_metrics_start_stop_cycle(self, client: MultiScoperTestClient):
         """
         Bug caught: start/stop not toggling collection state, or double-stop crash.
         """
@@ -55,7 +55,7 @@ class TestMetricsAPI:
 
         client.metrics_reset()
 
-    def test_metrics_reset_clears_stats(self, client: OscilTestClient):
+    def test_metrics_reset_clears_stats(self, client: MultiScoperTestClient):
         """
         Bug caught: metrics reset not clearing accumulated data.
         """
@@ -81,7 +81,7 @@ class TestMetricsAPI:
                 f"Reset should clear samples, got {stats.get('sampleCount')}"
             )
 
-    def test_double_stop_does_not_crash(self, client: OscilTestClient):
+    def test_double_stop_does_not_crash(self, client: MultiScoperTestClient):
         """
         Bug caught: stopping metrics collection twice causes crash or error.
         """
@@ -105,7 +105,7 @@ class TestPerformanceUnderLoad:
     """Performance tests that take longer to run."""
 
     def test_memory_stable_after_add_remove_cycle(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: memory leak when oscillators are repeatedly added and removed
@@ -158,7 +158,7 @@ class TestPerformanceUnderLoad:
             )
 
     def test_fps_stable_with_multiple_oscillators(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: FPS dropping to zero or single digits when many oscillators

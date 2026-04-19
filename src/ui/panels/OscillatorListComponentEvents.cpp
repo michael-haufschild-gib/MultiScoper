@@ -1,13 +1,13 @@
 /*
-    Oscil - Oscillator List Component Events
-    Item listener forwarding, filter-mode changes, drag-and-drop source
-    and target handling. Split from OscillatorListComponent.cpp which
-    owns construction, layout, and list rebuild/paint.
+    MultiScoper - Oscillator List Component Events
+    Item listener forwarding and drag-and-drop source/target handling.
+    Split from OscillatorListComponent.cpp which owns construction,
+    layout, and list rebuild/paint.
 */
 
 #include "ui/panels/OscillatorListComponent.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 void OscillatorListComponent::oscillatorSelected(const OscillatorId& id)
@@ -107,11 +107,6 @@ void OscillatorListComponent::itemDropped(const SourceDetails& dragSourceDetails
 
     if (sourceIndex != -1 && targetIndex != -1 && sourceIndex != targetIndex)
     {
-        // Filtered indices don't map 1:1 to global orderIndex — reject reorder
-        // while a filter is active to avoid corrupting oscillator order.
-        if (currentFilterMode_ != OscillatorFilterMode::All)
-            return;
-
         if (sourceIndex < targetIndex)
         {
             targetIndex--;
@@ -123,10 +118,6 @@ void OscillatorListComponent::itemDropped(const SourceDetails& dragSourceDetails
 
 void OscillatorListComponent::oscillatorMoveRequested(const OscillatorId& id, int direction)
 {
-    // Reject moves while a filter is active — same rationale as itemDropped.
-    if (currentFilterMode_ != OscillatorFilterMode::All)
-        return;
-
     // Find current index
     int currentIndex = -1;
     for (size_t i = 0; i < items_.size(); ++i)
@@ -186,14 +177,8 @@ void OscillatorListComponent::updateDragIndicator(int targetIndex)
     }
 }
 
-void OscillatorListComponent::filterModeChanged(OscillatorFilterMode mode)
-{
-    currentFilterMode_ = mode;
-    refreshList(allOscillators_);
-}
-
 void OscillatorListComponent::addListener(Listener* listener) { listeners_.add(listener); }
 
 void OscillatorListComponent::removeListener(Listener* listener) { listeners_.remove(listener); }
 
-} // namespace oscil
+} // namespace multiscoper

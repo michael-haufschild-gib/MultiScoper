@@ -13,13 +13,13 @@ What bugs these tests catch:
 """
 
 import pytest
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 
 
 class TestLayoutDropdown:
     """Layout dropdown in options section."""
 
-    def test_layout_dropdown_exists(self, options_section: OscilTestClient):
+    def test_layout_dropdown_exists(self, options_section: MultiScoperTestClient):
         """
         Bug caught: layout dropdown removed from options section.
         """
@@ -32,7 +32,7 @@ class TestLayoutDropdown:
         assert el is not None
         assert el.visible, "Layout dropdown should be visible"
 
-    def test_layout_dropdown_has_items(self, options_section: OscilTestClient):
+    def test_layout_dropdown_has_items(self, options_section: MultiScoperTestClient):
         """
         Bug caught: layout dropdown empty (no layouts registered).
         """
@@ -48,7 +48,7 @@ class TestLayoutDropdown:
         )
 
     def test_layout_selection_does_not_crash(
-        self, options_section: OscilTestClient, source_id: str
+        self, options_section: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: selecting a layout crashes when oscillators are present
@@ -80,7 +80,7 @@ class TestLayoutDropdown:
 class TestGridToggle:
     """Grid overlay toggle."""
 
-    def test_grid_toggle_clickable(self, options_section: OscilTestClient):
+    def test_grid_toggle_clickable(self, options_section: MultiScoperTestClient):
         """
         Bug caught: grid toggle not responding to clicks.
         """
@@ -100,7 +100,7 @@ class TestGridToggle:
 class TestAutoScaleToggle:
     """Auto-scale amplitude toggle."""
 
-    def test_auto_scale_toggle_clickable(self, options_section: OscilTestClient):
+    def test_auto_scale_toggle_clickable(self, options_section: MultiScoperTestClient):
         """
         Bug caught: auto-scale toggle not responding to clicks.
         """
@@ -119,7 +119,7 @@ class TestAutoScaleToggle:
 class TestGainSlider:
     """Gain slider control."""
 
-    def test_gain_slider_accepts_values(self, options_section: OscilTestClient):
+    def test_gain_slider_accepts_values(self, options_section: MultiScoperTestClient):
         """
         Bug caught: gain slider value setter not wired.
         """
@@ -136,7 +136,7 @@ class TestGainSlider:
         assert c.set_slider(slider_id, 0.0), "Gain slider should accept 0.0"
 
     def test_gain_slider_increment_decrement(
-        self, options_section: OscilTestClient
+        self, options_section: MultiScoperTestClient
     ):
         """
         Bug caught: increment/decrement not adjusting slider value.
@@ -159,7 +159,7 @@ class TestGainSlider:
 class TestQualityPresetDropdown:
     """Quality preset dropdown."""
 
-    def test_quality_dropdown_exists(self, options_section: OscilTestClient):
+    def test_quality_dropdown_exists(self, options_section: MultiScoperTestClient):
         """
         Bug caught: quality dropdown not registered in options.
         """
@@ -173,7 +173,7 @@ class TestQualityPresetDropdown:
         assert el.visible
 
     def test_quality_selection_does_not_crash(
-        self, options_section: OscilTestClient
+        self, options_section: MultiScoperTestClient
     ):
         """
         Bug caught: selecting a quality preset crashes the rendering pipeline.
@@ -199,7 +199,7 @@ class TestQualityPresetDropdown:
 class TestBufferDurationDropdown:
     """Buffer duration dropdown."""
 
-    def test_buffer_dropdown_exists(self, options_section: OscilTestClient):
+    def test_buffer_dropdown_exists(self, options_section: MultiScoperTestClient):
         """
         Bug caught: buffer duration dropdown not registered.
         """
@@ -213,7 +213,7 @@ class TestBufferDurationDropdown:
         assert el.visible
 
     def test_buffer_selection_does_not_crash(
-        self, options_section: OscilTestClient
+        self, options_section: MultiScoperTestClient
     ):
         """
         Bug caught: changing buffer duration during active capture causes
@@ -241,7 +241,7 @@ class TestAutoAdjustToggle:
     """Auto-adjust quality toggle."""
 
     def test_auto_adjust_toggle_clickable(
-        self, options_section: OscilTestClient
+        self, options_section: MultiScoperTestClient
     ):
         """
         Bug caught: auto-adjust toggle not responding to clicks.
@@ -261,7 +261,7 @@ class TestAutoAdjustToggle:
 class TestOptionsPersistence:
     """Verify options section settings persist through state save/load."""
 
-    def _expand_options(self, client: OscilTestClient) -> bool:
+    def _expand_options(self, client: MultiScoperTestClient) -> bool:
         """Expand options section. Returns False if not available."""
         options_id = "sidebar_options"
         if not client.element_exists(options_id):
@@ -270,7 +270,7 @@ class TestOptionsPersistence:
         return True
 
     def test_grid_toggle_state_persists_through_save_load(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: grid toggle state not serialized in state XML,
@@ -310,7 +310,7 @@ class TestOptionsPersistence:
         toggled_after = el_after_toggle.extra.get("toggled", el_after_toggle.extra.get("value")) if el_after_toggle else None
 
         # Save, reset, load
-        path = "/tmp/oscil_e2e_grid_persist.xml"
+        path = "/tmp/multiscoper_e2e_grid_persist.xml"
         saved = editor.save_state(path)
         if not saved:
             pytest.fail("State save API not available")
@@ -336,7 +336,7 @@ class TestOptionsPersistence:
             )
 
     def test_gain_slider_value_persists_through_save_load(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: gain slider value not serialized, reverting to 0 dB
@@ -361,7 +361,7 @@ class TestOptionsPersistence:
         value_before = el_before.extra.get("value") if el_before else None
 
         # Save, reset, load
-        path = "/tmp/oscil_e2e_gain_persist.xml"
+        path = "/tmp/multiscoper_e2e_gain_persist.xml"
         saved = editor.save_state(path)
         if not saved:
             pytest.fail("State save API not available")
@@ -386,7 +386,7 @@ class TestOptionsPersistence:
             )
 
     def test_layout_dropdown_selection_persists_through_save_load(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: layout selection not serialized, reverting to default
@@ -430,7 +430,7 @@ class TestOptionsPersistence:
         )
 
         # Save, reset, load
-        path = "/tmp/oscil_e2e_layout_persist.xml"
+        path = "/tmp/multiscoper_e2e_layout_persist.xml"
         saved = editor.save_state(path)
         if not saved:
             pytest.fail("State save API not available")

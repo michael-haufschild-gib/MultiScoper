@@ -1,5 +1,5 @@
 /*
-    Oscil - Window Layout
+    MultiScoper - Window Layout
     Manages plugin window dimensions and sidebar configuration
 */
 
@@ -8,7 +8,7 @@
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -178,4 +178,4 @@ inline const juce::Identifier SidebarWidth{"sidebarWidth"};
 inline const juce::Identifier SidebarCollapsed{"sidebarCollapsed"};
 } // namespace WindowLayoutIds
 
-} // namespace oscil
+} // namespace multiscoper

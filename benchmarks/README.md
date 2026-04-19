@@ -1,6 +1,6 @@
-# Oscil Benchmarks
+# MultiScoper Benchmarks
 
-Google Benchmark microbenchmarks for Oscil's DSP and capture-buffer hot paths.
+Google Benchmark microbenchmarks for MultiScoper's DSP and capture-buffer hot paths.
 
 ## Build and run locally
 
@@ -8,26 +8,26 @@ From the repo root:
 
 ```bash
 cmake -B build/bench -G Ninja \
-  -DOSCIL_BUILD_BENCHMARKS=ON \
-  -DOSCIL_BUILD_TESTS=OFF \
+  -DMULTISCOPER_BUILD_BENCHMARKS=ON \
+  -DMULTISCOPER_BUILD_TESTS=OFF \
   -DCMAKE_BUILD_TYPE=Release
 
-cmake --build build/bench --target OscilBenchmarks
+cmake --build build/bench --target MultiScoperBenchmarks
 
-./build/bench/benchmarks/OscilBenchmarks \
+./build/bench/benchmarks/MultiScoperBenchmarks \
   --benchmark_filter=SharedCaptureBuffer
 ```
 
 Run everything:
 
 ```bash
-./build/bench/benchmarks/OscilBenchmarks
+./build/bench/benchmarks/MultiScoperBenchmarks
 ```
 
 Emit JSON for diffing / tooling:
 
 ```bash
-./build/bench/benchmarks/OscilBenchmarks \
+./build/bench/benchmarks/MultiScoperBenchmarks \
   --benchmark_format=json \
   --benchmark_out=bench.json \
   --benchmark_repetitions=3 \
@@ -40,6 +40,7 @@ Emit JSON for diffing / tooling:
 |-|-|
 | `SharedCaptureBuffer::write` / `read` | `BM_SharedCaptureBuffer_Write`, `BM_SharedCaptureBuffer_Read` — numSamples ∈ {64, 256, 1024, 4096} |
 | `DecimatingCaptureBuffer::write` | `BM_DecimatingCaptureBuffer_Write` — numSamples × decimationRatio ∈ {1, 2, 4, 8} |
+| `DecimatingCaptureBuffer::readBlocking` / `readSnapshot` | `BM_DecimatingCaptureBuffer_ReadBlocking`, `BM_DecimatingCaptureBuffer_ReadSnapshot` — same cross product |
 | `SignalProcessor::process` | One benchmark per `ProcessingMode` (FullStereo, Mono, Mid, Side, Left, Right) — numSamples ∈ {64, 256, 1024, 4096} |
 | `TimingEngine::updateHostInfo` + `processBlock` | `BM_TimingEngine_Update` — block sizes ∈ {64, 128, 256, 512, 1024} |
 

@@ -1,5 +1,5 @@
 /*
-    Oscil - Animation System
+    MultiScoper - Animation System
     Dual-mode animation: exponential ease-out (default) and real spring physics.
 
     EaseOut mode: smooth monotonic transitions with no overshoot.
@@ -17,7 +17,7 @@
 #include <cmath>
 #include <map>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -315,4 +315,4 @@ private:
     std::map<juce::String, SpringAnimation> springs_;
 };
 
-} // namespace oscil
+} // namespace multiscoper

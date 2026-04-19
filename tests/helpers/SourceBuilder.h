@@ -1,5 +1,5 @@
 /*
-    Oscil - Source Builder
+    MultiScoper - Source Builder
     Fluent builder for creating Source objects in tests
 */
 
@@ -9,7 +9,7 @@
 
 #include <memory>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 /**
@@ -281,4 +281,4 @@ inline SourceId makeSourceId(const juce::String& id) { return SourceId{id}; }
  */
 inline InstanceId makeInstanceId(const juce::String& id) { return InstanceId{id}; }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

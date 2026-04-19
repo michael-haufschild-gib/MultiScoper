@@ -1,5 +1,5 @@
 /*
-    Oscil - Oscillator Handler
+    MultiScoper - Oscillator Handler
     Handles oscillator-related test server endpoints
 */
 
@@ -7,7 +7,7 @@
 
 #include "TestServerHandlerBase.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -36,4 +36,4 @@ private:
                                                    int visible);
 };
 
-} // namespace oscil
+} // namespace multiscoper

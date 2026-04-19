@@ -1,5 +1,5 @@
 /*
-    Oscil - SelectPaneDialog Tests
+    MultiScoper - SelectPaneDialog Tests
     Tests for the select pane dialog component
 */
 
@@ -10,7 +10,7 @@
 
 #include <gtest/gtest.h>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 class SelectPaneDialogTest : public ::testing::Test
@@ -101,7 +101,7 @@ TEST_F(SelectPaneDialogTest, OkClickWithNewPaneFiresCallbackWithCreateNewPaneTru
     for (int i = 0; i < dialog.getNumChildComponents(); ++i)
     {
         auto* child = dialog.getChildComponent(i);
-        if (auto* btn = dynamic_cast<OscilButton*>(child))
+        if (auto* btn = dynamic_cast<MultiScoperButton*>(child))
         {
             // Find the OK button (Primary variant)
             if (btn->getVariant() == ButtonVariant::Primary && btn->onClick)
@@ -129,7 +129,7 @@ TEST_F(SelectPaneDialogTest, CancelClickFiresCancelCallback)
     for (int i = 0; i < dialog.getNumChildComponents(); ++i)
     {
         auto* child = dialog.getChildComponent(i);
-        if (auto* btn = dynamic_cast<OscilButton*>(child))
+        if (auto* btn = dynamic_cast<MultiScoperButton*>(child))
         {
             if (btn->getVariant() == ButtonVariant::Secondary && btn->onClick)
             {
@@ -157,7 +157,7 @@ TEST_F(SelectPaneDialogTest, ResetClearsState)
     for (int i = 0; i < dialog.getNumChildComponents(); ++i)
     {
         auto* child = dialog.getChildComponent(i);
-        if (auto* btn = dynamic_cast<OscilButton*>(child))
+        if (auto* btn = dynamic_cast<MultiScoperButton*>(child))
         {
             if (btn->getVariant() == ButtonVariant::Primary && btn->onClick)
             {
@@ -184,4 +184,4 @@ TEST_F(SelectPaneDialogTest, ResizeDoesNotThrow)
     EXPECT_NO_THROW({ dialog.resized(); });
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

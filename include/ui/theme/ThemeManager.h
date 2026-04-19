@@ -1,5 +1,5 @@
 /*
-    Oscil - Theme Manager
+    MultiScoper - Theme Manager
     Theme system for customizable visual appearance
 */
 
@@ -19,7 +19,7 @@
 #include <utility>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 // Forward declarations
@@ -188,4 +188,4 @@ ColorTheme createGlassDarkBrown();
 ColorTheme createGlassDarkBlack();
 } // namespace SystemThemes
 
-} // namespace oscil
+} // namespace multiscoper

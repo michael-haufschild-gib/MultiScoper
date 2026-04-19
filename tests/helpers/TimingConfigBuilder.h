@@ -1,5 +1,5 @@
 /*
-    Oscil - Timing Config Builder
+    MultiScoper - Timing Config Builder
     Fluent builder for creating EngineTimingConfig objects in tests
 */
 
@@ -8,7 +8,7 @@
 #include "core/dsp/TimingConfig.h"
 #include "core/dsp/TimingEngine.h"
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 /**
@@ -334,4 +334,4 @@ private:
     HostTimingInfo info_;
 };
 
-} // namespace oscil::test
+} // namespace multiscoper::test

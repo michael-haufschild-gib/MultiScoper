@@ -49,19 +49,12 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y clang-format
 
       - name: clang-format check
+        # Delegates to scripts/format_lint.py so local `ctest --preset dev`
+        # (FormatLint) and CI enforce the identical file set / flag set.
         run: |
-          ERRORS=0
-          while IFS= read -r -d '' file; do
-            if ! clang-format --dry-run --Werror "$file" 2>/dev/null; then
-              echo "ERROR: $file has formatting issues"
-              ERRORS=$((ERRORS + 1))
-            fi
-          done < <(find include src tests test_harness -type f \( -name '*.cpp' -o -name '*.h' -o -name '*.hpp' \) -not -path '*/build/*' -not -path '*/_deps/*' -print0 2>/dev/null)
-          if [ $ERRORS -gt 0 ]; then
-            echo "FAILED: $ERRORS file(s) have formatting issues. Run clang-format -i on them."
-            exit 1
-          fi
-          echo "PASSED: all files formatted correctly."
+          python3 scripts/format_lint.py \
+            --root . \
+            --paths include src tests test_harness
 
       - name: Size lint (max file/function lines)
         run: |
@@ -110,21 +103,21 @@ jobs:
             cmake_preset: ci-macos
             pluginval_url: https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_macOS.zip
             pluginval_exe: pluginval.app/Contents/MacOS/pluginval
-            plugin_path: Oscil_artefacts/Release/VST3/oscil4.vst3
+            plugin_path: MultiScoper_artefacts/Release/VST3/MultiScoper.vst3
 
           - name: Windows
             os: windows-latest
             cmake_preset: ci-windows
             pluginval_url: https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_Windows.zip
             pluginval_exe: pluginval.exe
-            plugin_path: Oscil_artefacts/Release/VST3/oscil4.vst3
+            plugin_path: MultiScoper_artefacts/Release/VST3/MultiScoper.vst3
 
           - name: Linux
             os: ubuntu-22.04
             cmake_preset: ci-linux
             pluginval_url: https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_Linux.zip
             pluginval_exe: pluginval
-            plugin_path: Oscil_artefacts/Release/VST3/oscil4.vst3
+            plugin_path: MultiScoper_artefacts/Release/VST3/MultiScoper.vst3
 
     steps:
       - name: Checkout repository
@@ -231,28 +224,18 @@ jobs:
       - name: Build
         run: cmake --build --preset ${{ matrix.cmake_preset }}
 
-      # Run clang-tidy static analysis (macOS only — requires compile_commands.json from CMake)
+      # Run clang-tidy static analysis (macOS only — requires compile_commands.json from CMake).
+      # Delegates to scripts/clang_tidy_lint.py so CI and local ctest
+      # (ClangTidyLint) enforce the identical file set and flags.
       - name: Run clang-tidy
         if: runner.os == 'macOS'
         run: |
           brew install llvm
-          CLANG_TIDY="$(brew --prefix llvm)/bin/clang-tidy"
-          COMPILE_DB="build/${{ matrix.cmake_preset }}/compile_commands.json"
-          if [ ! -f "$COMPILE_DB" ]; then
-            echo "compile_commands.json not found at $COMPILE_DB"
-            exit 1
-          fi
-          ERRORS=0
-          while IFS= read -r -d '' file; do
-            if ! "$CLANG_TIDY" -p "build/${{ matrix.cmake_preset }}" "$file" 2>&1; then
-              ERRORS=$((ERRORS + 1))
-            fi
-          done < <(find src -type f -name '*.cpp' -print0)
-          if [ $ERRORS -gt 0 ]; then
-            echo "FAILED: clang-tidy found issues in $ERRORS file(s)."
-            exit 1
-          fi
-          echo "PASSED: clang-tidy found no issues."
+          python3 scripts/clang_tidy_lint.py \
+            --root . \
+            --build-dir "build/${{ matrix.cmake_preset }}" \
+            --paths src \
+            --clang-tidy "$(brew --prefix llvm)/bin/clang-tidy"
 
       # Run unit tests
       - name: Run Unit Tests
@@ -261,8 +244,8 @@ jobs:
       # Build the E2E test harness to verify it compiles
       - name: Build E2E Test Harness
         run: |
-          cmake --preset ${{ matrix.cmake_preset }} -DOSCIL_BUILD_TEST_HARNESS=ON
-          cmake --build --preset ${{ matrix.cmake_preset }} --target OscilTestHarness
+          cmake --preset ${{ matrix.cmake_preset }} -DMULTISCOPER_BUILD_TEST_HARNESS=ON
+          cmake --build --preset ${{ matrix.cmake_preset }} --target MultiScoperTestHarness
 
       # Download pluginval (skip if cached)
       - name: Download pluginval
@@ -308,23 +291,23 @@ jobs:
       - name: Upload VST3
         uses: actions/upload-artifact@v4
         with:
-          name: oscil4-vst3-${{ matrix.name }}
-          path: build/${{ matrix.cmake_preset }}/Oscil_artefacts/Release/VST3/
+          name: MultiScoper-vst3-${{ matrix.name }}
+          path: build/${{ matrix.cmake_preset }}/MultiScoper_artefacts/Release/VST3/
           if-no-files-found: error
 
       - name: Upload AU (macOS only)
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v4
         with:
-          name: oscil4-au-${{ matrix.name }}
-          path: build/${{ matrix.cmake_preset }}/Oscil_artefacts/Release/AU/
+          name: MultiScoper-au-${{ matrix.name }}
+          path: build/${{ matrix.cmake_preset }}/MultiScoper_artefacts/Release/AU/
           if-no-files-found: error
 
       - name: Upload Standalone
         uses: actions/upload-artifact@v4
         with:
-          name: oscil4-standalone-${{ matrix.name }}
-          path: build/${{ matrix.cmake_preset }}/Oscil_artefacts/Release/Standalone/
+          name: MultiScoper-standalone-${{ matrix.name }}
+          path: build/${{ matrix.cmake_preset }}/MultiScoper_artefacts/Release/Standalone/
           if-no-files-found: error
 
   # Code Coverage job
@@ -397,7 +380,7 @@ jobs:
           
           # Generate HTML report
           # We verify the executable path based on the preset binaryDir
-          llvm-cov show ./build/coverage/OscilTests \
+          llvm-cov show ./build/coverage/MultiScoperTests \
             -instr-profile=coverage.profdata \
             -format=html \
             -output-dir=coverage_report \
@@ -406,7 +389,7 @@ jobs:
             -Xdemangler=c++filt
 
           # Also generate a summary for the console
-          llvm-cov report ./build/coverage/OscilTests \
+          llvm-cov report ./build/coverage/MultiScoperTests \
             -instr-profile=coverage.profdata \
             -ignore-filename-regex="(_deps|JuceLibraryCode|tests/|test_harness/)"
 
@@ -487,11 +470,11 @@ jobs:
             -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_C_COMPILER=clang-20 \
             -DCMAKE_CXX_COMPILER=clang++-20 \
-            -DOSCIL_ENABLE_RTSAN=ON \
-            -DOSCIL_BUILD_TESTS=ON
+            -DMULTISCOPER_ENABLE_RTSAN=ON \
+            -DMULTISCOPER_BUILD_TESTS=ON
 
       - name: Build with RTSan
-        run: cmake --build build --target OscilTests --parallel
+        run: cmake --build build --target MultiScoperTests --parallel
 
       - name: Run unit tests with RTSan
         run: ctest --test-dir build --build-config Debug --output-on-failure

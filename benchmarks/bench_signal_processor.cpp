@@ -1,5 +1,5 @@
 /*
-    Benchmarks for oscil::SignalProcessor::process — one benchmark per
+    Benchmarks for multiscoper::SignalProcessor::process — one benchmark per
     ProcessingMode, sweeping numSamples ∈ {64, 256, 1024, 4096}.
 
     SignalProcessor is stateless and invoked on the UI (message) thread.
@@ -32,7 +32,7 @@ void fillDeterministic(std::vector<float>& buf, int offset)
 /// Shared body: build L/R spans and run process() in a loop. Preallocates
 /// the ProcessedSignal output buffer on the first call (permitted by the
 /// message-thread gate) so subsequent iterations avoid allocation.
-void runProcessBenchmark(benchmark::State& state, oscil::ProcessingMode mode)
+void runProcessBenchmark(benchmark::State& state, multiscoper::ProcessingMode mode)
 {
     const int numSamples = static_cast<int>(state.range(0));
 
@@ -44,14 +44,14 @@ void runProcessBenchmark(benchmark::State& state, oscil::ProcessingMode mode)
     const std::span<const float> leftSpan(left);
     const std::span<const float> rightSpan(right);
 
-    oscil::SignalProcessor processor;
-    oscil::ProcessedSignal output;
+    multiscoper::SignalProcessor processor;
+    multiscoper::ProcessedSignal output;
 
     // Pre-size output so steady-state iterations do not reallocate. The
     // first process() call would resize anyway; doing it up front keeps the
     // measurement focused on the processing path rather than on one-shot
     // allocation.
-    const bool isStereo = (mode == oscil::ProcessingMode::FullStereo);
+    const bool isStereo = (mode == multiscoper::ProcessingMode::FullStereo);
     output.resize(numSamples, isStereo);
 
     for (auto _ : state)
@@ -73,33 +73,36 @@ void runProcessBenchmark(benchmark::State& state, oscil::ProcessingMode mode)
 
 static void BM_SignalProcessor_FullStereo(benchmark::State& state)
 {
-    runProcessBenchmark(state, oscil::ProcessingMode::FullStereo);
+    runProcessBenchmark(state, multiscoper::ProcessingMode::FullStereo);
 }
 BENCHMARK(BM_SignalProcessor_FullStereo)->Arg(64)->Arg(256)->Arg(1024)->Arg(4096);
 
 static void BM_SignalProcessor_Mono(benchmark::State& state)
 {
-    runProcessBenchmark(state, oscil::ProcessingMode::Mono);
+    runProcessBenchmark(state, multiscoper::ProcessingMode::Mono);
 }
 BENCHMARK(BM_SignalProcessor_Mono)->Arg(64)->Arg(256)->Arg(1024)->Arg(4096);
 
-static void BM_SignalProcessor_Mid(benchmark::State& state) { runProcessBenchmark(state, oscil::ProcessingMode::Mid); }
+static void BM_SignalProcessor_Mid(benchmark::State& state)
+{
+    runProcessBenchmark(state, multiscoper::ProcessingMode::Mid);
+}
 BENCHMARK(BM_SignalProcessor_Mid)->Arg(64)->Arg(256)->Arg(1024)->Arg(4096);
 
 static void BM_SignalProcessor_Side(benchmark::State& state)
 {
-    runProcessBenchmark(state, oscil::ProcessingMode::Side);
+    runProcessBenchmark(state, multiscoper::ProcessingMode::Side);
 }
 BENCHMARK(BM_SignalProcessor_Side)->Arg(64)->Arg(256)->Arg(1024)->Arg(4096);
 
 static void BM_SignalProcessor_Left(benchmark::State& state)
 {
-    runProcessBenchmark(state, oscil::ProcessingMode::Left);
+    runProcessBenchmark(state, multiscoper::ProcessingMode::Left);
 }
 BENCHMARK(BM_SignalProcessor_Left)->Arg(64)->Arg(256)->Arg(1024)->Arg(4096);
 
 static void BM_SignalProcessor_Right(benchmark::State& state)
 {
-    runProcessBenchmark(state, oscil::ProcessingMode::Right);
+    runProcessBenchmark(state, multiscoper::ProcessingMode::Right);
 }
 BENCHMARK(BM_SignalProcessor_Right)->Arg(64)->Arg(256)->Arg(1024)->Arg(4096);

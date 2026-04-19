@@ -1,5 +1,5 @@
 /*
-    Oscil - Capture Buffer Tests: Metadata, Peak/RMS Edge Cases, Write Position
+    MultiScoper - Capture Buffer Tests: Metadata, Peak/RMS Edge Cases, Write Position
 */
 
 #include "core/SharedCaptureBuffer.h"
@@ -8,8 +8,8 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
-using namespace oscil::test;
+using namespace multiscoper;
+using namespace multiscoper::test;
 
 class CaptureBufferMetadataTest : public ::testing::Test
 {

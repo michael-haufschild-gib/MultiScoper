@@ -14,6 +14,13 @@ If a test fails, it fails. No exceptions.
 
 Allowed:
   - @pytest.mark.slow  — categorization, not disabling
+  - trailing ``# noqa: e2e-lint - <rationale>`` (or ``— <rationale>``) on a
+    line — suppresses soft bans only (``time.sleep``, inline ``pytest.skip``,
+    inline ``pytest.xfail``) for environmental constraints or polling with no
+    predicate. Never suppresses decorator-form ``@pytest.mark.{xfail,skip}``
+    or ``marks=pytest.mark.{xfail,skip}`` in parametrize — those disable
+    tests outright and are hard-banned. The marker must be trailing and must
+    carry a non-empty rationale after the dash.
 
 Exit code 1 on any violation.
 """
@@ -51,6 +58,13 @@ FORBIDDEN_PARAM_MARKS = [
 ]
 
 
+# Trailing noqa marker: must be at end-of-line AND carry a rationale after
+# an ASCII hyphen or em dash. Example:
+#   time.sleep(0.5)  # noqa: e2e-lint - wait for animation to settle
+#   time.sleep(0.5)  # noqa: e2e-lint — same with em dash
+NOQA_MARKER = re.compile(r"#\s*noqa:\s*e2e-lint\s*[-\u2014]\s*\S.*$")
+
+
 @dataclass(frozen=True)
 class Violation:
     file: str
@@ -71,11 +85,11 @@ def lint_file(path: Path, root: Path) -> List[Violation]:
         return violations
 
     for i, line in enumerate(lines, start=1):
-        for pattern, reason in FORBIDDEN_DECORATORS:
-            if pattern.search(line):
-                violations.append(Violation(relative, i, line.strip(), reason))
+        has_noqa = bool(NOQA_MARKER.search(line))
 
-        for pattern, reason in FORBIDDEN_INLINE:
+        # Hard bans: decorator-form skip/xfail and parametrize marks. These
+        # disable tests silently and are never suppressible.
+        for pattern, reason in FORBIDDEN_DECORATORS:
             if pattern.search(line):
                 violations.append(Violation(relative, i, line.strip(), reason))
 
@@ -83,7 +97,16 @@ def lint_file(path: Path, root: Path) -> List[Violation]:
             if pattern.search(line):
                 violations.append(Violation(relative, i, line.strip(), reason))
 
-        if is_test_file:
+        # Soft bans: inline pytest.skip/xfail calls. Suppressible only with a
+        # trailing, rationale-bearing noqa marker (environmental constraints).
+        if not has_noqa:
+            for pattern, reason in FORBIDDEN_INLINE:
+                if pattern.search(line):
+                    violations.append(Violation(relative, i, line.strip(), reason))
+
+        # Soft bans: time.sleep in test files. Suppressible with noqa +
+        # rationale for polling with no available predicate.
+        if is_test_file and not has_noqa:
             for pattern, reason in FORBIDDEN_IN_TEST_FILES_ONLY:
                 if pattern.search(line):
                     violations.append(Violation(relative, i, line.strip(), reason))

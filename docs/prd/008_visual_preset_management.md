@@ -17,7 +17,7 @@ Provide a complete user interface for managing visual presets. Users can browse,
 - Provide real-time preview while editing
 - Organize ~80 parameters into logical, navigable sections
 - Support preset organization (favorites, search, categories)
-- Maintain consistency with existing Oscil UI patterns
+- Maintain consistency with existing MultiScoper UI patterns
 
 ### 1.2 Success Criteria
 
@@ -35,7 +35,7 @@ Provide a complete user interface for managing visual presets. Users can browse,
 | Property | Value |
 |----------|-------|
 | Location | Sidebar, below oscillator list header |
-| Component | `OscilButton` with icon |
+| Component | `MultiScoperButton` with icon |
 | Icon | `resources/icomoon/SVG/equalizer.svg` |
 | Label | "Presets" |
 | TestId | `sidebar_presets_button` |
@@ -46,7 +46,7 @@ Provide a complete user interface for managing visual presets. Users can browse,
 | Property | Value |
 |----------|-------|
 | Location | Existing "Visual Preset" dropdown in OscillatorConfigDialog |
-| Component | `OscilDropdown` + "Edit" button |
+| Component | `MultiScoperDropdown` + "Edit" button |
 | TestId | `oscillator_config_preset_edit_button` |
 | Action | Open Preset Editor for selected preset |
 
@@ -65,7 +65,7 @@ Provide a complete user interface for managing visual presets. Users can browse,
 
 | Property | Value |
 |----------|-------|
-| Component | `OscilModal` + custom content |
+| Component | `MultiScoperModal` + custom content |
 | Size | Large (640x520) |
 | Title | "Visual Presets" |
 | TestId | `preset_browser_dialog` |
@@ -157,7 +157,7 @@ Provide a complete user interface for managing visual presets. Users can browse,
 
 | Property | Value |
 |----------|-------|
-| Component | `OscilModal` + custom content |
+| Component | `MultiScoperModal` + custom content |
 | Size | FullScreen or 900x700 (configurable) |
 | Title | "Edit Preset: {name}" or "New Preset" |
 | TestId | `preset_editor_dialog` |
@@ -195,9 +195,9 @@ Provide a complete user interface for managing visual presets. Users can browse,
 
 | Field | Component | TestId | Validation |
 |-------|-----------|--------|------------|
-| Name | `OscilTextField` | `preset_editor_name_field` | 1-64 chars, unique |
-| Description | `OscilTextField` | `preset_editor_description_field` | 0-256 chars |
-| Favorite | `OscilToggle` | `preset_editor_favorite_toggle` | - |
+| Name | `MultiScoperTextField` | `preset_editor_name_field` | 1-64 chars, unique |
+| Description | `MultiScoperTextField` | `preset_editor_description_field` | 0-256 chars |
+| Favorite | `MultiScoperToggle` | `preset_editor_favorite_toggle` | - |
 
 ### 4.4 Live Preview Panel
 
@@ -230,7 +230,7 @@ Provide a complete user interface for managing visual presets. Users can browse,
 
 | Field | Component | TestId | Options |
 |-------|-----------|--------|---------|
-| Shader Type | `OscilDropdown` | `preset_shader_type_dropdown` | All 15 ShaderType enum values |
+| Shader Type | `MultiScoperDropdown` | `preset_shader_type_dropdown` | All 15 ShaderType enum values |
 
 Display shader options in groups:
 - **2D Shaders**: Basic2D, NeonGlow, GradientFill, DualOutline, PlasmaSine, DigitalGlitch
@@ -241,8 +241,8 @@ Display shader options in groups:
 
 | Field | Component | TestId | Range/Options |
 |-------|-----------|--------|---------------|
-| Blend Mode | `OscilDropdown` | `preset_blend_mode_dropdown` | Alpha, Additive, Multiply, Screen |
-| Opacity | `OscilSlider` | `preset_opacity_slider` | 0.0 - 1.0, default 1.0 |
+| Blend Mode | `MultiScoperDropdown` | `preset_blend_mode_dropdown` | Alpha, Additive, Multiply, Screen |
+| Opacity | `MultiScoperSlider` | `preset_opacity_slider` | 0.0 - 1.0, default 1.0 |
 
 ### 5.2 Effects Tab
 
@@ -295,95 +295,95 @@ Each effect section contains:
 
 | Parameter | Component | TestId | Range |
 |-----------|-----------|--------|-------|
-| Intensity | `OscilSlider` | `preset_bloom_intensity` | 0.0 - 2.0 |
-| Threshold | `OscilSlider` | `preset_bloom_threshold` | 0.0 - 1.0 |
-| Iterations | `OscilSlider` (int) | `preset_bloom_iterations` | 2 - 8 |
-| Downsample Steps | `OscilSlider` (int) | `preset_bloom_downsample` | 2 - 8 |
-| Spread | `OscilSlider` | `preset_bloom_spread` | 0.5 - 3.0 |
-| Soft Knee | `OscilSlider` | `preset_bloom_soft_knee` | 0.0 - 1.0 |
+| Intensity | `MultiScoperSlider` | `preset_bloom_intensity` | 0.0 - 2.0 |
+| Threshold | `MultiScoperSlider` | `preset_bloom_threshold` | 0.0 - 1.0 |
+| Iterations | `MultiScoperSlider` (int) | `preset_bloom_iterations` | 2 - 8 |
+| Downsample Steps | `MultiScoperSlider` (int) | `preset_bloom_downsample` | 2 - 8 |
+| Spread | `MultiScoperSlider` | `preset_bloom_spread` | 0.5 - 3.0 |
+| Soft Knee | `MultiScoperSlider` | `preset_bloom_soft_knee` | 0.0 - 1.0 |
 
 #### 5.2.4 Radial Blur Parameters
 
 | Parameter | Component | TestId | Range |
 |-----------|-----------|--------|-------|
-| Amount | `OscilSlider` | `preset_radial_blur_amount` | 0.0 - 0.5 |
-| Glow | `OscilSlider` | `preset_radial_blur_glow` | 0.0 - 2.0 |
-| Samples | `OscilSlider` (int) | `preset_radial_blur_samples` | 2 - 8 |
+| Amount | `MultiScoperSlider` | `preset_radial_blur_amount` | 0.0 - 0.5 |
+| Glow | `MultiScoperSlider` | `preset_radial_blur_glow` | 0.0 - 2.0 |
+| Samples | `MultiScoperSlider` (int) | `preset_radial_blur_samples` | 2 - 8 |
 
 #### 5.2.5 Trails Parameters
 
 | Parameter | Component | TestId | Range |
 |-----------|-----------|--------|-------|
-| Decay | `OscilSlider` | `preset_trails_decay` | 0.01 - 0.5 |
-| Opacity | `OscilSlider` | `preset_trails_opacity` | 0.0 - 1.0 |
+| Decay | `MultiScoperSlider` | `preset_trails_decay` | 0.01 - 0.5 |
+| Opacity | `MultiScoperSlider` | `preset_trails_opacity` | 0.0 - 1.0 |
 
 #### 5.2.6 Color Grade Parameters
 
 | Parameter | Component | TestId | Range |
 |-----------|-----------|--------|-------|
-| Brightness | `OscilSlider` | `preset_color_brightness` | -1.0 - 1.0 |
-| Contrast | `OscilSlider` | `preset_color_contrast` | 0.5 - 2.0 |
-| Saturation | `OscilSlider` | `preset_color_saturation` | 0.0 - 2.0 |
-| Temperature | `OscilSlider` | `preset_color_temperature` | -1.0 - 1.0 |
-| Tint | `OscilSlider` | `preset_color_tint` | -1.0 - 1.0 |
-| Shadows | `OscilColorPicker` button | `preset_color_shadows` | ARGB |
-| Highlights | `OscilColorPicker` button | `preset_color_highlights` | ARGB |
+| Brightness | `MultiScoperSlider` | `preset_color_brightness` | -1.0 - 1.0 |
+| Contrast | `MultiScoperSlider` | `preset_color_contrast` | 0.5 - 2.0 |
+| Saturation | `MultiScoperSlider` | `preset_color_saturation` | 0.0 - 2.0 |
+| Temperature | `MultiScoperSlider` | `preset_color_temperature` | -1.0 - 1.0 |
+| Tint | `MultiScoperSlider` | `preset_color_tint` | -1.0 - 1.0 |
+| Shadows | `MultiScoperColorPicker` button | `preset_color_shadows` | ARGB |
+| Highlights | `MultiScoperColorPicker` button | `preset_color_highlights` | ARGB |
 
 #### 5.2.7 Vignette Parameters
 
 | Parameter | Component | TestId | Range |
 |-----------|-----------|--------|-------|
-| Intensity | `OscilSlider` | `preset_vignette_intensity` | 0.0 - 1.0 |
-| Softness | `OscilSlider` | `preset_vignette_softness` | 0.0 - 1.0 |
-| Color | `OscilColorPicker` button | `preset_vignette_color` | ARGB |
+| Intensity | `MultiScoperSlider` | `preset_vignette_intensity` | 0.0 - 1.0 |
+| Softness | `MultiScoperSlider` | `preset_vignette_softness` | 0.0 - 1.0 |
+| Color | `MultiScoperColorPicker` button | `preset_vignette_color` | ARGB |
 
 #### 5.2.8 Film Grain Parameters
 
 | Parameter | Component | TestId | Range |
 |-----------|-----------|--------|-------|
-| Intensity | `OscilSlider` | `preset_grain_intensity` | 0.0 - 0.5 |
-| Speed | `OscilSlider` | `preset_grain_speed` | 1.0 - 60.0 |
+| Intensity | `MultiScoperSlider` | `preset_grain_intensity` | 0.0 - 0.5 |
+| Speed | `MultiScoperSlider` | `preset_grain_speed` | 1.0 - 60.0 |
 
 #### 5.2.9 Chromatic Aberration Parameters
 
 | Parameter | Component | TestId | Range |
 |-----------|-----------|--------|-------|
-| Intensity | `OscilSlider` | `preset_chromatic_intensity` | 0.0 - 0.02 |
+| Intensity | `MultiScoperSlider` | `preset_chromatic_intensity` | 0.0 - 0.02 |
 
 #### 5.2.10 Scanlines Parameters
 
 | Parameter | Component | TestId | Range |
 |-----------|-----------|--------|-------|
-| Intensity | `OscilSlider` | `preset_scanlines_intensity` | 0.0 - 1.0 |
-| Density | `OscilSlider` | `preset_scanlines_density` | 0.5 - 4.0 |
-| Phosphor Glow | `OscilToggle` | `preset_scanlines_phosphor` | boolean |
+| Intensity | `MultiScoperSlider` | `preset_scanlines_intensity` | 0.0 - 1.0 |
+| Density | `MultiScoperSlider` | `preset_scanlines_density` | 0.5 - 4.0 |
+| Phosphor Glow | `MultiScoperToggle` | `preset_scanlines_phosphor` | boolean |
 
 #### 5.2.11 Distortion Parameters
 
 | Parameter | Component | TestId | Range |
 |-----------|-----------|--------|-------|
-| Intensity | `OscilSlider` | `preset_distortion_intensity` | 0.0 - 0.5 |
-| Frequency | `OscilSlider` | `preset_distortion_frequency` | 1.0 - 20.0 |
-| Speed | `OscilSlider` | `preset_distortion_speed` | 0.1 - 5.0 |
+| Intensity | `MultiScoperSlider` | `preset_distortion_intensity` | 0.0 - 0.5 |
+| Frequency | `MultiScoperSlider` | `preset_distortion_frequency` | 1.0 - 20.0 |
+| Speed | `MultiScoperSlider` | `preset_distortion_speed` | 0.1 - 5.0 |
 
 #### 5.2.12 Glitch Parameters
 
 | Parameter | Component | TestId | Range |
 |-----------|-----------|--------|-------|
-| Intensity | `OscilSlider` | `preset_glitch_intensity` | 0.0 - 1.0 |
-| Block Size | `OscilSlider` | `preset_glitch_block_size` | 0.01 - 0.2 |
-| Line Shift | `OscilSlider` | `preset_glitch_line_shift` | 0.0 - 0.1 |
-| Color Separation | `OscilSlider` | `preset_glitch_color_sep` | 0.0 - 0.05 |
-| Flicker Rate | `OscilSlider` | `preset_glitch_flicker` | 1.0 - 30.0 |
+| Intensity | `MultiScoperSlider` | `preset_glitch_intensity` | 0.0 - 1.0 |
+| Block Size | `MultiScoperSlider` | `preset_glitch_block_size` | 0.01 - 0.2 |
+| Line Shift | `MultiScoperSlider` | `preset_glitch_line_shift` | 0.0 - 0.1 |
+| Color Separation | `MultiScoperSlider` | `preset_glitch_color_sep` | 0.0 - 0.05 |
+| Flicker Rate | `MultiScoperSlider` | `preset_glitch_flicker` | 1.0 - 30.0 |
 
-#### 5.2.13 Tilt Shift Parameters
+#### 5.2.13 Tilt-Shift Parameters
 
 | Parameter | Component | TestId | Range |
 |-----------|-----------|--------|-------|
-| Position | `OscilSlider` | `preset_tilt_position` | 0.0 - 1.0 |
-| Range | `OscilSlider` | `preset_tilt_range` | 0.0 - 1.0 |
-| Blur Radius | `OscilSlider` | `preset_tilt_blur` | 0.0 - 10.0 |
-| Iterations | `OscilSlider` (int) | `preset_tilt_iterations` | 1 - 8 |
+| Position | `MultiScoperSlider` | `preset_tilt_position` | 0.0 - 1.0 |
+| Range | `MultiScoperSlider` | `preset_tilt_range` | 0.0 - 1.0 |
+| Blur Radius | `MultiScoperSlider` | `preset_tilt_blur` | 0.0 - 10.0 |
+| Iterations | `MultiScoperSlider` (int) | `preset_tilt_iterations` | 1 - 8 |
 
 ### 5.3 Particles Tab
 
@@ -391,7 +391,7 @@ Each effect section contains:
 
 | Field | Component | TestId |
 |-------|-----------|--------|
-| Enable Particles | `OscilToggle` | `preset_particles_enabled` |
+| Enable Particles | `MultiScoperToggle` | `preset_particles_enabled` |
 
 When disabled, entire tab content is dimmed/disabled.
 
@@ -399,47 +399,47 @@ When disabled, entire tab content is dimmed/disabled.
 
 | Parameter | Component | TestId | Options/Range |
 |-----------|-----------|--------|---------------|
-| Emission Mode | `OscilDropdown` | `preset_particles_mode` | AlongWaveform, AtPeaks, AtZeroCrossings, Continuous, Burst |
-| Emission Rate | `OscilSlider` | `preset_particles_rate` | 1.0 - 1000.0 |
-| Particle Life | `OscilSlider` | `preset_particles_life` | 0.1 - 10.0 |
-| Particle Size | `OscilSlider` | `preset_particles_size` | 1.0 - 32.0 |
-| Particle Color | `OscilColorPicker` button | `preset_particles_color` | ARGB |
-| Blend Mode | `OscilDropdown` | `preset_particles_blend` | Additive, Alpha, Multiply, Screen |
+| Emission Mode | `MultiScoperDropdown` | `preset_particles_mode` | AlongWaveform, AtPeaks, AtZeroCrossings, Continuous, Burst |
+| Emission Rate | `MultiScoperSlider` | `preset_particles_rate` | 1.0 - 1000.0 |
+| Particle Life | `MultiScoperSlider` | `preset_particles_life` | 0.1 - 10.0 |
+| Particle Size | `MultiScoperSlider` | `preset_particles_size` | 1.0 - 32.0 |
+| Particle Color | `MultiScoperColorPicker` button | `preset_particles_color` | ARGB |
+| Blend Mode | `MultiScoperDropdown` | `preset_particles_blend` | Additive, Alpha, Multiply, Screen |
 
 #### 5.3.3 Physics Section
 
 | Parameter | Component | TestId | Range |
 |-----------|-----------|--------|-------|
-| Gravity | `OscilSlider` | `preset_particles_gravity` | -100.0 - 100.0 |
-| Drag | `OscilSlider` | `preset_particles_drag` | 0.0 - 1.0 |
-| Randomness | `OscilSlider` | `preset_particles_randomness` | 0.0 - 1.0 |
-| Velocity Scale | `OscilSlider` | `preset_particles_velocity` | 0.0 - 5.0 |
+| Gravity | `MultiScoperSlider` | `preset_particles_gravity` | -100.0 - 100.0 |
+| Drag | `MultiScoperSlider` | `preset_particles_drag` | 0.0 - 1.0 |
+| Randomness | `MultiScoperSlider` | `preset_particles_randomness` | 0.0 - 1.0 |
+| Velocity Scale | `MultiScoperSlider` | `preset_particles_velocity` | 0.0 - 5.0 |
 
 #### 5.3.4 Audio Reactivity Section
 
 | Parameter | Component | TestId | Range |
 |-----------|-----------|--------|-------|
-| Audio Reactive | `OscilToggle` | `preset_particles_audio_reactive` | boolean |
-| Emission Boost | `OscilSlider` | `preset_particles_audio_boost` | 1.0 - 10.0 |
+| Audio Reactive | `MultiScoperToggle` | `preset_particles_audio_reactive` | boolean |
+| Emission Boost | `MultiScoperSlider` | `preset_particles_audio_boost` | 1.0 - 10.0 |
 
 #### 5.3.5 Texture Section
 
 | Parameter | Component | TestId | Options/Range |
 |-----------|-----------|--------|---------------|
-| Texture | `OscilDropdown` | `preset_particles_texture` | "(none)", "sparkle", "dot", "star", etc. |
-| Texture Rows | `OscilSlider` (int) | `preset_particles_tex_rows` | 1 - 16 |
-| Texture Columns | `OscilSlider` (int) | `preset_particles_tex_cols` | 1 - 16 |
+| Texture | `MultiScoperDropdown` | `preset_particles_texture` | "(none)", "sparkle", "dot", "star", etc. |
+| Texture Rows | `MultiScoperSlider` (int) | `preset_particles_tex_rows` | 1 - 16 |
+| Texture Columns | `MultiScoperSlider` (int) | `preset_particles_tex_cols` | 1 - 16 |
 
 #### 5.3.6 Advanced Section (Collapsible)
 
 | Parameter | Component | TestId | Range |
 |-----------|-----------|--------|-------|
-| Soft Particles | `OscilToggle` | `preset_particles_soft` | boolean |
-| Depth Sensitivity | `OscilSlider` | `preset_particles_soft_depth` | 0.1 - 5.0 |
-| Use Turbulence | `OscilToggle` | `preset_particles_turbulence` | boolean |
-| Turbulence Strength | `OscilSlider` | `preset_particles_turb_strength` | 0.0 - 10.0 |
-| Turbulence Scale | `OscilSlider` | `preset_particles_turb_scale` | 0.1 - 2.0 |
-| Turbulence Speed | `OscilSlider` | `preset_particles_turb_speed` | 0.1 - 2.0 |
+| Soft Particles | `MultiScoperToggle` | `preset_particles_soft` | boolean |
+| Depth Sensitivity | `MultiScoperSlider` | `preset_particles_soft_depth` | 0.1 - 5.0 |
+| Use Turbulence | `MultiScoperToggle` | `preset_particles_turbulence` | boolean |
+| Turbulence Strength | `MultiScoperSlider` | `preset_particles_turb_strength` | 0.0 - 10.0 |
+| Turbulence Scale | `MultiScoperSlider` | `preset_particles_turb_scale` | 0.1 - 2.0 |
+| Turbulence Speed | `MultiScoperSlider` | `preset_particles_turb_speed` | 0.1 - 2.0 |
 
 ### 5.4 3D/Camera Tab
 
@@ -447,7 +447,7 @@ When disabled, entire tab content is dimmed/disabled.
 
 | Field | Component | TestId |
 |-------|-----------|--------|
-| Enable 3D | `OscilToggle` | `preset_3d_enabled` |
+| Enable 3D | `MultiScoperToggle` | `preset_3d_enabled` |
 
 Note: When ShaderType is a 3D or Material shader, this is automatically enabled and locked.
 
@@ -455,32 +455,32 @@ Note: When ShaderType is a 3D or Material shader, this is automatically enabled 
 
 | Parameter | Component | TestId | Range |
 |-----------|-----------|--------|-------|
-| Camera Distance | `OscilSlider` | `preset_3d_distance` | 1.0 - 20.0 |
-| Camera Pitch (X) | `OscilSlider` | `preset_3d_angle_x` | -90.0 - 90.0 |
-| Camera Yaw (Y) | `OscilSlider` | `preset_3d_angle_y` | 0.0 - 360.0 |
-| Auto Rotate | `OscilToggle` | `preset_3d_auto_rotate` | boolean |
-| Rotation Speed | `OscilSlider` | `preset_3d_rotate_speed` | 0.0 - 60.0 |
+| Camera Distance | `MultiScoperSlider` | `preset_3d_distance` | 1.0 - 20.0 |
+| Camera Pitch (X) | `MultiScoperSlider` | `preset_3d_angle_x` | -90.0 - 90.0 |
+| Camera Yaw (Y) | `MultiScoperSlider` | `preset_3d_angle_y` | 0.0 - 360.0 |
+| Auto Rotate | `MultiScoperToggle` | `preset_3d_auto_rotate` | boolean |
+| Rotation Speed | `MultiScoperSlider` | `preset_3d_rotate_speed` | 0.0 - 60.0 |
 
 #### 5.4.3 Mesh Section
 
 | Parameter | Component | TestId | Range |
 |-----------|-----------|--------|-------|
-| Resolution X | `OscilSlider` (int) | `preset_3d_mesh_res_x` | 16 - 512 |
-| Resolution Z | `OscilSlider` (int) | `preset_3d_mesh_res_z` | 8 - 128 |
-| Mesh Scale | `OscilSlider` | `preset_3d_mesh_scale` | 0.1 - 5.0 |
+| Resolution X | `MultiScoperSlider` (int) | `preset_3d_mesh_res_x` | 16 - 512 |
+| Resolution Z | `MultiScoperSlider` (int) | `preset_3d_mesh_res_z` | 8 - 128 |
+| Mesh Scale | `MultiScoperSlider` | `preset_3d_mesh_scale` | 0.1 - 5.0 |
 
 #### 5.4.4 Lighting Section
 
 | Parameter | Component | TestId | Range |
 |-----------|-----------|--------|-------|
-| Light Direction X | `OscilSlider` | `preset_light_dir_x` | -1.0 - 1.0 |
-| Light Direction Y | `OscilSlider` | `preset_light_dir_y` | -1.0 - 1.0 |
-| Light Direction Z | `OscilSlider` | `preset_light_dir_z` | -1.0 - 1.0 |
-| Ambient Color | `OscilColorPicker` button | `preset_light_ambient` | RGB |
-| Diffuse Color | `OscilColorPicker` button | `preset_light_diffuse` | RGB |
-| Specular Color | `OscilColorPicker` button | `preset_light_specular` | RGB |
-| Specular Power | `OscilSlider` | `preset_light_spec_power` | 1.0 - 256.0 |
-| Specular Intensity | `OscilSlider` | `preset_light_spec_intensity` | 0.0 - 2.0 |
+| Light Direction X | `MultiScoperSlider` | `preset_light_dir_x` | -1.0 - 1.0 |
+| Light Direction Y | `MultiScoperSlider` | `preset_light_dir_y` | -1.0 - 1.0 |
+| Light Direction Z | `MultiScoperSlider` | `preset_light_dir_z` | -1.0 - 1.0 |
+| Ambient Color | `MultiScoperColorPicker` button | `preset_light_ambient` | RGB |
+| Diffuse Color | `MultiScoperColorPicker` button | `preset_light_diffuse` | RGB |
+| Specular Color | `MultiScoperColorPicker` button | `preset_light_specular` | RGB |
+| Specular Power | `MultiScoperSlider` | `preset_light_spec_power` | 1.0 - 256.0 |
+| Specular Intensity | `MultiScoperSlider` | `preset_light_spec_intensity` | 0.0 - 2.0 |
 
 ### 5.5 Materials Tab
 
@@ -488,7 +488,7 @@ Note: When ShaderType is a 3D or Material shader, this is automatically enabled 
 
 | Field | Component | TestId |
 |-------|-----------|--------|
-| Enable Materials | `OscilToggle` | `preset_material_enabled` |
+| Enable Materials | `MultiScoperToggle` | `preset_material_enabled` |
 
 Note: When ShaderType is a Material shader, this is automatically enabled and locked.
 
@@ -496,18 +496,18 @@ Note: When ShaderType is a Material shader, this is automatically enabled and lo
 
 | Parameter | Component | TestId | Range |
 |-----------|-----------|--------|-------|
-| Reflectivity | `OscilSlider` | `preset_material_reflectivity` | 0.0 - 1.0 |
-| Refractive Index | `OscilSlider` | `preset_material_ior` | 1.0 - 3.0 |
-| Fresnel Power | `OscilSlider` | `preset_material_fresnel` | 0.5 - 5.0 |
-| Roughness | `OscilSlider` | `preset_material_roughness` | 0.0 - 1.0 |
-| Tint Color | `OscilColorPicker` button | `preset_material_tint` | ARGB |
+| Reflectivity | `MultiScoperSlider` | `preset_material_reflectivity` | 0.0 - 1.0 |
+| Refractive Index | `MultiScoperSlider` | `preset_material_ior` | 1.0 - 3.0 |
+| Fresnel Power | `MultiScoperSlider` | `preset_material_fresnel` | 0.5 - 5.0 |
+| Roughness | `MultiScoperSlider` | `preset_material_roughness` | 0.0 - 1.0 |
+| Tint Color | `MultiScoperColorPicker` button | `preset_material_tint` | ARGB |
 
 #### 5.5.3 Environment Section
 
 | Parameter | Component | TestId | Options |
 |-----------|-----------|--------|---------|
-| Use Environment Map | `OscilToggle` | `preset_material_use_env` | boolean |
-| Environment Map | `OscilDropdown` | `preset_material_env_map` | "default_studio", "sunset", "night", "abstract" |
+| Use Environment Map | `MultiScoperToggle` | `preset_material_use_env` | boolean |
+| Environment Map | `MultiScoperDropdown` | `preset_material_env_map` | "default_studio", "sunset", "night", "abstract" |
 
 ---
 

@@ -1,12 +1,12 @@
 /*
-    Oscil - Transient Detector Tests
+    MultiScoper - Transient Detector Tests
 */
 
 #include "core/analysis/TransientDetector.h"
 
 #include <gtest/gtest.h>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -26,9 +26,9 @@ struct TransientDetectorTestAccess
     static double& samplesSincePeakIncrease(TransientDetector& d) { return d.samplesSincePeakIncrease_; }
 };
 
-} // namespace oscil
+} // namespace multiscoper
 
-using namespace oscil;
+using namespace multiscoper;
 
 // ============================================================================
 // Behavioral Tests (public interface only)

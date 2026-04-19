@@ -1,5 +1,5 @@
 /*
-    Oscil - Sidebar Component Implementation
+    MultiScoper - Sidebar Component Implementation
     Collapsible sidebar with sources list and oscillator list
 */
 
@@ -9,7 +9,7 @@
 #include "ui/components/SurfaceStyle.h"
 #include "ui/components/TestId.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 // SidebarResizeHandle implementation
@@ -18,8 +18,8 @@ SidebarResizeHandle::SidebarResizeHandle(IThemeService& themeService) : themeSer
 {
     setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);
 
-#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
-    OSCIL_REGISTER_TEST_ID("sidebar_resizeHandle");
+#if defined(TEST_HARNESS) || defined(MULTISCOPER_ENABLE_TEST_IDS)
+    MULTISCOPER_REGISTER_TEST_ID("sidebar_resizeHandle");
 #endif
 }
 
@@ -100,7 +100,7 @@ void SidebarCollapseButton::paint(juce::Graphics& g)
     if (isHovered_)
     {
         g.setColour(theme.textPrimary.withAlpha(0.08f));
-        g.fillRoundedRectangle(bounds, 4.0f);
+        g.fillRect(bounds);
     }
 
     // Draw chevron
@@ -164,8 +164,8 @@ SidebarComponent::SidebarComponent(ServiceContext& context)
     widthSpring_.position = static_cast<float>(expandedWidth_);
     widthSpring_.target = static_cast<float>(expandedWidth_);
 
-#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
-    OSCIL_REGISTER_TEST_ID("sidebar");
+#if defined(TEST_HARNESS) || defined(MULTISCOPER_ENABLE_TEST_IDS)
+    MULTISCOPER_REGISTER_TEST_ID("sidebar");
 #endif
 
     // Create resize handle
@@ -191,7 +191,7 @@ SidebarComponent::SidebarComponent(ServiceContext& context)
 
     // All sections in scrollable viewport
     accordionViewport_ = std::make_unique<juce::Viewport>();
-    accordion_ = std::make_unique<OscilAccordion>(getThemeService());
+    accordion_ = std::make_unique<MultiScoperAccordion>(getThemeService());
 
     accordionViewport_->setViewedComponent(accordion_.get(), false);
     accordionViewport_->setScrollBarsShown(true, false);
@@ -415,4 +415,4 @@ void SidebarComponent::setupSections()
 // Section listener callbacks (oscillator*, timing*, display*, etc.)
 // are in SidebarComponentHandlers.cpp
 
-} // namespace oscil
+} // namespace multiscoper

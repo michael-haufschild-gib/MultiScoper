@@ -1,18 +1,18 @@
 /*
-    Oscil Test Harness - UI Controller: Form Interactions
+    MultiScoper Test Harness - UI Controller: Form Interactions
 */
 
 #include "ui/components/InlineEditLabel.h"
-#include "ui/components/OscilButton.h"
-#include "ui/components/OscilDropdown.h"
-#include "ui/components/OscilSlider.h"
-#include "ui/components/OscilTextField.h"
-#include "ui/components/OscilToggle.h"
+#include "ui/components/MultiScoperButton.h"
+#include "ui/components/MultiScoperDropdown.h"
+#include "ui/components/MultiScoperSlider.h"
+#include "ui/components/MultiScoperTextField.h"
+#include "ui/components/MultiScoperToggle.h"
 
 #include "TestDAW.h"
 #include "TestUIController.h"
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 // ================== Form Interactions ==================
@@ -53,13 +53,13 @@ bool TestUIController::selectById(const juce::String& elementId, const juce::Str
         if (!component)
             return false;
 
-        if (auto* oscilDropdown = dynamic_cast<oscil::OscilDropdown*>(component))
+        if (auto* multiscoperDropdown = dynamic_cast<multiscoper::MultiScoperDropdown*>(component))
         {
-            for (int i = 0; i < oscilDropdown->getNumItems(); ++i)
+            for (int i = 0; i < multiscoperDropdown->getNumItems(); ++i)
             {
-                if (oscilDropdown->getItem(i).id == itemId)
+                if (multiscoperDropdown->getItem(i).id == itemId)
                 {
-                    oscilDropdown->setSelectedIndex(i, true);
+                    multiscoperDropdown->setSelectedIndex(i, true);
                     return true;
                 }
             }
@@ -83,9 +83,9 @@ bool TestUIController::toggle(const juce::String& elementId, bool value)
         if (!component)
             return false;
 
-        if (auto* oscilToggle = dynamic_cast<oscil::OscilToggle*>(component))
+        if (auto* multiscoperToggle = dynamic_cast<multiscoper::MultiScoperToggle*>(component))
         {
-            oscilToggle->setValue(value);
+            multiscoperToggle->setValue(value);
             return true;
         }
         if (auto* toggleButton = dynamic_cast<juce::ToggleButton*>(component))
@@ -113,14 +113,14 @@ bool TestUIController::setSliderValue(const juce::String& elementId, double valu
             slider->setValue(value, juce::sendNotification);
             return true;
         }
-        if (auto* textField = dynamic_cast<oscil::OscilTextField*>(component))
+        if (auto* textField = dynamic_cast<multiscoper::MultiScoperTextField*>(component))
         {
             textField->setNumericValue(value, true);
             return true;
         }
-        if (auto* oscilSlider = dynamic_cast<oscil::OscilSlider*>(component))
+        if (auto* multiscoperSlider = dynamic_cast<multiscoper::MultiScoperSlider*>(component))
         {
-            oscilSlider->setValue(value);
+            multiscoperSlider->setValue(value);
             return true;
         }
         return false;
@@ -133,12 +133,12 @@ bool TestUIController::adjustSlider(const juce::String& elementId, int direction
         if (!component)
             return false;
 
-        if (auto* oscilSlider = dynamic_cast<oscil::OscilSlider*>(component))
+        if (auto* multiscoperSlider = dynamic_cast<multiscoper::MultiScoperSlider*>(component))
         {
-            double step = oscilSlider->getStep();
+            double step = multiscoperSlider->getStep();
             if (step == 0.0)
-                step = (oscilSlider->getMaximum() - oscilSlider->getMinimum()) / 100.0;
-            oscilSlider->setValue(oscilSlider->getValue() + step * direction);
+                step = (multiscoperSlider->getMaximum() - multiscoperSlider->getMinimum()) / 100.0;
+            multiscoperSlider->setValue(multiscoperSlider->getValue() + step * direction);
             return true;
         }
         if (auto* slider = dynamic_cast<juce::Slider*>(component))
@@ -174,12 +174,12 @@ bool TestUIController::typeText(const juce::String& elementId, const juce::Strin
             textEditor->setText(text, juce::sendNotification);
             return true;
         }
-        if (auto* oscilField = dynamic_cast<oscil::OscilTextField*>(component))
+        if (auto* multiscoperField = dynamic_cast<multiscoper::MultiScoperTextField*>(component))
         {
-            oscilField->setText(text, true);
+            multiscoperField->setText(text, true);
             return true;
         }
-        if (auto* inlineLabel = dynamic_cast<oscil::InlineEditLabel*>(component))
+        if (auto* inlineLabel = dynamic_cast<multiscoper::InlineEditLabel*>(component))
         {
             inlineLabel->setText(text, true);
             return true;
@@ -198,4 +198,4 @@ bool TestUIController::typeText(const juce::String& elementId, const juce::Strin
 
 bool TestUIController::clearText(const juce::String& elementId) { return typeText(elementId, juce::String()); }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

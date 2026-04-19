@@ -1,5 +1,5 @@
 /*
-    Oscil - Bloom Effect
+    MultiScoper - Bloom Effect
     Multi-pass bloom/glow effect for bright areas
 */
 
@@ -10,9 +10,9 @@
 
 #include <memory>
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -93,6 +93,6 @@ private:
     void passCombine(Framebuffer* source, Framebuffer* destination, FramebufferPool& pool);
 };
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

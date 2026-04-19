@@ -1,5 +1,5 @@
 /*
-    Oscil - Visual Configuration Validation Tests
+    MultiScoper - Visual Configuration Validation Tests
     Tests for shader type validation, enum conversions, and default values
 */
 
@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class ShaderTypeTest : public ::testing::Test
 {

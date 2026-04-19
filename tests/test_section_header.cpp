@@ -1,5 +1,5 @@
 /*
-    Oscil - Section Header Tests
+    MultiScoper - Section Header Tests
 
     Covers: title round-trip, chevron hit-testing (left vs right bounds fire
     onPrev/onNext), suppression when chevrons hidden, accent setter contract.
@@ -10,7 +10,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 namespace
 {

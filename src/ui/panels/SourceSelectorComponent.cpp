@@ -1,5 +1,5 @@
 /*
-    Oscil - Source Selector Component Implementation
+    MultiScoper - Source Selector Component Implementation
     (SourceListItem implementation is in SourceListItem.cpp)
 */
 
@@ -7,7 +7,7 @@
 
 #include "ui/theme/Typography.h"
 
-namespace oscil
+namespace multiscoper
 {
 SourceSelectorComponent::SourceSelectorComponent(IThemeService& themeService, IInstanceRegistry& instanceRegistry)
     : themeService_(themeService)
@@ -31,11 +31,11 @@ void SourceSelectorComponent::paint(juce::Graphics& g)
 
     // Background
     g.setColour(theme.controlBackground);
-    g.fillRoundedRectangle(bounds, 4.0f);
+    g.fillRect(bounds);
 
     // Border
     g.setColour(theme.controlBorder);
-    g.drawRoundedRectangle(bounds, 4.0f, 1.0f);
+    g.drawRect(bounds, 1.0f);
 
     bounds = bounds.reduced(8, 4);
 
@@ -58,7 +58,7 @@ void SourceSelectorComponent::paint(juce::Graphics& g)
         juce::Colour const badgeColor = channelCount_ == 2 ? theme.controlActive : theme.textSecondary;
 
         g.setColour(badgeColor.withAlpha(0.2f));
-        g.fillRoundedRectangle(badgeBounds.reduced(2, 4), 8.0f);
+        g.fillRect(badgeBounds.reduced(2, 4));
         g.setColour(badgeColor);
         // Preserve 10pt — pre-sized badge; upsize risks clipping.
         g.setFont(Typography::caption().withHeight(10.0f));
@@ -189,4 +189,4 @@ void SourceSelectorComponent::sourceUpdated(const SourceId& /*sourceId*/)
     });
 }
 
-} // namespace oscil
+} // namespace multiscoper

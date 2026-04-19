@@ -1,12 +1,12 @@
 /*
-    Oscil - Dialog Manager Implementation
+    MultiScoper - Dialog Manager Implementation
 */
 
 #include "ui/managers/DialogManager.h"
 
-#include "core/OscilLog.h"
+#include "core/MultiScoperLog.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 DialogManager::DialogManager(juce::Component& parent, IThemeService& themeService, IInstanceRegistry& instanceRegistry)
@@ -18,24 +18,24 @@ DialogManager::DialogManager(juce::Component& parent, IThemeService& themeServic
 
     // Initialize Add Oscillator Dialog
     addOscillatorDialogContent_ = std::make_unique<AddOscillatorDialog>(themeService_);
-    addOscillatorModal_ = std::make_unique<OscilModal>(themeService_, "Add Oscillator", "addOscillatorModal");
+    addOscillatorModal_ = std::make_unique<MultiScoperModal>(themeService_, "Add Oscillator", "addOscillatorModal");
     addOscillatorModal_->setContent(addOscillatorDialogContent_.get());
 
     // Initialize Color Dialog
     colorDialogContent_ = std::make_unique<OscillatorColorDialog>(themeService_);
-    colorModal_ = std::make_unique<OscilModal>(themeService_, "Select Color", "colorDialogModal");
+    colorModal_ = std::make_unique<MultiScoperModal>(themeService_, "Select Color", "colorDialogModal");
     colorModal_->setContent(colorDialogContent_.get());
 
     // Initialize Select Pane Dialog
     selectPaneDialogContent_ = std::make_unique<SelectPaneDialog>(themeService_);
-    selectPaneModal_ = std::make_unique<OscilModal>(themeService_, "Select Pane", "selectPaneModal");
+    selectPaneModal_ = std::make_unique<MultiScoperModal>(themeService_, "Select Pane", "selectPaneModal");
     selectPaneModal_->setContent(selectPaneDialogContent_.get());
 
     // Initialize Config Popup (Content)
     configPopup_ = std::make_unique<OscillatorConfigDialog>(themeService_, instanceRegistry_);
 
     // Initialize Config Modal
-    configModal_ = std::make_unique<OscilModal>(themeService_, "Configure Oscillator", "configModal");
+    configModal_ = std::make_unique<MultiScoperModal>(themeService_, "Configure Oscillator", "configModal");
     configModal_->setContent(configPopup_.get());
 
     // Close wiring: the content's footer Close button asks the modal to hide.
@@ -59,7 +59,7 @@ DialogManager::~DialogManager()
 void DialogManager::showAddOscillatorDialog(const std::vector<SourceInfo>& sources, const std::vector<Pane>& panes,
                                             std::function<void(const AddOscillatorDialog::Result&)> onComplete)
 {
-    OSCIL_LOG(DIALOG, "showAddOscillatorDialog: " << sources.size() << " sources, " << panes.size() << " panes");
+    MULTISCOPER_LOG(DIALOG, "showAddOscillatorDialog: " << sources.size() << " sources, " << panes.size() << " panes");
     if (!addOscillatorModal_ || !addOscillatorDialogContent_)
         return;
 
@@ -78,7 +78,7 @@ void DialogManager::showAddOscillatorDialog(const std::vector<SourceInfo>& sourc
 
 void DialogManager::showColorDialog(juce::Colour initialColor, std::function<void(juce::Colour)> onColorSelected)
 {
-    OSCIL_LOG(DIALOG, "showColorDialog: initialColor=#" << initialColor.toDisplayString(false));
+    MULTISCOPER_LOG(DIALOG, "showColorDialog: initialColor=#" << initialColor.toDisplayString(false));
     if (!colorModal_ || !colorDialogContent_)
         return;
 
@@ -100,7 +100,7 @@ void DialogManager::showSelectPaneDialog(const std::vector<Pane>& availablePanes
                                          std::function<void(const SelectPaneDialog::Result&)> onComplete,
                                          std::function<void()> onCancel)
 {
-    OSCIL_LOG(DIALOG, "showSelectPaneDialog: " << availablePanes.size() << " panes");
+    MULTISCOPER_LOG(DIALOG, "showSelectPaneDialog: " << availablePanes.size() << " panes");
     if (!selectPaneModal_ || !selectPaneDialogContent_)
         return;
 
@@ -124,8 +124,8 @@ void DialogManager::showSelectPaneDialog(const std::vector<Pane>& availablePanes
 void DialogManager::showConfigPopup(const Oscillator& oscillator,
                                     const std::vector<std::pair<PaneId, juce::String>>& availablePanes)
 {
-    OSCIL_LOG(DIALOG, "showConfigPopup: oscId=" << oscillator.getId().id << " name=" << oscillator.getName()
-                                                << " panes=" << availablePanes.size());
+    MULTISCOPER_LOG(DIALOG, "showConfigPopup: oscId=" << oscillator.getId().id << " name=" << oscillator.getName()
+                                                      << " panes=" << availablePanes.size());
     if (!configPopup_ || !configModal_)
         return;
 
@@ -137,7 +137,7 @@ void DialogManager::showConfigPopup(const Oscillator& oscillator,
 
 void DialogManager::closeConfigPopup()
 {
-    OSCIL_LOG(DIALOG, "closeConfigPopup");
+    MULTISCOPER_LOG(DIALOG, "closeConfigPopup");
     if (configModal_)
         configModal_->hide();
 }
@@ -184,4 +184,4 @@ void DialogManager::componentBeingDeleted(juce::Component& component)
     }
 }
 
-} // namespace oscil
+} // namespace multiscoper

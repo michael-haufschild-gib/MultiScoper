@@ -1,11 +1,11 @@
 /*
-    Oscil Test Harness - UI Controller: Focus Management, State Queries & Waits
+    MultiScoper Test Harness - UI Controller: Focus Management, State Queries & Waits
 */
 
-#include "ui/components/OscilDropdown.h"
-#include "ui/components/OscilSlider.h"
-#include "ui/components/OscilTextField.h"
-#include "ui/components/OscilToggle.h"
+#include "ui/components/MultiScoperDropdown.h"
+#include "ui/components/MultiScoperSlider.h"
+#include "ui/components/MultiScoperTextField.h"
+#include "ui/components/MultiScoperToggle.h"
 
 #include "TestDAW.h"
 #include "TestUIController.h"
@@ -15,18 +15,24 @@
 #include <limits>
 #include <thread>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 // ================== Focus Management ==================
 
 bool TestUIController::setFocus(const juce::String& elementId)
 {
+    // Return the post-grab truth — grabKeyboardFocus() is advisory and
+    // silently fails when JUCE's focus system rejects the grab (most
+    // commonly: the harness window is not the active OS window, e.g. a
+    // backgrounded macOS app). Reporting success regardless would lie
+    // to e2e tests, which then fail with confusing downstream assertions
+    // instead of skipping for the environmental reason.
     return runOnMessageThreadSync(elementId, [](juce::Component* comp) -> bool {
         if (!comp)
             return false;
         comp->grabKeyboardFocus();
-        return true;
+        return comp->hasKeyboardFocus(true);
     });
 }
 
@@ -170,8 +176,8 @@ double TestUIController::getSliderValue(const juce::String& elementId)
 {
     return runOnMessageThreadSyncWithResult<double>(
         elementId, std::numeric_limits<double>::quiet_NaN(), [](juce::Component* component) -> double {
-            if (auto* oscilSlider = dynamic_cast<oscil::OscilSlider*>(component))
-                return oscilSlider->getValue();
+            if (auto* multiscoperSlider = dynamic_cast<multiscoper::MultiScoperSlider*>(component))
+                return multiscoperSlider->getValue();
             if (auto* slider = dynamic_cast<juce::Slider*>(component))
                 return slider->getValue();
             return std::numeric_limits<double>::quiet_NaN();
@@ -182,8 +188,8 @@ std::pair<double, double> TestUIController::getSliderRange(const juce::String& e
 {
     return runOnMessageThreadSyncWithResult<std::pair<double, double>>(
         elementId, {0.0, 1.0}, [](juce::Component* component) -> std::pair<double, double> {
-            if (auto* oscilSlider = dynamic_cast<oscil::OscilSlider*>(component))
-                return {oscilSlider->getMinimum(), oscilSlider->getMaximum()};
+            if (auto* multiscoperSlider = dynamic_cast<multiscoper::MultiScoperSlider*>(component))
+                return {multiscoperSlider->getMinimum(), multiscoperSlider->getMaximum()};
             if (auto* slider = dynamic_cast<juce::Slider*>(component))
                 return {slider->getMinimum(), slider->getMaximum()};
             return {0.0, 1.0};
@@ -193,8 +199,8 @@ std::pair<double, double> TestUIController::getSliderRange(const juce::String& e
 bool TestUIController::getToggleState(const juce::String& elementId)
 {
     return runOnMessageThreadSync(elementId, [](juce::Component* component) -> bool {
-        if (auto* oscilToggle = dynamic_cast<oscil::OscilToggle*>(component))
-            return oscilToggle->getValue();
+        if (auto* multiscoperToggle = dynamic_cast<multiscoper::MultiScoperToggle*>(component))
+            return multiscoperToggle->getValue();
         if (auto* button = dynamic_cast<juce::Button*>(component))
             return button->getToggleState();
         return false;
@@ -205,8 +211,8 @@ juce::String TestUIController::getTextContent(const juce::String& elementId)
 {
     return runOnMessageThreadSyncWithResult<juce::String>(
         elementId, juce::String{}, [](juce::Component* component) -> juce::String {
-            if (auto* oscilTextField = dynamic_cast<oscil::OscilTextField*>(component))
-                return oscilTextField->getText();
+            if (auto* multiscoperTextField = dynamic_cast<multiscoper::MultiScoperTextField*>(component))
+                return multiscoperTextField->getText();
             if (auto* textEditor = dynamic_cast<juce::TextEditor*>(component))
                 return textEditor->getText();
             if (auto* label = dynamic_cast<juce::Label*>(component))
@@ -220,8 +226,8 @@ juce::String TestUIController::getTextContent(const juce::String& elementId)
 int TestUIController::getSelectedItemId(const juce::String& elementId)
 {
     return runOnMessageThreadSyncWithResult<int>(elementId, 0, [](juce::Component* component) -> int {
-        if (auto* oscilDropdown = dynamic_cast<oscil::OscilDropdown*>(component))
-            return oscilDropdown->getSelectedIndex();
+        if (auto* multiscoperDropdown = dynamic_cast<multiscoper::MultiScoperDropdown*>(component))
+            return multiscoperDropdown->getSelectedIndex();
         if (auto* comboBox = dynamic_cast<juce::ComboBox*>(component))
             return comboBox->getSelectedId();
         return 0;
@@ -309,4 +315,4 @@ bool TestUIController::waitForSliderValue(const juce::String& elementId, double 
     }
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>main-plugin-layouts</title>
+<style>
+body { margin:0; padding:24px; background:#05070B; font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; color:#E8EAED; font-variant-numeric: tabular-nums; }
+.variant-label { font-size:12px; color:#8A94A3; text-transform:uppercase; letter-spacing:0.08em; margin:0 0 8px 0; }
+.frame { position:relative; width:1200px; height:760px; overflow:hidden; margin:0 0 24px 0; background:#0A0D12; border-radius:10px; }
+.content-area { position:absolute; left:0; top:0; height:738px; background:#0A0D12; }
+.sidebar { position:absolute; right:0; top:0; height:738px; background:#10141B; border-left:1px solid #1F2630; }
+.status-bar { position:absolute; left:0; bottom:0; width:1200px; height:22px; background:#10141B; }
+.pane { position:absolute; background:#0F131A; border-radius:10px; border:1px solid rgba(232,234,237,0.12); overflow:hidden; }
+.pane-header { position:absolute; left:0; top:0; right:0; height:32px; background:rgba(232,234,237,0.08); border-bottom:1px solid rgba(232,234,237,0.12); }
+.drag-handle { position:absolute; left:0; top:0; width:24px; height:32px; }
+.drag-handle .dot { position:absolute; width:2px; height:2px; border-radius:1px; background:rgba(138,148,163,0.5); }
+.pane-name { position:absolute; top:0; line-height:32px; font-size:12px; font-weight:600; color:#E8EAED; }
+.pane-proc-label { position:absolute; top:0; line-height:32px; font-size:10px; color:#8A94A3; }
+.pane-proc-value { position:absolute; top:0; line-height:32px; font-size:12px; font-weight:600; }
+.pane-canvas { position:absolute; left:0; right:0; top:32px; bottom:20px; }
+.pane-scroll { position:absolute; left:0; right:0; bottom:0; height:20px; background:#0F131A; border-top:1px solid rgba(232,234,237,0.08); }
+.icon-btn { position:absolute; width:24px; height:24px; border-radius:4px; }
+.sec-header { position:absolute; height:40px; }
+.sec-label { position:absolute; top:0; line-height:40px; font-size:10px; font-weight:600; color:#8A94A3; text-transform:uppercase; letter-spacing:0.12em; }
+.count-badge { position:absolute; top:11px; width:18px; height:18px; border-radius:999px; background:rgba(31,212,243,0.20); text-align:center; line-height:18px; font-size:10px; font-weight:600; color:#1FD4F3; }
+.osc-row { position:absolute; left:0; width:300px; height:56px; }
+.osc-dot { position:absolute; left:16px; top:22px; width:12px; height:12px; border-radius:999px; }
+.osc-name { position:absolute; left:36px; top:12px; font-size:13px; font-weight:600; color:#E8EAED; }
+.osc-track { position:absolute; left:36px; top:30px; font-size:11px; color:#8A94A3; }
+.sb-divider { position:absolute; left:16px; right:16px; height:1px; background:#1F2630; }
+.sub-header { position:absolute; font-size:10px; font-weight:600; color:#8A94A3; text-transform:uppercase; letter-spacing:0.12em; }
+.dropdown { position:absolute; height:32px; border-radius:6px; background:#161B24; border:1px solid #242A35; }
+.dropdown-text { position:absolute; left:10px; top:0; line-height:32px; font-size:12px; color:#E8EAED; }
+.dropdown-chev { position:absolute; right:8px; top:9px; color:#8A94A3; }
+.toggle-track { position:absolute; width:34px; height:18px; border-radius:999px; }
+.toggle-thumb { position:absolute; top:2px; width:14px; height:14px; border-radius:999px; }
+.slider-track { position:absolute; height:4px; border-radius:2px; background:#242A35; }
+.slider-fill { position:absolute; height:4px; border-radius:2px; background:#1FD4F3; }
+.slider-thumb { position:absolute; width:14px; height:14px; border-radius:999px; background:#FFFFFF; top:-5px; }
+.metric { position:absolute; top:0; line-height:22px; font-size:11px; color:#8A94A3; text-align:center; }
+</style>
+</head>
+<body>
+
+<!-- ============ FRAME 1: SINGLE COLUMN + SIDEBAR EXPANDED ============ -->
+<div class="variant-label">SINGLE COLUMN + SIDEBAR EXPANDED</div>
+<div class="frame">
+  <div class="content-area" style="width:900px;"></div>
+
+  <!-- Pane 1: Vocals -->
+  <div class="pane" style="left:16px;top:16px;width:868px;height:224px;">
+    <div class="pane-header">
+      <div class="drag-handle">
+        <span class="dot" style="left:9px;top:10px;"></span><span class="dot" style="left:13px;top:10px;"></span>
+        <span class="dot" style="left:9px;top:15px;"></span><span class="dot" style="left:13px;top:15px;"></span>
+        <span class="dot" style="left:9px;top:20px;"></span><span class="dot" style="left:13px;top:20px;"></span>
+      </div>
+      <span class="pane-name" style="left:32px;">Track 1 - Vocals</span>
+      <span class="pane-proc-label" style="right:108px;">Processing:</span>
+      <span class="pane-proc-value" style="right:72px;color:#1FD4F3;">Clean</span>
+      <div class="icon-btn" style="right:64px;top:4px;">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg>
+      </div>
+      <div class="icon-btn" style="right:36px;top:4px;">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><path d="M3 3v18h18"/><path d="M7 16V10"/><path d="M12 16V7"/><path d="M17 16v-4"/></svg>
+      </div>
+      <div class="icon-btn" style="right:8px;top:4px;">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </div>
+    </div>
+    <div class="pane-canvas">
+      <svg width="100%" height="100%" viewBox="0 0 866 172" preserveAspectRatio="none">
+        <line x1="108" y1="0" x2="108" y2="172" stroke="#242A35" stroke-width="1"/><line x1="216" y1="0" x2="216" y2="172" stroke="#242A35" stroke-width="1"/><line x1="324" y1="0" x2="324" y2="172" stroke="#242A35" stroke-width="1"/><line x1="432" y1="0" x2="432" y2="172" stroke="#242A35" stroke-width="1"/><line x1="541" y1="0" x2="541" y2="172" stroke="#242A35" stroke-width="1"/><line x1="649" y1="0" x2="649" y2="172" stroke="#242A35" stroke-width="1"/><line x1="757" y1="0" x2="757" y2="172" stroke="#242A35" stroke-width="1"/>
+        <line x1="0" y1="43" x2="866" y2="43" stroke="#242A35" stroke-width="1"/><line x1="0" y1="129" x2="866" y2="129" stroke="#242A35" stroke-width="1"/>
+        <line x1="0" y1="86" x2="866" y2="86" stroke="#3B4555" stroke-width="1"/>
+      </svg>
+      <svg width="100%" height="100%" viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute;left:0;top:0;">
+        <polyline fill="none" stroke="#1FD4F3" stroke-width="1.5" stroke-linejoin="round" points="0,60 30,58 60,62 90,55 120,68 150,48 180,72 210,40 240,80 270,30 300,90 330,20 360,100 390,10 420,105 450,15 480,95 510,25 540,85 570,35 600,75 630,45 660,65 690,55 720,60 750,58 780,62 810,59 840,60 870,60 900,61 930,59 960,60 990,60 1000,60"/>
+        <polyline fill="none" stroke="#1FD4F3" stroke-width="1.5" stroke-linejoin="round" points="0,140 30,138 60,142 90,135 120,148 150,128 180,152 210,120 240,160 270,110 300,170 330,100 360,180 390,90 420,185 450,95 480,175 510,105 540,165 570,115 600,155 630,125 660,145 690,135 720,140 750,138 780,142 810,139 840,140 870,140 900,141 930,139 960,140 990,140 1000,140"/>
+      </svg>
+    </div>
+    <div class="pane-scroll">
+      <div style="position:absolute;left:8px;right:52px;top:9px;height:2px;background:#242A35;"></div>
+      <div style="position:absolute;left:380px;top:8px;width:80px;height:4px;border-radius:2px;background:#3B4555;"></div>
+      <div class="icon-btn" style="right:26px;top:0;width:20px;height:20px;">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:4px;top:4px;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><line x1="8" y1="11" x2="14" y2="11"/><line x1="11" y1="8" x2="11" y2="14"/></svg>
+      </div>
+      <div class="icon-btn" style="right:4px;top:0;width:20px;height:20px;">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:4px;top:4px;"><path d="M3 3h7v2H5v5H3V3zm11 0h7v7h-2V5h-5V3zM3 14h2v5h5v2H3v-7zm16 0h2v7h-7v-2h5v-5z"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pane 2: Drums -->
+  <div class="pane" style="left:16px;top:248px;width:868px;height:224px;">
+    <div class="pane-header">
+      <div class="drag-handle">
+        <span class="dot" style="left:9px;top:10px;"></span><span class="dot" style="left:13px;top:10px;"></span>
+        <span class="dot" style="left:9px;top:15px;"></span><span class="dot" style="left:13px;top:15px;"></span>
+        <span class="dot" style="left:9px;top:20px;"></span><span class="dot" style="left:13px;top:20px;"></span>
+      </div>
+      <span class="pane-name" style="left:32px;">Track 2 - Drums</span>
+      <span class="pane-proc-label" style="right:140px;">Processing:</span>
+      <span class="pane-proc-value" style="right:72px;color:#E24BA6;">Compressed</span>
+      <div class="icon-btn" style="right:64px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg></div>
+      <div class="icon-btn" style="right:36px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><path d="M3 3v18h18"/><path d="M7 16V10"/><path d="M12 16V7"/><path d="M17 16v-4"/></svg></div>
+      <div class="icon-btn" style="right:8px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+    </div>
+    <div class="pane-canvas">
+      <svg width="100%" height="100%" viewBox="0 0 866 172" preserveAspectRatio="none">
+        <line x1="108" y1="0" x2="108" y2="172" stroke="#242A35"/><line x1="216" y1="0" x2="216" y2="172" stroke="#242A35"/><line x1="324" y1="0" x2="324" y2="172" stroke="#242A35"/><line x1="432" y1="0" x2="432" y2="172" stroke="#242A35"/><line x1="541" y1="0" x2="541" y2="172" stroke="#242A35"/><line x1="649" y1="0" x2="649" y2="172" stroke="#242A35"/><line x1="757" y1="0" x2="757" y2="172" stroke="#242A35"/>
+        <line x1="0" y1="43" x2="866" y2="43" stroke="#242A35"/><line x1="0" y1="129" x2="866" y2="129" stroke="#242A35"/>
+        <line x1="0" y1="86" x2="866" y2="86" stroke="#3B4555"/>
+      </svg>
+      <svg width="100%" height="100%" viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute;left:0;top:0;">
+        <polyline fill="none" stroke="#E24BA6" stroke-width="1.5" stroke-linejoin="round" points="0,60 30,58 60,62 90,55 120,68 150,48 180,72 210,40 240,80 270,30 300,90 330,20 360,100 390,10 420,105 450,15 480,95 510,25 540,85 570,35 600,75 630,45 660,65 690,55 720,60 750,58 780,62 810,59 840,60 870,60 900,61 930,59 960,60 990,60 1000,60"/>
+        <polyline fill="none" stroke="#E24BA6" stroke-width="1.5" stroke-linejoin="round" points="0,140 30,138 60,142 90,135 120,148 150,128 180,152 210,120 240,160 270,110 300,170 330,100 360,180 390,90 420,185 450,95 480,175 510,105 540,165 570,115 600,155 630,125 660,145 690,135 720,140 750,138 780,142 810,139 840,140 870,140 900,141 930,139 960,140 990,140 1000,140"/>
+      </svg>
+    </div>
+    <div class="pane-scroll">
+      <div style="position:absolute;left:8px;right:52px;top:9px;height:2px;background:#242A35;"></div>
+      <div style="position:absolute;left:380px;top:8px;width:80px;height:4px;border-radius:2px;background:#3B4555;"></div>
+      <div class="icon-btn" style="right:26px;top:0;width:20px;height:20px;"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:4px;top:4px;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><line x1="8" y1="11" x2="14" y2="11"/><line x1="11" y1="8" x2="11" y2="14"/></svg></div>
+      <div class="icon-btn" style="right:4px;top:0;width:20px;height:20px;"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:4px;top:4px;"><path d="M3 3h7v2H5v5H3V3zm11 0h7v7h-2V5h-5V3zM3 14h2v5h5v2H3v-7zm16 0h2v7h-7v-2h5v-5z"/></svg></div>
+    </div>
+  </div>
+
+  <!-- Pane 3: Bass -->
+  <div class="pane" style="left:16px;top:480px;width:868px;height:224px;">
+    <div class="pane-header">
+      <div class="drag-handle">
+        <span class="dot" style="left:9px;top:10px;"></span><span class="dot" style="left:13px;top:10px;"></span>
+        <span class="dot" style="left:9px;top:15px;"></span><span class="dot" style="left:13px;top:15px;"></span>
+        <span class="dot" style="left:9px;top:20px;"></span><span class="dot" style="left:13px;top:20px;"></span>
+      </div>
+      <span class="pane-name" style="left:32px;">Track 3 - Bass</span>
+      <span class="pane-proc-label" style="right:108px;">Processing:</span>
+      <span class="pane-proc-value" style="right:72px;color:#4AD070;">Sub</span>
+      <div class="icon-btn" style="right:64px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg></div>
+      <div class="icon-btn" style="right:36px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><path d="M3 3v18h18"/><path d="M7 16V10"/><path d="M12 16V7"/><path d="M17 16v-4"/></svg></div>
+      <div class="icon-btn" style="right:8px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+    </div>
+    <div class="pane-canvas">
+      <svg width="100%" height="100%" viewBox="0 0 866 172" preserveAspectRatio="none">
+        <line x1="108" y1="0" x2="108" y2="172" stroke="#242A35"/><line x1="216" y1="0" x2="216" y2="172" stroke="#242A35"/><line x1="324" y1="0" x2="324" y2="172" stroke="#242A35"/><line x1="432" y1="0" x2="432" y2="172" stroke="#242A35"/><line x1="541" y1="0" x2="541" y2="172" stroke="#242A35"/><line x1="649" y1="0" x2="649" y2="172" stroke="#242A35"/><line x1="757" y1="0" x2="757" y2="172" stroke="#242A35"/>
+        <line x1="0" y1="43" x2="866" y2="43" stroke="#242A35"/><line x1="0" y1="129" x2="866" y2="129" stroke="#242A35"/>
+        <line x1="0" y1="86" x2="866" y2="86" stroke="#3B4555"/>
+      </svg>
+      <svg width="100%" height="100%" viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute;left:0;top:0;">
+        <polyline fill="none" stroke="#4AD070" stroke-width="1.5" stroke-linejoin="round" points="0,60 30,58 60,62 90,55 120,68 150,48 180,72 210,40 240,80 270,30 300,90 330,20 360,100 390,10 420,105 450,15 480,95 510,25 540,85 570,35 600,75 630,45 660,65 690,55 720,60 750,58 780,62 810,59 840,60 870,60 900,61 930,59 960,60 990,60 1000,60"/>
+        <polyline fill="none" stroke="#4AD070" stroke-width="1.5" stroke-linejoin="round" points="0,140 30,138 60,142 90,135 120,148 150,128 180,152 210,120 240,160 270,110 300,170 330,100 360,180 390,90 420,185 450,95 480,175 510,105 540,165 570,115 600,155 630,125 660,145 690,135 720,140 750,138 780,142 810,139 840,140 870,140 900,141 930,139 960,140 990,140 1000,140"/>
+      </svg>
+    </div>
+    <div class="pane-scroll">
+      <div style="position:absolute;left:8px;right:52px;top:9px;height:2px;background:#242A35;"></div>
+      <div style="position:absolute;left:380px;top:8px;width:80px;height:4px;border-radius:2px;background:#3B4555;"></div>
+      <div class="icon-btn" style="right:26px;top:0;width:20px;height:20px;"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:4px;top:4px;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><line x1="8" y1="11" x2="14" y2="11"/><line x1="11" y1="8" x2="11" y2="14"/></svg></div>
+      <div class="icon-btn" style="right:4px;top:0;width:20px;height:20px;"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:4px;top:4px;"><path d="M3 3h7v2H5v5H3V3zm11 0h7v7h-2V5h-5V3zM3 14h2v5h5v2H3v-7zm16 0h2v7h-7v-2h5v-5z"/></svg></div>
+    </div>
+  </div>
+
+  <!-- Sidebar expanded -->
+  <div class="sidebar" style="width:300px;">
+    <!-- Top row -->
+    <div style="position:absolute;left:0;top:0;width:300px;height:40px;border-bottom:1px solid #1F2630;">
+      <div class="icon-btn" style="right:8px;top:8px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><polyline points="15 18 9 12 15 6"/></svg></div>
+    </div>
+
+    <!-- OSCILLATORS section -->
+    <div class="sec-header" style="left:0;top:40px;width:300px;">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:8px;top:13px;"><polyline points="6 9 12 15 18 9"/></svg>
+      <span class="sec-label" style="left:28px;">OSCILLATORS</span>
+      <div class="count-badge" style="right:16px;">3</div>
+    </div>
+    <!-- Add Oscillator button -->
+    <div style="position:absolute;left:16px;top:88px;width:268px;height:32px;border-radius:6px;background:#007ACC;text-align:center;line-height:32px;font-size:12px;font-weight:600;color:#FFFFFF;">+ Add Oscillator</div>
+    <!-- Oscillator rows -->
+    <div class="osc-row" style="top:128px;"><div class="osc-dot" style="background:#1FD4F3;"></div><span class="osc-name">Lead Vocal</span><span class="osc-track">Track 1</span></div>
+    <div class="osc-row" style="top:184px;"><div class="osc-dot" style="background:#E24BA6;"></div><span class="osc-name">Drums - Kick</span><span class="osc-track">Track 2</span></div>
+    <div class="osc-row" style="top:240px;"><div class="osc-dot" style="background:#4AD070;"></div><span class="osc-name">Bass DI</span><span class="osc-track">Track 3</span></div>
+    <div class="sb-divider" style="top:304px;"></div>
+
+    <!-- TIMING section -->
+    <div class="sec-header" style="left:0;top:312px;width:300px;">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:8px;top:13px;"><polyline points="6 9 12 15 18 9"/></svg>
+      <span class="sec-label" style="left:28px;">TIMING</span>
+    </div>
+    <!-- TIME/MELODIC segmented -->
+    <div style="position:absolute;left:16px;top:360px;width:268px;height:28px;border-radius:6px;background:#161B24;border:1px solid #242A35;">
+      <div style="position:absolute;left:0;top:0;width:134px;height:28px;text-align:center;line-height:28px;font-size:11px;color:#8A94A3;">TIME</div>
+      <div style="position:absolute;left:134px;top:0;width:1px;height:28px;background:#242A35;"></div>
+      <div style="position:absolute;left:135px;top:0;width:133px;height:28px;border-radius:6px;background:rgba(31,212,243,0.15);text-align:center;line-height:28px;font-size:11px;font-weight:600;color:#1FD4F3;">MELODIC</div>
+    </div>
+    <!-- Mode row -->
+    <span style="position:absolute;left:16px;top:400px;line-height:32px;font-size:12px;color:#E8EAED;">Mode</span>
+    <div class="dropdown" style="left:80px;top:400px;width:204px;">
+      <span class="dropdown-text">Free Running</span>
+      <svg class="dropdown-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <!-- Note interval -->
+    <div class="dropdown" style="left:16px;top:440px;width:268px;">
+      <span class="dropdown-text">1/4 Note</span>
+      <svg class="dropdown-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <!-- BPM row -->
+    <span style="position:absolute;left:16px;top:480px;line-height:32px;font-size:12px;color:#E8EAED;">BPM</span>
+    <div class="dropdown" style="left:52px;top:480px;width:80px;">
+      <span style="position:absolute;left:0;top:0;width:80px;line-height:32px;text-align:center;font-size:12px;font-weight:600;color:#E8EAED;">120.0</span>
+    </div>
+    <div class="toggle-track" style="left:144px;top:487px;background:#4AD070;"><div class="toggle-thumb" style="left:18px;background:#FFFFFF;"></div></div>
+    <span style="position:absolute;left:186px;top:480px;line-height:32px;font-size:12px;color:#E8EAED;">Sync</span>
+    <!-- SYNCED pill -->
+    <div style="position:absolute;left:115px;top:524px;width:70px;height:18px;border-radius:999px;background:rgba(0,221,0,0.20);text-align:center;line-height:18px;font-size:10px;font-weight:600;color:#4AD070;">SYNCED</div>
+    <div class="sb-divider" style="top:556px;"></div>
+
+    <!-- OPTIONS section (compact) -->
+    <div class="sec-header" style="left:0;top:564px;width:300px;">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:8px;top:13px;"><polyline points="6 9 12 15 18 9"/></svg>
+      <span class="sec-label" style="left:28px;">OPTIONS</span>
+    </div>
+    <!-- Gain slider -->
+    <span style="position:absolute;left:16px;top:612px;font-size:12px;font-weight:600;color:#E8EAED;">Gain</span>
+    <span style="position:absolute;right:16px;top:612px;font-size:12px;color:#8A94A3;">0.0 dB</span>
+    <div style="position:absolute;left:16px;top:636px;width:268px;height:14px;">
+      <div class="slider-track" style="left:0;top:5px;width:268px;"></div>
+      <div class="slider-fill" style="left:0;top:5px;width:134px;"></div>
+      <div class="slider-thumb" style="left:127px;"></div>
+    </div>
+    <!-- DISPLAY subheader -->
+    <span class="sub-header" style="left:16px;top:664px;">DISPLAY</span>
+    <span style="position:absolute;left:16px;top:686px;line-height:22px;font-size:12px;color:#E8EAED;">Show Grid</span>
+    <div class="toggle-track" style="right:16px;top:688px;background:#4AD070;"><div class="toggle-thumb" style="left:18px;background:#FFFFFF;"></div></div>
+    <span style="position:absolute;left:16px;top:714px;line-height:22px;font-size:12px;color:#E8EAED;">Auto-Scale</span>
+    <div class="toggle-track" style="right:16px;top:716px;background:#3A3A3A;"><div class="toggle-thumb" style="left:2px;background:#E0E0E0;"></div></div>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span class="metric" style="right:8px;width:70px;color:#00DD00;">60.0 FPS</span>
+    <span class="metric" style="right:86px;width:80px;">CPU: 4.2%</span>
+    <span class="metric" style="right:174px;width:90px;">Mem: 287.0 MB</span>
+    <span class="metric" style="right:272px;width:60px;">Osc: 3</span>
+    <span class="metric" style="right:340px;width:60px;">Src: 6</span>
+    <span class="metric" style="right:408px;width:80px;">OpenGL</span>
+  </div>
+</div>
+
+<!-- ============ FRAME 2: TWO COLUMN + SIDEBAR EXPANDED ============ -->
+<div class="variant-label">TWO COLUMN + SIDEBAR EXPANDED</div>
+<div class="frame">
+  <div class="content-area" style="width:900px;"></div>
+
+  <!-- 2x2 panes -->
+  <!-- Pane 1: Vocals top-left -->
+  <div class="pane" style="left:16px;top:16px;width:434px;height:348px;">
+    <div class="pane-header">
+      <div class="drag-handle"><span class="dot" style="left:9px;top:10px;"></span><span class="dot" style="left:13px;top:10px;"></span><span class="dot" style="left:9px;top:15px;"></span><span class="dot" style="left:13px;top:15px;"></span><span class="dot" style="left:9px;top:20px;"></span><span class="dot" style="left:13px;top:20px;"></span></div>
+      <span class="pane-name" style="left:32px;">Track 1 - Vocals</span>
+      <span class="pane-proc-value" style="right:100px;color:#1FD4F3;">Clean</span>
+      <div class="icon-btn" style="right:64px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg></div>
+      <div class="icon-btn" style="right:36px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><path d="M3 3v18h18"/><path d="M7 16V10"/><path d="M12 16V7"/><path d="M17 16v-4"/></svg></div>
+      <div class="icon-btn" style="right:8px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+    </div>
+    <div class="pane-canvas">
+      <svg width="100%" height="100%" viewBox="0 0 432 296" preserveAspectRatio="none"><line x1="54" y1="0" x2="54" y2="296" stroke="#242A35"/><line x1="108" y1="0" x2="108" y2="296" stroke="#242A35"/><line x1="162" y1="0" x2="162" y2="296" stroke="#242A35"/><line x1="216" y1="0" x2="216" y2="296" stroke="#242A35"/><line x1="270" y1="0" x2="270" y2="296" stroke="#242A35"/><line x1="324" y1="0" x2="324" y2="296" stroke="#242A35"/><line x1="378" y1="0" x2="378" y2="296" stroke="#242A35"/><line x1="0" y1="74" x2="432" y2="74" stroke="#242A35"/><line x1="0" y1="222" x2="432" y2="222" stroke="#242A35"/><line x1="0" y1="148" x2="432" y2="148" stroke="#3B4555"/></svg>
+      <svg width="100%" height="100%" viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute;left:0;top:0;"><polyline fill="none" stroke="#1FD4F3" stroke-width="1.5" stroke-linejoin="round" points="0,60 30,58 60,62 90,55 120,68 150,48 180,72 210,40 240,80 270,30 300,90 330,20 360,100 390,10 420,105 450,15 480,95 510,25 540,85 570,35 600,75 630,45 660,65 690,55 720,60 750,58 780,62 810,59 840,60 870,60 900,61 930,59 960,60 990,60 1000,60"/><polyline fill="none" stroke="#1FD4F3" stroke-width="1.5" stroke-linejoin="round" points="0,140 30,138 60,142 90,135 120,148 150,128 180,152 210,120 240,160 270,110 300,170 330,100 360,180 390,90 420,185 450,95 480,175 510,105 540,165 570,115 600,155 630,125 660,145 690,135 720,140 750,138 780,142 810,139 840,140 870,140 900,141 930,139 960,140 990,140 1000,140"/></svg>
+    </div>
+    <div class="pane-scroll"><div style="position:absolute;left:8px;right:52px;top:9px;height:2px;background:#242A35;"></div><div style="position:absolute;left:168px;top:8px;width:80px;height:4px;border-radius:2px;background:#3B4555;"></div></div>
+  </div>
+
+  <!-- Pane 2: Drums top-right -->
+  <div class="pane" style="left:466px;top:16px;width:418px;height:348px;">
+    <div class="pane-header">
+      <div class="drag-handle"><span class="dot" style="left:9px;top:10px;"></span><span class="dot" style="left:13px;top:10px;"></span><span class="dot" style="left:9px;top:15px;"></span><span class="dot" style="left:13px;top:15px;"></span><span class="dot" style="left:9px;top:20px;"></span><span class="dot" style="left:13px;top:20px;"></span></div>
+      <span class="pane-name" style="left:32px;">Track 3 - Drums</span>
+      <span class="pane-proc-value" style="right:100px;color:#E24BA6;font-size:11px;">Compressed</span>
+      <div class="icon-btn" style="right:64px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg></div>
+      <div class="icon-btn" style="right:36px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><path d="M3 3v18h18"/><path d="M7 16V10"/><path d="M12 16V7"/><path d="M17 16v-4"/></svg></div>
+      <div class="icon-btn" style="right:8px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+    </div>
+    <div class="pane-canvas">
+      <svg width="100%" height="100%" viewBox="0 0 416 296" preserveAspectRatio="none"><line x1="52" y1="0" x2="52" y2="296" stroke="#242A35"/><line x1="104" y1="0" x2="104" y2="296" stroke="#242A35"/><line x1="156" y1="0" x2="156" y2="296" stroke="#242A35"/><line x1="208" y1="0" x2="208" y2="296" stroke="#242A35"/><line x1="260" y1="0" x2="260" y2="296" stroke="#242A35"/><line x1="312" y1="0" x2="312" y2="296" stroke="#242A35"/><line x1="364" y1="0" x2="364" y2="296" stroke="#242A35"/><line x1="0" y1="74" x2="416" y2="74" stroke="#242A35"/><line x1="0" y1="222" x2="416" y2="222" stroke="#242A35"/><line x1="0" y1="148" x2="416" y2="148" stroke="#3B4555"/></svg>
+      <svg width="100%" height="100%" viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute;left:0;top:0;"><polyline fill="none" stroke="#E24BA6" stroke-width="1.5" stroke-linejoin="round" points="0,60 30,58 60,62 90,55 120,68 150,48 180,72 210,40 240,80 270,30 300,90 330,20 360,100 390,10 420,105 450,15 480,95 510,25 540,85 570,35 600,75 630,45 660,65 690,55 720,60 750,58 780,62 810,59 840,60 870,60 900,61 930,59 960,60 990,60 1000,60"/><polyline fill="none" stroke="#E24BA6" stroke-width="1.5" stroke-linejoin="round" points="0,140 30,138 60,142 90,135 120,148 150,128 180,152 210,120 240,160 270,110 300,170 330,100 360,180 390,90 420,185 450,95 480,175 510,105 540,165 570,115 600,155 630,125 660,145 690,135 720,140 750,138 780,142 810,139 840,140 870,140 900,141 930,139 960,140 990,140 1000,140"/></svg>
+    </div>
+    <div class="pane-scroll"><div style="position:absolute;left:8px;right:52px;top:9px;height:2px;background:#242A35;"></div><div style="position:absolute;left:160px;top:8px;width:80px;height:4px;border-radius:2px;background:#3B4555;"></div></div>
+  </div>
+
+  <!-- Pane 3: Guitar bottom-left -->
+  <div class="pane" style="left:16px;top:380px;width:434px;height:324px;">
+    <div class="pane-header">
+      <div class="drag-handle"><span class="dot" style="left:9px;top:10px;"></span><span class="dot" style="left:13px;top:10px;"></span><span class="dot" style="left:9px;top:15px;"></span><span class="dot" style="left:13px;top:15px;"></span><span class="dot" style="left:9px;top:20px;"></span><span class="dot" style="left:13px;top:20px;"></span></div>
+      <span class="pane-name" style="left:32px;">Track 2 - Guitar</span>
+      <span class="pane-proc-value" style="right:100px;color:#E87B3A;font-size:11px;">Overdrive</span>
+      <div class="icon-btn" style="right:64px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg></div>
+      <div class="icon-btn" style="right:36px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><path d="M3 3v18h18"/><path d="M7 16V10"/><path d="M12 16V7"/><path d="M17 16v-4"/></svg></div>
+      <div class="icon-btn" style="right:8px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+    </div>
+    <div class="pane-canvas">
+      <svg width="100%" height="100%" viewBox="0 0 432 272" preserveAspectRatio="none"><line x1="54" y1="0" x2="54" y2="272" stroke="#242A35"/><line x1="108" y1="0" x2="108" y2="272" stroke="#242A35"/><line x1="162" y1="0" x2="162" y2="272" stroke="#242A35"/><line x1="216" y1="0" x2="216" y2="272" stroke="#242A35"/><line x1="270" y1="0" x2="270" y2="272" stroke="#242A35"/><line x1="324" y1="0" x2="324" y2="272" stroke="#242A35"/><line x1="378" y1="0" x2="378" y2="272" stroke="#242A35"/><line x1="0" y1="68" x2="432" y2="68" stroke="#242A35"/><line x1="0" y1="204" x2="432" y2="204" stroke="#242A35"/><line x1="0" y1="136" x2="432" y2="136" stroke="#3B4555"/></svg>
+      <svg width="100%" height="100%" viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute;left:0;top:0;"><polyline fill="none" stroke="#E87B3A" stroke-width="1.5" stroke-linejoin="round" points="0,60 30,58 60,62 90,55 120,68 150,48 180,72 210,40 240,80 270,30 300,90 330,20 360,100 390,10 420,105 450,15 480,95 510,25 540,85 570,35 600,75 630,45 660,65 690,55 720,60 750,58 780,62 810,59 840,60 870,60 900,61 930,59 960,60 990,60 1000,60"/><polyline fill="none" stroke="#E87B3A" stroke-width="1.5" stroke-linejoin="round" points="0,140 30,138 60,142 90,135 120,148 150,128 180,152 210,120 240,160 270,110 300,170 330,100 360,180 390,90 420,185 450,95 480,175 510,105 540,165 570,115 600,155 630,125 660,145 690,135 720,140 750,138 780,142 810,139 840,140 870,140 900,141 930,139 960,140 990,140 1000,140"/></svg>
+    </div>
+    <div class="pane-scroll"><div style="position:absolute;left:8px;right:52px;top:9px;height:2px;background:#242A35;"></div><div style="position:absolute;left:168px;top:8px;width:80px;height:4px;border-radius:2px;background:#3B4555;"></div></div>
+  </div>
+
+  <!-- Pane 4: Bass bottom-right -->
+  <div class="pane" style="left:466px;top:380px;width:418px;height:324px;">
+    <div class="pane-header">
+      <div class="drag-handle"><span class="dot" style="left:9px;top:10px;"></span><span class="dot" style="left:13px;top:10px;"></span><span class="dot" style="left:9px;top:15px;"></span><span class="dot" style="left:13px;top:15px;"></span><span class="dot" style="left:9px;top:20px;"></span><span class="dot" style="left:13px;top:20px;"></span></div>
+      <span class="pane-name" style="left:32px;">Track 4 - Bass</span>
+      <span class="pane-proc-value" style="right:100px;color:#4AD070;">Sub</span>
+      <div class="icon-btn" style="right:64px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg></div>
+      <div class="icon-btn" style="right:36px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><path d="M3 3v18h18"/><path d="M7 16V10"/><path d="M12 16V7"/><path d="M17 16v-4"/></svg></div>
+      <div class="icon-btn" style="right:8px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+    </div>
+    <div class="pane-canvas">
+      <svg width="100%" height="100%" viewBox="0 0 416 272" preserveAspectRatio="none"><line x1="52" y1="0" x2="52" y2="272" stroke="#242A35"/><line x1="104" y1="0" x2="104" y2="272" stroke="#242A35"/><line x1="156" y1="0" x2="156" y2="272" stroke="#242A35"/><line x1="208" y1="0" x2="208" y2="272" stroke="#242A35"/><line x1="260" y1="0" x2="260" y2="272" stroke="#242A35"/><line x1="312" y1="0" x2="312" y2="272" stroke="#242A35"/><line x1="364" y1="0" x2="364" y2="272" stroke="#242A35"/><line x1="0" y1="68" x2="416" y2="68" stroke="#242A35"/><line x1="0" y1="204" x2="416" y2="204" stroke="#242A35"/><line x1="0" y1="136" x2="416" y2="136" stroke="#3B4555"/></svg>
+      <svg width="100%" height="100%" viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute;left:0;top:0;"><polyline fill="none" stroke="#4AD070" stroke-width="1.5" stroke-linejoin="round" points="0,60 30,58 60,62 90,55 120,68 150,48 180,72 210,40 240,80 270,30 300,90 330,20 360,100 390,10 420,105 450,15 480,95 510,25 540,85 570,35 600,75 630,45 660,65 690,55 720,60 750,58 780,62 810,59 840,60 870,60 900,61 930,59 960,60 990,60 1000,60"/><polyline fill="none" stroke="#4AD070" stroke-width="1.5" stroke-linejoin="round" points="0,140 30,138 60,142 90,135 120,148 150,128 180,152 210,120 240,160 270,110 300,170 330,100 360,180 390,90 420,185 450,95 480,175 510,105 540,165 570,115 600,155 630,125 660,145 690,135 720,140 750,138 780,142 810,139 840,140 870,140 900,141 930,139 960,140 990,140 1000,140"/></svg>
+    </div>
+    <div class="pane-scroll"><div style="position:absolute;left:8px;right:52px;top:9px;height:2px;background:#242A35;"></div><div style="position:absolute;left:160px;top:8px;width:80px;height:4px;border-radius:2px;background:#3B4555;"></div></div>
+  </div>
+
+  <!-- Sidebar (clone of frame 1 sidebar) -->
+  <div class="sidebar" style="width:300px;">
+    <div style="position:absolute;left:0;top:0;width:300px;height:40px;border-bottom:1px solid #1F2630;"><div class="icon-btn" style="right:8px;top:8px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><polyline points="15 18 9 12 15 6"/></svg></div></div>
+    <div class="sec-header" style="left:0;top:40px;width:300px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:8px;top:13px;"><polyline points="6 9 12 15 18 9"/></svg><span class="sec-label" style="left:28px;">OSCILLATORS</span><div class="count-badge" style="right:16px;">3</div></div>
+    <div style="position:absolute;left:16px;top:88px;width:268px;height:32px;border-radius:6px;background:#007ACC;text-align:center;line-height:32px;font-size:12px;font-weight:600;color:#FFFFFF;">+ Add Oscillator</div>
+    <div class="osc-row" style="top:128px;"><div class="osc-dot" style="background:#1FD4F3;"></div><span class="osc-name">Lead Vocal</span><span class="osc-track">Track 1</span></div>
+    <div class="osc-row" style="top:184px;"><div class="osc-dot" style="background:#E24BA6;"></div><span class="osc-name">Drums - Kick</span><span class="osc-track">Track 2</span></div>
+    <div class="osc-row" style="top:240px;"><div class="osc-dot" style="background:#4AD070;"></div><span class="osc-name">Bass DI</span><span class="osc-track">Track 3</span></div>
+    <div class="sb-divider" style="top:304px;"></div>
+    <div class="sec-header" style="left:0;top:312px;width:300px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:8px;top:13px;"><polyline points="6 9 12 15 18 9"/></svg><span class="sec-label" style="left:28px;">TIMING</span></div>
+    <div style="position:absolute;left:16px;top:360px;width:268px;height:28px;border-radius:6px;background:#161B24;border:1px solid #242A35;"><div style="position:absolute;left:0;top:0;width:134px;height:28px;text-align:center;line-height:28px;font-size:11px;color:#8A94A3;">TIME</div><div style="position:absolute;left:134px;top:0;width:1px;height:28px;background:#242A35;"></div><div style="position:absolute;left:135px;top:0;width:133px;height:28px;border-radius:6px;background:rgba(31,212,243,0.15);text-align:center;line-height:28px;font-size:11px;font-weight:600;color:#1FD4F3;">MELODIC</div></div>
+    <span style="position:absolute;left:16px;top:400px;line-height:32px;font-size:12px;color:#E8EAED;">Mode</span>
+    <div class="dropdown" style="left:80px;top:400px;width:204px;"><span class="dropdown-text">Free Running</span><svg class="dropdown-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+    <div class="dropdown" style="left:16px;top:440px;width:268px;"><span class="dropdown-text">1/4 Note</span><svg class="dropdown-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+    <span style="position:absolute;left:16px;top:480px;line-height:32px;font-size:12px;color:#E8EAED;">BPM</span>
+    <div class="dropdown" style="left:52px;top:480px;width:80px;"><span style="position:absolute;left:0;top:0;width:80px;line-height:32px;text-align:center;font-size:12px;font-weight:600;color:#E8EAED;">120.0</span></div>
+    <div class="toggle-track" style="left:144px;top:487px;background:#4AD070;"><div class="toggle-thumb" style="left:18px;background:#FFFFFF;"></div></div>
+    <span style="position:absolute;left:186px;top:480px;line-height:32px;font-size:12px;color:#E8EAED;">Sync</span>
+    <div style="position:absolute;left:115px;top:524px;width:70px;height:18px;border-radius:999px;background:rgba(0,221,0,0.20);text-align:center;line-height:18px;font-size:10px;font-weight:600;color:#4AD070;">SYNCED</div>
+    <div class="sb-divider" style="top:556px;"></div>
+    <div class="sec-header" style="left:0;top:564px;width:300px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:8px;top:13px;"><polyline points="6 9 12 15 18 9"/></svg><span class="sec-label" style="left:28px;">OPTIONS</span></div>
+    <span style="position:absolute;left:16px;top:612px;font-size:12px;font-weight:600;color:#E8EAED;">Gain</span>
+    <span style="position:absolute;right:16px;top:612px;font-size:12px;color:#8A94A3;">0.0 dB</span>
+    <div style="position:absolute;left:16px;top:636px;width:268px;height:14px;"><div class="slider-track" style="left:0;top:5px;width:268px;"></div><div class="slider-fill" style="left:0;top:5px;width:134px;"></div><div class="slider-thumb" style="left:127px;"></div></div>
+    <span class="sub-header" style="left:16px;top:664px;">DISPLAY</span>
+    <span style="position:absolute;left:16px;top:686px;line-height:22px;font-size:12px;color:#E8EAED;">Show Grid</span>
+    <div class="toggle-track" style="right:16px;top:688px;background:#4AD070;"><div class="toggle-thumb" style="left:18px;background:#FFFFFF;"></div></div>
+    <span style="position:absolute;left:16px;top:714px;line-height:22px;font-size:12px;color:#E8EAED;">Auto-Scale</span>
+    <div class="toggle-track" style="right:16px;top:716px;background:#3A3A3A;"><div class="toggle-thumb" style="left:2px;background:#E0E0E0;"></div></div>
+  </div>
+
+  <div class="status-bar">
+    <span class="metric" style="right:8px;width:70px;color:#00DD00;">60.0 FPS</span>
+    <span class="metric" style="right:86px;width:80px;">CPU: 4.2%</span>
+    <span class="metric" style="right:174px;width:90px;">Mem: 287.0 MB</span>
+    <span class="metric" style="right:272px;width:60px;">Osc: 3</span>
+    <span class="metric" style="right:340px;width:60px;">Src: 6</span>
+    <span class="metric" style="right:408px;width:80px;">OpenGL</span>
+  </div>
+</div>
+
+<!-- ============ FRAME 3: THREE COLUMN + SIDEBAR COLLAPSED ============ -->
+<div class="variant-label">THREE COLUMN + SIDEBAR COLLAPSED</div>
+<div class="frame">
+  <div class="content-area" style="width:1160px;"></div>
+
+  <!-- 3x2 panes -->
+  <!-- row 0: Vocals -->
+  <div class="pane" style="left:16px;top:16px;width:378px;height:348px;">
+    <div class="pane-header"><div class="drag-handle"><span class="dot" style="left:9px;top:10px;"></span><span class="dot" style="left:13px;top:10px;"></span><span class="dot" style="left:9px;top:15px;"></span><span class="dot" style="left:13px;top:15px;"></span><span class="dot" style="left:9px;top:20px;"></span><span class="dot" style="left:13px;top:20px;"></span></div><span class="pane-name" style="left:32px;">Vocals</span><span class="pane-proc-value" style="right:96px;color:#1FD4F3;font-size:11px;">Clean</span><div class="icon-btn" style="right:64px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg></div><div class="icon-btn" style="right:36px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><path d="M3 3v18h18"/><path d="M7 16V10"/><path d="M12 16V7"/><path d="M17 16v-4"/></svg></div><div class="icon-btn" style="right:8px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div></div>
+    <div class="pane-canvas"><svg width="100%" height="100%" viewBox="0 0 376 296" preserveAspectRatio="none"><line x1="47" y1="0" x2="47" y2="296" stroke="#242A35"/><line x1="94" y1="0" x2="94" y2="296" stroke="#242A35"/><line x1="141" y1="0" x2="141" y2="296" stroke="#242A35"/><line x1="188" y1="0" x2="188" y2="296" stroke="#242A35"/><line x1="235" y1="0" x2="235" y2="296" stroke="#242A35"/><line x1="282" y1="0" x2="282" y2="296" stroke="#242A35"/><line x1="329" y1="0" x2="329" y2="296" stroke="#242A35"/><line x1="0" y1="74" x2="376" y2="74" stroke="#242A35"/><line x1="0" y1="222" x2="376" y2="222" stroke="#242A35"/><line x1="0" y1="148" x2="376" y2="148" stroke="#3B4555"/></svg><svg width="100%" height="100%" viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute;left:0;top:0;"><polyline fill="none" stroke="#1FD4F3" stroke-width="1.5" stroke-linejoin="round" points="0,60 30,58 60,62 90,55 120,68 150,48 180,72 210,40 240,80 270,30 300,90 330,20 360,100 390,10 420,105 450,15 480,95 510,25 540,85 570,35 600,75 630,45 660,65 690,55 720,60 750,58 780,62 810,59 840,60 870,60 900,61 930,59 960,60 990,60 1000,60"/><polyline fill="none" stroke="#1FD4F3" stroke-width="1.5" stroke-linejoin="round" points="0,140 30,138 60,142 90,135 120,148 150,128 180,152 210,120 240,160 270,110 300,170 330,100 360,180 390,90 420,185 450,95 480,175 510,105 540,165 570,115 600,155 630,125 660,145 690,135 720,140 750,138 780,142 810,139 840,140 870,140 900,141 930,139 960,140 990,140 1000,140"/></svg></div>
+    <div class="pane-scroll"><div style="position:absolute;left:8px;right:52px;top:9px;height:2px;background:#242A35;"></div><div style="position:absolute;left:140px;top:8px;width:80px;height:4px;border-radius:2px;background:#3B4555;"></div></div>
+  </div>
+
+  <!-- Drums -->
+  <div class="pane" style="left:398px;top:16px;width:378px;height:348px;">
+    <div class="pane-header"><div class="drag-handle"><span class="dot" style="left:9px;top:10px;"></span><span class="dot" style="left:13px;top:10px;"></span><span class="dot" style="left:9px;top:15px;"></span><span class="dot" style="left:13px;top:15px;"></span><span class="dot" style="left:9px;top:20px;"></span><span class="dot" style="left:13px;top:20px;"></span></div><span class="pane-name" style="left:32px;">Drums</span><span class="pane-proc-value" style="right:96px;color:#E24BA6;font-size:10px;">Compressed</span><div class="icon-btn" style="right:64px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg></div><div class="icon-btn" style="right:36px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><path d="M3 3v18h18"/><path d="M7 16V10"/><path d="M12 16V7"/><path d="M17 16v-4"/></svg></div><div class="icon-btn" style="right:8px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div></div>
+    <div class="pane-canvas"><svg width="100%" height="100%" viewBox="0 0 376 296" preserveAspectRatio="none"><line x1="47" y1="0" x2="47" y2="296" stroke="#242A35"/><line x1="94" y1="0" x2="94" y2="296" stroke="#242A35"/><line x1="141" y1="0" x2="141" y2="296" stroke="#242A35"/><line x1="188" y1="0" x2="188" y2="296" stroke="#242A35"/><line x1="235" y1="0" x2="235" y2="296" stroke="#242A35"/><line x1="282" y1="0" x2="282" y2="296" stroke="#242A35"/><line x1="329" y1="0" x2="329" y2="296" stroke="#242A35"/><line x1="0" y1="74" x2="376" y2="74" stroke="#242A35"/><line x1="0" y1="222" x2="376" y2="222" stroke="#242A35"/><line x1="0" y1="148" x2="376" y2="148" stroke="#3B4555"/></svg><svg width="100%" height="100%" viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute;left:0;top:0;"><polyline fill="none" stroke="#E24BA6" stroke-width="1.5" stroke-linejoin="round" points="0,60 30,58 60,62 90,55 120,68 150,48 180,72 210,40 240,80 270,30 300,90 330,20 360,100 390,10 420,105 450,15 480,95 510,25 540,85 570,35 600,75 630,45 660,65 690,55 720,60 750,58 780,62 810,59 840,60 870,60 900,61 930,59 960,60 990,60 1000,60"/><polyline fill="none" stroke="#E24BA6" stroke-width="1.5" stroke-linejoin="round" points="0,140 30,138 60,142 90,135 120,148 150,128 180,152 210,120 240,160 270,110 300,170 330,100 360,180 390,90 420,185 450,95 480,175 510,105 540,165 570,115 600,155 630,125 660,145 690,135 720,140 750,138 780,142 810,139 840,140 870,140 900,141 930,139 960,140 990,140 1000,140"/></svg></div>
+    <div class="pane-scroll"><div style="position:absolute;left:8px;right:52px;top:9px;height:2px;background:#242A35;"></div><div style="position:absolute;left:140px;top:8px;width:80px;height:4px;border-radius:2px;background:#3B4555;"></div></div>
+  </div>
+
+  <!-- Guitar -->
+  <div class="pane" style="left:780px;top:16px;width:378px;height:348px;">
+    <div class="pane-header"><div class="drag-handle"><span class="dot" style="left:9px;top:10px;"></span><span class="dot" style="left:13px;top:10px;"></span><span class="dot" style="left:9px;top:15px;"></span><span class="dot" style="left:13px;top:15px;"></span><span class="dot" style="left:9px;top:20px;"></span><span class="dot" style="left:13px;top:20px;"></span></div><span class="pane-name" style="left:32px;">Guitar</span><span class="pane-proc-value" style="right:96px;color:#E87B3A;font-size:11px;">Overdrive</span><div class="icon-btn" style="right:64px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg></div><div class="icon-btn" style="right:36px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><path d="M3 3v18h18"/><path d="M7 16V10"/><path d="M12 16V7"/><path d="M17 16v-4"/></svg></div><div class="icon-btn" style="right:8px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div></div>
+    <div class="pane-canvas"><svg width="100%" height="100%" viewBox="0 0 376 296" preserveAspectRatio="none"><line x1="47" y1="0" x2="47" y2="296" stroke="#242A35"/><line x1="94" y1="0" x2="94" y2="296" stroke="#242A35"/><line x1="141" y1="0" x2="141" y2="296" stroke="#242A35"/><line x1="188" y1="0" x2="188" y2="296" stroke="#242A35"/><line x1="235" y1="0" x2="235" y2="296" stroke="#242A35"/><line x1="282" y1="0" x2="282" y2="296" stroke="#242A35"/><line x1="329" y1="0" x2="329" y2="296" stroke="#242A35"/><line x1="0" y1="74" x2="376" y2="74" stroke="#242A35"/><line x1="0" y1="222" x2="376" y2="222" stroke="#242A35"/><line x1="0" y1="148" x2="376" y2="148" stroke="#3B4555"/></svg><svg width="100%" height="100%" viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute;left:0;top:0;"><polyline fill="none" stroke="#E87B3A" stroke-width="1.5" stroke-linejoin="round" points="0,60 30,58 60,62 90,55 120,68 150,48 180,72 210,40 240,80 270,30 300,90 330,20 360,100 390,10 420,105 450,15 480,95 510,25 540,85 570,35 600,75 630,45 660,65 690,55 720,60 750,58 780,62 810,59 840,60 870,60 900,61 930,59 960,60 990,60 1000,60"/><polyline fill="none" stroke="#E87B3A" stroke-width="1.5" stroke-linejoin="round" points="0,140 30,138 60,142 90,135 120,148 150,128 180,152 210,120 240,160 270,110 300,170 330,100 360,180 390,90 420,185 450,95 480,175 510,105 540,165 570,115 600,155 630,125 660,145 690,135 720,140 750,138 780,142 810,139 840,140 870,140 900,141 930,139 960,140 990,140 1000,140"/></svg></div>
+    <div class="pane-scroll"><div style="position:absolute;left:8px;right:52px;top:9px;height:2px;background:#242A35;"></div><div style="position:absolute;left:140px;top:8px;width:80px;height:4px;border-radius:2px;background:#3B4555;"></div></div>
+  </div>
+
+  <!-- Bass -->
+  <div class="pane" style="left:16px;top:380px;width:378px;height:324px;">
+    <div class="pane-header"><div class="drag-handle"><span class="dot" style="left:9px;top:10px;"></span><span class="dot" style="left:13px;top:10px;"></span><span class="dot" style="left:9px;top:15px;"></span><span class="dot" style="left:13px;top:15px;"></span><span class="dot" style="left:9px;top:20px;"></span><span class="dot" style="left:13px;top:20px;"></span></div><span class="pane-name" style="left:32px;">Bass</span><span class="pane-proc-value" style="right:96px;color:#4AD070;font-size:11px;">Sub</span><div class="icon-btn" style="right:64px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg></div><div class="icon-btn" style="right:36px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><path d="M3 3v18h18"/><path d="M7 16V10"/><path d="M12 16V7"/><path d="M17 16v-4"/></svg></div><div class="icon-btn" style="right:8px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div></div>
+    <div class="pane-canvas"><svg width="100%" height="100%" viewBox="0 0 376 272" preserveAspectRatio="none"><line x1="47" y1="0" x2="47" y2="272" stroke="#242A35"/><line x1="94" y1="0" x2="94" y2="272" stroke="#242A35"/><line x1="141" y1="0" x2="141" y2="272" stroke="#242A35"/><line x1="188" y1="0" x2="188" y2="272" stroke="#242A35"/><line x1="235" y1="0" x2="235" y2="272" stroke="#242A35"/><line x1="282" y1="0" x2="282" y2="272" stroke="#242A35"/><line x1="329" y1="0" x2="329" y2="272" stroke="#242A35"/><line x1="0" y1="68" x2="376" y2="68" stroke="#242A35"/><line x1="0" y1="204" x2="376" y2="204" stroke="#242A35"/><line x1="0" y1="136" x2="376" y2="136" stroke="#3B4555"/></svg><svg width="100%" height="100%" viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute;left:0;top:0;"><polyline fill="none" stroke="#4AD070" stroke-width="1.5" stroke-linejoin="round" points="0,60 30,58 60,62 90,55 120,68 150,48 180,72 210,40 240,80 270,30 300,90 330,20 360,100 390,10 420,105 450,15 480,95 510,25 540,85 570,35 600,75 630,45 660,65 690,55 720,60 750,58 780,62 810,59 840,60 870,60 900,61 930,59 960,60 990,60 1000,60"/><polyline fill="none" stroke="#4AD070" stroke-width="1.5" stroke-linejoin="round" points="0,140 30,138 60,142 90,135 120,148 150,128 180,152 210,120 240,160 270,110 300,170 330,100 360,180 390,90 420,185 450,95 480,175 510,105 540,165 570,115 600,155 630,125 660,145 690,135 720,140 750,138 780,142 810,139 840,140 870,140 900,141 930,139 960,140 990,140 1000,140"/></svg></div>
+    <div class="pane-scroll"><div style="position:absolute;left:8px;right:52px;top:9px;height:2px;background:#242A35;"></div><div style="position:absolute;left:140px;top:8px;width:80px;height:4px;border-radius:2px;background:#3B4555;"></div></div>
+  </div>
+
+  <!-- Synth -->
+  <div class="pane" style="left:398px;top:380px;width:378px;height:324px;">
+    <div class="pane-header"><div class="drag-handle"><span class="dot" style="left:9px;top:10px;"></span><span class="dot" style="left:13px;top:10px;"></span><span class="dot" style="left:9px;top:15px;"></span><span class="dot" style="left:13px;top:15px;"></span><span class="dot" style="left:9px;top:20px;"></span><span class="dot" style="left:13px;top:20px;"></span></div><span class="pane-name" style="left:32px;">Synth</span><span class="pane-proc-value" style="right:96px;color:#9F70E5;font-size:11px;">Dry</span><div class="icon-btn" style="right:64px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg></div><div class="icon-btn" style="right:36px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><path d="M3 3v18h18"/><path d="M7 16V10"/><path d="M12 16V7"/><path d="M17 16v-4"/></svg></div><div class="icon-btn" style="right:8px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div></div>
+    <div class="pane-canvas"><svg width="100%" height="100%" viewBox="0 0 376 272" preserveAspectRatio="none"><line x1="47" y1="0" x2="47" y2="272" stroke="#242A35"/><line x1="94" y1="0" x2="94" y2="272" stroke="#242A35"/><line x1="141" y1="0" x2="141" y2="272" stroke="#242A35"/><line x1="188" y1="0" x2="188" y2="272" stroke="#242A35"/><line x1="235" y1="0" x2="235" y2="272" stroke="#242A35"/><line x1="282" y1="0" x2="282" y2="272" stroke="#242A35"/><line x1="329" y1="0" x2="329" y2="272" stroke="#242A35"/><line x1="0" y1="68" x2="376" y2="68" stroke="#242A35"/><line x1="0" y1="204" x2="376" y2="204" stroke="#242A35"/><line x1="0" y1="136" x2="376" y2="136" stroke="#3B4555"/></svg><svg width="100%" height="100%" viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute;left:0;top:0;"><polyline fill="none" stroke="#9F70E5" stroke-width="1.5" stroke-linejoin="round" points="0,60 30,58 60,62 90,55 120,68 150,48 180,72 210,40 240,80 270,30 300,90 330,20 360,100 390,10 420,105 450,15 480,95 510,25 540,85 570,35 600,75 630,45 660,65 690,55 720,60 750,58 780,62 810,59 840,60 870,60 900,61 930,59 960,60 990,60 1000,60"/><polyline fill="none" stroke="#9F70E5" stroke-width="1.5" stroke-linejoin="round" points="0,140 30,138 60,142 90,135 120,148 150,128 180,152 210,120 240,160 270,110 300,170 330,100 360,180 390,90 420,185 450,95 480,175 510,105 540,165 570,115 600,155 630,125 660,145 690,135 720,140 750,138 780,142 810,139 840,140 870,140 900,141 930,139 960,140 990,140 1000,140"/></svg></div>
+    <div class="pane-scroll"><div style="position:absolute;left:8px;right:52px;top:9px;height:2px;background:#242A35;"></div><div style="position:absolute;left:140px;top:8px;width:80px;height:4px;border-radius:2px;background:#3B4555;"></div></div>
+  </div>
+
+  <!-- FX -->
+  <div class="pane" style="left:780px;top:380px;width:378px;height:324px;">
+    <div class="pane-header"><div class="drag-handle"><span class="dot" style="left:9px;top:10px;"></span><span class="dot" style="left:13px;top:10px;"></span><span class="dot" style="left:9px;top:15px;"></span><span class="dot" style="left:13px;top:15px;"></span><span class="dot" style="left:9px;top:20px;"></span><span class="dot" style="left:13px;top:20px;"></span></div><span class="pane-name" style="left:32px;">FX</span><span class="pane-proc-value" style="right:96px;color:#D4B02C;font-size:11px;">Wet</span><div class="icon-btn" style="right:64px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg></div><div class="icon-btn" style="right:36px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><path d="M3 3v18h18"/><path d="M7 16V10"/><path d="M12 16V7"/><path d="M17 16v-4"/></svg></div><div class="icon-btn" style="right:8px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div></div>
+    <div class="pane-canvas"><svg width="100%" height="100%" viewBox="0 0 376 272" preserveAspectRatio="none"><line x1="47" y1="0" x2="47" y2="272" stroke="#242A35"/><line x1="94" y1="0" x2="94" y2="272" stroke="#242A35"/><line x1="141" y1="0" x2="141" y2="272" stroke="#242A35"/><line x1="188" y1="0" x2="188" y2="272" stroke="#242A35"/><line x1="235" y1="0" x2="235" y2="272" stroke="#242A35"/><line x1="282" y1="0" x2="282" y2="272" stroke="#242A35"/><line x1="329" y1="0" x2="329" y2="272" stroke="#242A35"/><line x1="0" y1="68" x2="376" y2="68" stroke="#242A35"/><line x1="0" y1="204" x2="376" y2="204" stroke="#242A35"/><line x1="0" y1="136" x2="376" y2="136" stroke="#3B4555"/></svg><svg width="100%" height="100%" viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute;left:0;top:0;"><polyline fill="none" stroke="#D4B02C" stroke-width="1.5" stroke-linejoin="round" points="0,60 30,58 60,62 90,55 120,68 150,48 180,72 210,40 240,80 270,30 300,90 330,20 360,100 390,10 420,105 450,15 480,95 510,25 540,85 570,35 600,75 630,45 660,65 690,55 720,60 750,58 780,62 810,59 840,60 870,60 900,61 930,59 960,60 990,60 1000,60"/><polyline fill="none" stroke="#D4B02C" stroke-width="1.5" stroke-linejoin="round" points="0,140 30,138 60,142 90,135 120,148 150,128 180,152 210,120 240,160 270,110 300,170 330,100 360,180 390,90 420,185 450,95 480,175 510,105 540,165 570,115 600,155 630,125 660,145 690,135 720,140 750,138 780,142 810,139 840,140 870,140 900,141 930,139 960,140 990,140 1000,140"/></svg></div>
+    <div class="pane-scroll"><div style="position:absolute;left:8px;right:52px;top:9px;height:2px;background:#242A35;"></div><div style="position:absolute;left:140px;top:8px;width:80px;height:4px;border-radius:2px;background:#3B4555;"></div></div>
+  </div>
+
+  <!-- Sidebar collapsed -->
+  <div class="sidebar" style="width:40px;">
+    <div style="position:absolute;left:1px;top:357px;width:1px;height:24px;background:rgba(232,234,237,0.08);"></div>
+    <div style="position:absolute;left:3px;top:357px;width:1px;height:24px;background:rgba(232,234,237,0.08);"></div>
+    <div class="icon-btn" style="left:8px;top:357px;">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <span class="metric" style="right:8px;width:70px;color:#00DD00;">60.0 FPS</span>
+    <span class="metric" style="right:86px;width:80px;">CPU: 4.2%</span>
+    <span class="metric" style="right:174px;width:90px;">Mem: 287.0 MB</span>
+    <span class="metric" style="right:272px;width:60px;">Osc: 3</span>
+    <span class="metric" style="right:340px;width:60px;">Src: 6</span>
+    <span class="metric" style="right:408px;width:80px;">OpenGL</span>
+  </div>
+</div>
+
+<!-- ============ FRAME 4: SINGLE COLUMN + HINT TEXT ============ -->
+<div class="variant-label">SINGLE COLUMN + HINT TEXT IN STATUS BAR</div>
+<div class="frame">
+  <div class="content-area" style="width:900px;"></div>
+
+  <!-- same three panes as Frame 1 -->
+  <div class="pane" style="left:16px;top:16px;width:868px;height:224px;">
+    <div class="pane-header"><div class="drag-handle"><span class="dot" style="left:9px;top:10px;"></span><span class="dot" style="left:13px;top:10px;"></span><span class="dot" style="left:9px;top:15px;"></span><span class="dot" style="left:13px;top:15px;"></span><span class="dot" style="left:9px;top:20px;"></span><span class="dot" style="left:13px;top:20px;"></span></div><span class="pane-name" style="left:32px;">Track 1 - Vocals</span><span class="pane-proc-label" style="right:108px;">Processing:</span><span class="pane-proc-value" style="right:72px;color:#1FD4F3;">Clean</span><div class="icon-btn" style="right:64px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg></div><div class="icon-btn" style="right:36px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><path d="M3 3v18h18"/><path d="M7 16V10"/><path d="M12 16V7"/><path d="M17 16v-4"/></svg></div><div class="icon-btn" style="right:8px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div></div>
+    <div class="pane-canvas"><svg width="100%" height="100%" viewBox="0 0 866 172" preserveAspectRatio="none"><line x1="108" y1="0" x2="108" y2="172" stroke="#242A35"/><line x1="216" y1="0" x2="216" y2="172" stroke="#242A35"/><line x1="324" y1="0" x2="324" y2="172" stroke="#242A35"/><line x1="432" y1="0" x2="432" y2="172" stroke="#242A35"/><line x1="541" y1="0" x2="541" y2="172" stroke="#242A35"/><line x1="649" y1="0" x2="649" y2="172" stroke="#242A35"/><line x1="757" y1="0" x2="757" y2="172" stroke="#242A35"/><line x1="0" y1="43" x2="866" y2="43" stroke="#242A35"/><line x1="0" y1="129" x2="866" y2="129" stroke="#242A35"/><line x1="0" y1="86" x2="866" y2="86" stroke="#3B4555"/></svg><svg width="100%" height="100%" viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute;left:0;top:0;"><polyline fill="none" stroke="#1FD4F3" stroke-width="1.5" stroke-linejoin="round" points="0,60 30,58 60,62 90,55 120,68 150,48 180,72 210,40 240,80 270,30 300,90 330,20 360,100 390,10 420,105 450,15 480,95 510,25 540,85 570,35 600,75 630,45 660,65 690,55 720,60 750,58 780,62 810,59 840,60 870,60 900,61 930,59 960,60 990,60 1000,60"/><polyline fill="none" stroke="#1FD4F3" stroke-width="1.5" stroke-linejoin="round" points="0,140 30,138 60,142 90,135 120,148 150,128 180,152 210,120 240,160 270,110 300,170 330,100 360,180 390,90 420,185 450,95 480,175 510,105 540,165 570,115 600,155 630,125 660,145 690,135 720,140 750,138 780,142 810,139 840,140 870,140 900,141 930,139 960,140 990,140 1000,140"/></svg></div>
+    <div class="pane-scroll"><div style="position:absolute;left:8px;right:52px;top:9px;height:2px;background:#242A35;"></div><div style="position:absolute;left:380px;top:8px;width:80px;height:4px;border-radius:2px;background:#3B4555;"></div></div>
+  </div>
+
+  <div class="pane" style="left:16px;top:248px;width:868px;height:224px;">
+    <div class="pane-header"><div class="drag-handle"><span class="dot" style="left:9px;top:10px;"></span><span class="dot" style="left:13px;top:10px;"></span><span class="dot" style="left:9px;top:15px;"></span><span class="dot" style="left:13px;top:15px;"></span><span class="dot" style="left:9px;top:20px;"></span><span class="dot" style="left:13px;top:20px;"></span></div><span class="pane-name" style="left:32px;">Track 2 - Drums</span><span class="pane-proc-label" style="right:140px;">Processing:</span><span class="pane-proc-value" style="right:72px;color:#E24BA6;">Compressed</span><div class="icon-btn" style="right:64px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg></div><div class="icon-btn" style="right:36px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><path d="M3 3v18h18"/><path d="M7 16V10"/><path d="M12 16V7"/><path d="M17 16v-4"/></svg></div><div class="icon-btn" style="right:8px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div></div>
+    <div class="pane-canvas"><svg width="100%" height="100%" viewBox="0 0 866 172" preserveAspectRatio="none"><line x1="108" y1="0" x2="108" y2="172" stroke="#242A35"/><line x1="216" y1="0" x2="216" y2="172" stroke="#242A35"/><line x1="324" y1="0" x2="324" y2="172" stroke="#242A35"/><line x1="432" y1="0" x2="432" y2="172" stroke="#242A35"/><line x1="541" y1="0" x2="541" y2="172" stroke="#242A35"/><line x1="649" y1="0" x2="649" y2="172" stroke="#242A35"/><line x1="757" y1="0" x2="757" y2="172" stroke="#242A35"/><line x1="0" y1="43" x2="866" y2="43" stroke="#242A35"/><line x1="0" y1="129" x2="866" y2="129" stroke="#242A35"/><line x1="0" y1="86" x2="866" y2="86" stroke="#3B4555"/></svg><svg width="100%" height="100%" viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute;left:0;top:0;"><polyline fill="none" stroke="#E24BA6" stroke-width="1.5" stroke-linejoin="round" points="0,60 30,58 60,62 90,55 120,68 150,48 180,72 210,40 240,80 270,30 300,90 330,20 360,100 390,10 420,105 450,15 480,95 510,25 540,85 570,35 600,75 630,45 660,65 690,55 720,60 750,58 780,62 810,59 840,60 870,60 900,61 930,59 960,60 990,60 1000,60"/><polyline fill="none" stroke="#E24BA6" stroke-width="1.5" stroke-linejoin="round" points="0,140 30,138 60,142 90,135 120,148 150,128 180,152 210,120 240,160 270,110 300,170 330,100 360,180 390,90 420,185 450,95 480,175 510,105 540,165 570,115 600,155 630,125 660,145 690,135 720,140 750,138 780,142 810,139 840,140 870,140 900,141 930,139 960,140 990,140 1000,140"/></svg></div>
+    <div class="pane-scroll"><div style="position:absolute;left:8px;right:52px;top:9px;height:2px;background:#242A35;"></div><div style="position:absolute;left:380px;top:8px;width:80px;height:4px;border-radius:2px;background:#3B4555;"></div></div>
+  </div>
+
+  <div class="pane" style="left:16px;top:480px;width:868px;height:224px;">
+    <div class="pane-header"><div class="drag-handle"><span class="dot" style="left:9px;top:10px;"></span><span class="dot" style="left:13px;top:10px;"></span><span class="dot" style="left:9px;top:15px;"></span><span class="dot" style="left:13px;top:15px;"></span><span class="dot" style="left:9px;top:20px;"></span><span class="dot" style="left:13px;top:20px;"></span></div><span class="pane-name" style="left:32px;">Track 3 - Bass</span><span class="pane-proc-label" style="right:108px;">Processing:</span><span class="pane-proc-value" style="right:72px;color:#4AD070;">Sub</span><div class="icon-btn" style="right:64px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg></div><div class="icon-btn" style="right:36px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><path d="M3 3v18h18"/><path d="M7 16V10"/><path d="M12 16V7"/><path d="M17 16v-4"/></svg></div><div class="icon-btn" style="right:8px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div></div>
+    <div class="pane-canvas"><svg width="100%" height="100%" viewBox="0 0 866 172" preserveAspectRatio="none"><line x1="108" y1="0" x2="108" y2="172" stroke="#242A35"/><line x1="216" y1="0" x2="216" y2="172" stroke="#242A35"/><line x1="324" y1="0" x2="324" y2="172" stroke="#242A35"/><line x1="432" y1="0" x2="432" y2="172" stroke="#242A35"/><line x1="541" y1="0" x2="541" y2="172" stroke="#242A35"/><line x1="649" y1="0" x2="649" y2="172" stroke="#242A35"/><line x1="757" y1="0" x2="757" y2="172" stroke="#242A35"/><line x1="0" y1="43" x2="866" y2="43" stroke="#242A35"/><line x1="0" y1="129" x2="866" y2="129" stroke="#242A35"/><line x1="0" y1="86" x2="866" y2="86" stroke="#3B4555"/></svg><svg width="100%" height="100%" viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute;left:0;top:0;"><polyline fill="none" stroke="#4AD070" stroke-width="1.5" stroke-linejoin="round" points="0,60 30,58 60,62 90,55 120,68 150,48 180,72 210,40 240,80 270,30 300,90 330,20 360,100 390,10 420,105 450,15 480,95 510,25 540,85 570,35 600,75 630,45 660,65 690,55 720,60 750,58 780,62 810,59 840,60 870,60 900,61 930,59 960,60 990,60 1000,60"/><polyline fill="none" stroke="#4AD070" stroke-width="1.5" stroke-linejoin="round" points="0,140 30,138 60,142 90,135 120,148 150,128 180,152 210,120 240,160 270,110 300,170 330,100 360,180 390,90 420,185 450,95 480,175 510,105 540,165 570,115 600,155 630,125 660,145 690,135 720,140 750,138 780,142 810,139 840,140 870,140 900,141 930,139 960,140 990,140 1000,140"/></svg></div>
+    <div class="pane-scroll"><div style="position:absolute;left:8px;right:52px;top:9px;height:2px;background:#242A35;"></div><div style="position:absolute;left:380px;top:8px;width:80px;height:4px;border-radius:2px;background:#3B4555;"></div></div>
+  </div>
+
+  <!-- Sidebar expanded (same as frame 1) -->
+  <div class="sidebar" style="width:300px;">
+    <div style="position:absolute;left:0;top:0;width:300px;height:40px;border-bottom:1px solid #1F2630;"><div class="icon-btn" style="right:8px;top:8px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><polyline points="15 18 9 12 15 6"/></svg></div></div>
+    <div class="sec-header" style="left:0;top:40px;width:300px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:8px;top:13px;"><polyline points="6 9 12 15 18 9"/></svg><span class="sec-label" style="left:28px;">OSCILLATORS</span><div class="count-badge" style="right:16px;">3</div></div>
+    <div style="position:absolute;left:16px;top:88px;width:268px;height:32px;border-radius:6px;background:#007ACC;text-align:center;line-height:32px;font-size:12px;font-weight:600;color:#FFFFFF;">+ Add Oscillator</div>
+    <div class="osc-row" style="top:128px;"><div class="osc-dot" style="background:#1FD4F3;"></div><span class="osc-name">Lead Vocal</span><span class="osc-track">Track 1</span></div>
+    <div class="osc-row" style="top:184px;"><div class="osc-dot" style="background:#E24BA6;"></div><span class="osc-name">Drums - Kick</span><span class="osc-track">Track 2</span></div>
+    <div class="osc-row" style="top:240px;"><div class="osc-dot" style="background:#4AD070;"></div><span class="osc-name">Bass DI</span><span class="osc-track">Track 3</span></div>
+    <div class="sb-divider" style="top:304px;"></div>
+    <div class="sec-header" style="left:0;top:312px;width:300px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:8px;top:13px;"><polyline points="6 9 12 15 18 9"/></svg><span class="sec-label" style="left:28px;">TIMING</span></div>
+    <div style="position:absolute;left:16px;top:360px;width:268px;height:28px;border-radius:6px;background:#161B24;border:1px solid #242A35;"><div style="position:absolute;left:0;top:0;width:134px;height:28px;text-align:center;line-height:28px;font-size:11px;color:#8A94A3;">TIME</div><div style="position:absolute;left:134px;top:0;width:1px;height:28px;background:#242A35;"></div><div style="position:absolute;left:135px;top:0;width:133px;height:28px;border-radius:6px;background:rgba(31,212,243,0.15);text-align:center;line-height:28px;font-size:11px;font-weight:600;color:#1FD4F3;">MELODIC</div></div>
+    <span style="position:absolute;left:16px;top:400px;line-height:32px;font-size:12px;color:#E8EAED;">Mode</span>
+    <div class="dropdown" style="left:80px;top:400px;width:204px;"><span class="dropdown-text">Free Running</span><svg class="dropdown-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+    <div class="dropdown" style="left:16px;top:440px;width:268px;"><span class="dropdown-text">1/4 Note</span><svg class="dropdown-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+    <span style="position:absolute;left:16px;top:480px;line-height:32px;font-size:12px;color:#E8EAED;">BPM</span>
+    <div class="dropdown" style="left:52px;top:480px;width:80px;"><span style="position:absolute;left:0;top:0;width:80px;line-height:32px;text-align:center;font-size:12px;font-weight:600;color:#E8EAED;">120.0</span></div>
+    <div class="toggle-track" style="left:144px;top:487px;background:#4AD070;"><div class="toggle-thumb" style="left:18px;background:#FFFFFF;"></div></div>
+    <span style="position:absolute;left:186px;top:480px;line-height:32px;font-size:12px;color:#E8EAED;">Sync</span>
+    <div style="position:absolute;left:115px;top:524px;width:70px;height:18px;border-radius:999px;background:rgba(0,221,0,0.20);text-align:center;line-height:18px;font-size:10px;font-weight:600;color:#4AD070;">SYNCED</div>
+    <div class="sb-divider" style="top:556px;"></div>
+    <div class="sec-header" style="left:0;top:564px;width:300px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:8px;top:13px;"><polyline points="6 9 12 15 18 9"/></svg><span class="sec-label" style="left:28px;">OPTIONS</span></div>
+    <span style="position:absolute;left:16px;top:612px;font-size:12px;font-weight:600;color:#E8EAED;">Gain</span>
+    <span style="position:absolute;right:16px;top:612px;font-size:12px;color:#8A94A3;">0.0 dB</span>
+    <div style="position:absolute;left:16px;top:636px;width:268px;height:14px;"><div class="slider-track" style="left:0;top:5px;width:268px;"></div><div class="slider-fill" style="left:0;top:5px;width:134px;"></div><div class="slider-thumb" style="left:127px;"></div></div>
+    <span class="sub-header" style="left:16px;top:664px;">DISPLAY</span>
+    <span style="position:absolute;left:16px;top:686px;line-height:22px;font-size:12px;color:#E8EAED;">Show Grid</span>
+    <div class="toggle-track" style="right:16px;top:688px;background:#4AD070;"><div class="toggle-thumb" style="left:18px;background:#FFFFFF;"></div></div>
+    <span style="position:absolute;left:16px;top:714px;line-height:22px;font-size:12px;color:#E8EAED;">Auto-Scale</span>
+    <div class="toggle-track" style="right:16px;top:716px;background:#3A3A3A;"><div class="toggle-thumb" style="left:2px;background:#E0E0E0;"></div></div>
+  </div>
+
+  <!-- Status Bar with hint -->
+  <div class="status-bar">
+    <span style="position:absolute;left:10px;top:0;line-height:22px;font-size:12px;color:#8A94A3;">Drag the oscillator header to move it to another pane</span>
+    <div style="position:absolute;right:508px;top:5px;width:1px;height:12px;background:#1F2630;"></div>
+    <span class="metric" style="right:8px;width:70px;color:#00DD00;">60.0 FPS</span>
+    <span class="metric" style="right:86px;width:80px;">CPU: 4.2%</span>
+    <span class="metric" style="right:174px;width:90px;">Mem: 287.0 MB</span>
+    <span class="metric" style="right:272px;width:60px;">Osc: 3</span>
+    <span class="metric" style="right:340px;width:60px;">Src: 6</span>
+    <span class="metric" style="right:408px;width:80px;">OpenGL</span>
+  </div>
+</div>
+
+<!-- ============ FRAME 5: SINGLE COLUMN + FPS WARNING ============ -->
+<div class="variant-label">SINGLE COLUMN + FPS WARNING STATE</div>
+<div class="frame">
+  <div class="content-area" style="width:900px;"></div>
+
+  <div class="pane" style="left:16px;top:16px;width:868px;height:224px;">
+    <div class="pane-header"><div class="drag-handle"><span class="dot" style="left:9px;top:10px;"></span><span class="dot" style="left:13px;top:10px;"></span><span class="dot" style="left:9px;top:15px;"></span><span class="dot" style="left:13px;top:15px;"></span><span class="dot" style="left:9px;top:20px;"></span><span class="dot" style="left:13px;top:20px;"></span></div><span class="pane-name" style="left:32px;">Track 1 - Vocals</span><span class="pane-proc-label" style="right:108px;">Processing:</span><span class="pane-proc-value" style="right:72px;color:#1FD4F3;">Clean</span><div class="icon-btn" style="right:64px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg></div><div class="icon-btn" style="right:36px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><path d="M3 3v18h18"/><path d="M7 16V10"/><path d="M12 16V7"/><path d="M17 16v-4"/></svg></div><div class="icon-btn" style="right:8px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div></div>
+    <div class="pane-canvas"><svg width="100%" height="100%" viewBox="0 0 866 172" preserveAspectRatio="none"><line x1="108" y1="0" x2="108" y2="172" stroke="#242A35"/><line x1="216" y1="0" x2="216" y2="172" stroke="#242A35"/><line x1="324" y1="0" x2="324" y2="172" stroke="#242A35"/><line x1="432" y1="0" x2="432" y2="172" stroke="#242A35"/><line x1="541" y1="0" x2="541" y2="172" stroke="#242A35"/><line x1="649" y1="0" x2="649" y2="172" stroke="#242A35"/><line x1="757" y1="0" x2="757" y2="172" stroke="#242A35"/><line x1="0" y1="43" x2="866" y2="43" stroke="#242A35"/><line x1="0" y1="129" x2="866" y2="129" stroke="#242A35"/><line x1="0" y1="86" x2="866" y2="86" stroke="#3B4555"/></svg><svg width="100%" height="100%" viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute;left:0;top:0;"><polyline fill="none" stroke="#1FD4F3" stroke-width="1.5" stroke-linejoin="round" points="0,60 30,58 60,62 90,55 120,68 150,48 180,72 210,40 240,80 270,30 300,90 330,20 360,100 390,10 420,105 450,15 480,95 510,25 540,85 570,35 600,75 630,45 660,65 690,55 720,60 750,58 780,62 810,59 840,60 870,60 900,61 930,59 960,60 990,60 1000,60"/><polyline fill="none" stroke="#1FD4F3" stroke-width="1.5" stroke-linejoin="round" points="0,140 30,138 60,142 90,135 120,148 150,128 180,152 210,120 240,160 270,110 300,170 330,100 360,180 390,90 420,185 450,95 480,175 510,105 540,165 570,115 600,155 630,125 660,145 690,135 720,140 750,138 780,142 810,139 840,140 870,140 900,141 930,139 960,140 990,140 1000,140"/></svg></div>
+    <div class="pane-scroll"><div style="position:absolute;left:8px;right:52px;top:9px;height:2px;background:#242A35;"></div><div style="position:absolute;left:380px;top:8px;width:80px;height:4px;border-radius:2px;background:#3B4555;"></div></div>
+  </div>
+
+  <div class="pane" style="left:16px;top:248px;width:868px;height:224px;">
+    <div class="pane-header"><div class="drag-handle"><span class="dot" style="left:9px;top:10px;"></span><span class="dot" style="left:13px;top:10px;"></span><span class="dot" style="left:9px;top:15px;"></span><span class="dot" style="left:13px;top:15px;"></span><span class="dot" style="left:9px;top:20px;"></span><span class="dot" style="left:13px;top:20px;"></span></div><span class="pane-name" style="left:32px;">Track 2 - Drums</span><span class="pane-proc-label" style="right:140px;">Processing:</span><span class="pane-proc-value" style="right:72px;color:#E24BA6;">Compressed</span><div class="icon-btn" style="right:64px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg></div><div class="icon-btn" style="right:36px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><path d="M3 3v18h18"/><path d="M7 16V10"/><path d="M12 16V7"/><path d="M17 16v-4"/></svg></div><div class="icon-btn" style="right:8px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div></div>
+    <div class="pane-canvas"><svg width="100%" height="100%" viewBox="0 0 866 172" preserveAspectRatio="none"><line x1="108" y1="0" x2="108" y2="172" stroke="#242A35"/><line x1="216" y1="0" x2="216" y2="172" stroke="#242A35"/><line x1="324" y1="0" x2="324" y2="172" stroke="#242A35"/><line x1="432" y1="0" x2="432" y2="172" stroke="#242A35"/><line x1="541" y1="0" x2="541" y2="172" stroke="#242A35"/><line x1="649" y1="0" x2="649" y2="172" stroke="#242A35"/><line x1="757" y1="0" x2="757" y2="172" stroke="#242A35"/><line x1="0" y1="43" x2="866" y2="43" stroke="#242A35"/><line x1="0" y1="129" x2="866" y2="129" stroke="#242A35"/><line x1="0" y1="86" x2="866" y2="86" stroke="#3B4555"/></svg><svg width="100%" height="100%" viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute;left:0;top:0;"><polyline fill="none" stroke="#E24BA6" stroke-width="1.5" stroke-linejoin="round" points="0,60 30,58 60,62 90,55 120,68 150,48 180,72 210,40 240,80 270,30 300,90 330,20 360,100 390,10 420,105 450,15 480,95 510,25 540,85 570,35 600,75 630,45 660,65 690,55 720,60 750,58 780,62 810,59 840,60 870,60 900,61 930,59 960,60 990,60 1000,60"/><polyline fill="none" stroke="#E24BA6" stroke-width="1.5" stroke-linejoin="round" points="0,140 30,138 60,142 90,135 120,148 150,128 180,152 210,120 240,160 270,110 300,170 330,100 360,180 390,90 420,185 450,95 480,175 510,105 540,165 570,115 600,155 630,125 660,145 690,135 720,140 750,138 780,142 810,139 840,140 870,140 900,141 930,139 960,140 990,140 1000,140"/></svg></div>
+    <div class="pane-scroll"><div style="position:absolute;left:8px;right:52px;top:9px;height:2px;background:#242A35;"></div><div style="position:absolute;left:380px;top:8px;width:80px;height:4px;border-radius:2px;background:#3B4555;"></div></div>
+  </div>
+
+  <div class="pane" style="left:16px;top:480px;width:868px;height:224px;">
+    <div class="pane-header"><div class="drag-handle"><span class="dot" style="left:9px;top:10px;"></span><span class="dot" style="left:13px;top:10px;"></span><span class="dot" style="left:9px;top:15px;"></span><span class="dot" style="left:13px;top:15px;"></span><span class="dot" style="left:9px;top:20px;"></span><span class="dot" style="left:13px;top:20px;"></span></div><span class="pane-name" style="left:32px;">Track 3 - Bass</span><span class="pane-proc-label" style="right:108px;">Processing:</span><span class="pane-proc-value" style="right:72px;color:#4AD070;">Sub</span><div class="icon-btn" style="right:64px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg></div><div class="icon-btn" style="right:36px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><path d="M3 3v18h18"/><path d="M7 16V10"/><path d="M12 16V7"/><path d="M17 16v-4"/></svg></div><div class="icon-btn" style="right:8px;top:4px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div></div>
+    <div class="pane-canvas"><svg width="100%" height="100%" viewBox="0 0 866 172" preserveAspectRatio="none"><line x1="108" y1="0" x2="108" y2="172" stroke="#242A35"/><line x1="216" y1="0" x2="216" y2="172" stroke="#242A35"/><line x1="324" y1="0" x2="324" y2="172" stroke="#242A35"/><line x1="432" y1="0" x2="432" y2="172" stroke="#242A35"/><line x1="541" y1="0" x2="541" y2="172" stroke="#242A35"/><line x1="649" y1="0" x2="649" y2="172" stroke="#242A35"/><line x1="757" y1="0" x2="757" y2="172" stroke="#242A35"/><line x1="0" y1="43" x2="866" y2="43" stroke="#242A35"/><line x1="0" y1="129" x2="866" y2="129" stroke="#242A35"/><line x1="0" y1="86" x2="866" y2="86" stroke="#3B4555"/></svg><svg width="100%" height="100%" viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute;left:0;top:0;"><polyline fill="none" stroke="#4AD070" stroke-width="1.5" stroke-linejoin="round" points="0,60 30,58 60,62 90,55 120,68 150,48 180,72 210,40 240,80 270,30 300,90 330,20 360,100 390,10 420,105 450,15 480,95 510,25 540,85 570,35 600,75 630,45 660,65 690,55 720,60 750,58 780,62 810,59 840,60 870,60 900,61 930,59 960,60 990,60 1000,60"/><polyline fill="none" stroke="#4AD070" stroke-width="1.5" stroke-linejoin="round" points="0,140 30,138 60,142 90,135 120,148 150,128 180,152 210,120 240,160 270,110 300,170 330,100 360,180 390,90 420,185 450,95 480,175 510,105 540,165 570,115 600,155 630,125 660,145 690,135 720,140 750,138 780,142 810,139 840,140 870,140 900,141 930,139 960,140 990,140 1000,140"/></svg></div>
+    <div class="pane-scroll"><div style="position:absolute;left:8px;right:52px;top:9px;height:2px;background:#242A35;"></div><div style="position:absolute;left:380px;top:8px;width:80px;height:4px;border-radius:2px;background:#3B4555;"></div></div>
+  </div>
+
+  <!-- Sidebar expanded (clone) -->
+  <div class="sidebar" style="width:300px;">
+    <div style="position:absolute;left:0;top:0;width:300px;height:40px;border-bottom:1px solid #1F2630;"><div class="icon-btn" style="right:8px;top:8px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><polyline points="15 18 9 12 15 6"/></svg></div></div>
+    <div class="sec-header" style="left:0;top:40px;width:300px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:8px;top:13px;"><polyline points="6 9 12 15 18 9"/></svg><span class="sec-label" style="left:28px;">OSCILLATORS</span><div class="count-badge" style="right:16px;">3</div></div>
+    <div style="position:absolute;left:16px;top:88px;width:268px;height:32px;border-radius:6px;background:#007ACC;text-align:center;line-height:32px;font-size:12px;font-weight:600;color:#FFFFFF;">+ Add Oscillator</div>
+    <div class="osc-row" style="top:128px;"><div class="osc-dot" style="background:#1FD4F3;"></div><span class="osc-name">Lead Vocal</span><span class="osc-track">Track 1</span></div>
+    <div class="osc-row" style="top:184px;"><div class="osc-dot" style="background:#E24BA6;"></div><span class="osc-name">Drums - Kick</span><span class="osc-track">Track 2</span></div>
+    <div class="osc-row" style="top:240px;"><div class="osc-dot" style="background:#4AD070;"></div><span class="osc-name">Bass DI</span><span class="osc-track">Track 3</span></div>
+    <div class="sb-divider" style="top:304px;"></div>
+    <div class="sec-header" style="left:0;top:312px;width:300px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:8px;top:13px;"><polyline points="6 9 12 15 18 9"/></svg><span class="sec-label" style="left:28px;">TIMING</span></div>
+    <div style="position:absolute;left:16px;top:360px;width:268px;height:28px;border-radius:6px;background:#161B24;border:1px solid #242A35;"><div style="position:absolute;left:0;top:0;width:134px;height:28px;text-align:center;line-height:28px;font-size:11px;color:#8A94A3;">TIME</div><div style="position:absolute;left:134px;top:0;width:1px;height:28px;background:#242A35;"></div><div style="position:absolute;left:135px;top:0;width:133px;height:28px;border-radius:6px;background:rgba(31,212,243,0.15);text-align:center;line-height:28px;font-size:11px;font-weight:600;color:#1FD4F3;">MELODIC</div></div>
+    <span style="position:absolute;left:16px;top:400px;line-height:32px;font-size:12px;color:#E8EAED;">Mode</span>
+    <div class="dropdown" style="left:80px;top:400px;width:204px;"><span class="dropdown-text">Free Running</span><svg class="dropdown-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+    <div class="dropdown" style="left:16px;top:440px;width:268px;"><span class="dropdown-text">1/4 Note</span><svg class="dropdown-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+    <span style="position:absolute;left:16px;top:480px;line-height:32px;font-size:12px;color:#E8EAED;">BPM</span>
+    <div class="dropdown" style="left:52px;top:480px;width:80px;"><span style="position:absolute;left:0;top:0;width:80px;line-height:32px;text-align:center;font-size:12px;font-weight:600;color:#E8EAED;">120.0</span></div>
+    <div class="toggle-track" style="left:144px;top:487px;background:#4AD070;"><div class="toggle-thumb" style="left:18px;background:#FFFFFF;"></div></div>
+    <span style="position:absolute;left:186px;top:480px;line-height:32px;font-size:12px;color:#E8EAED;">Sync</span>
+    <div style="position:absolute;left:115px;top:524px;width:70px;height:18px;border-radius:999px;background:rgba(0,221,0,0.20);text-align:center;line-height:18px;font-size:10px;font-weight:600;color:#4AD070;">SYNCED</div>
+    <div class="sb-divider" style="top:556px;"></div>
+    <div class="sec-header" style="left:0;top:564px;width:300px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:8px;top:13px;"><polyline points="6 9 12 15 18 9"/></svg><span class="sec-label" style="left:28px;">OPTIONS</span></div>
+    <span style="position:absolute;left:16px;top:612px;font-size:12px;font-weight:600;color:#E8EAED;">Gain</span>
+    <span style="position:absolute;right:16px;top:612px;font-size:12px;color:#8A94A3;">0.0 dB</span>
+    <div style="position:absolute;left:16px;top:636px;width:268px;height:14px;"><div class="slider-track" style="left:0;top:5px;width:268px;"></div><div class="slider-fill" style="left:0;top:5px;width:134px;"></div><div class="slider-thumb" style="left:127px;"></div></div>
+    <span class="sub-header" style="left:16px;top:664px;">DISPLAY</span>
+    <span style="position:absolute;left:16px;top:686px;line-height:22px;font-size:12px;color:#E8EAED;">Show Grid</span>
+    <div class="toggle-track" style="right:16px;top:688px;background:#4AD070;"><div class="toggle-thumb" style="left:18px;background:#FFFFFF;"></div></div>
+    <span style="position:absolute;left:16px;top:714px;line-height:22px;font-size:12px;color:#E8EAED;">Auto-Scale</span>
+    <div class="toggle-track" style="right:16px;top:716px;background:#3A3A3A;"><div class="toggle-thumb" style="left:2px;background:#E0E0E0;"></div></div>
+  </div>
+
+  <!-- Status Bar with FPS warning -->
+  <div class="status-bar">
+    <span class="metric" style="right:8px;width:70px;color:#EE4444;font-weight:600;">28.4 FPS</span>
+    <span class="metric" style="right:86px;width:80px;">CPU: 4.2%</span>
+    <span class="metric" style="right:174px;width:90px;">Mem: 287.0 MB</span>
+    <span class="metric" style="right:272px;width:60px;">Osc: 3</span>
+    <span class="metric" style="right:340px;width:60px;">Src: 6</span>
+    <span class="metric" style="right:408px;width:80px;">OpenGL</span>
+  </div>
+</div>
+
+</body>
+</html>

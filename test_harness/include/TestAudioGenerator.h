@@ -1,5 +1,5 @@
 /*
-    Oscil Test Harness - Audio Generator
+    MultiScoper Test Harness - Audio Generator
     Generates test waveforms for simulating DAW audio
 */
 
@@ -10,7 +10,7 @@
 #include <atomic>
 #include <random>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 enum class Waveform
@@ -96,9 +96,20 @@ private:
     std::atomic<int> burstSamples_{0};
     std::atomic<bool> generating_{true};
 
-    double sampleRate_ = 44100.0;
+    // sampleRate_ and phaseIncrement_ are read on the audio thread by
+    // generateBlock and written on the message thread by prepare() /
+    // setFrequency(). Plain doubles would be a data race per the C++
+    // memory model (even though aligned 64-bit loads/stores are atomic
+    // on x86 and ARM64 in practice). Use std::atomic<double> to match
+    // the header's documented "thread-safe for real-time audio" contract.
+    std::atomic<double> sampleRate_{44100.0};
+    std::atomic<double> phaseIncrement_{0.0};
+
+    // phase_ and burstCounter_ are audio-thread-only for the main path;
+    // reset() from the message thread briefly writes them but a torn
+    // read just produces a transient visual blip, acceptable for test
+    // audio. Left as plain members.
     double phase_ = 0.0;
-    double phaseIncrement_ = 0.0;
     int burstCounter_ = 0;
 
     // For noise generation
@@ -108,4 +119,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TestAudioGenerator)
 };
 
-} // namespace oscil::test
+} // namespace multiscoper::test

@@ -1,5 +1,5 @@
 /*
-    Oscil - Pane Header
+    MultiScoper - Pane Header
     Header component for pane containing title, badges, actions, and close button
 */
 
@@ -7,7 +7,7 @@
 
 #include "core/Oscillator.h"
 #include "ui/components/InlineEditLabel.h"
-#include "ui/components/OscilButton.h"
+#include "ui/components/MultiScoperButton.h"
 #include "ui/components/TestId.h"
 #include "ui/layout/pane/PaneActionBar.h"
 #include "ui/theme/IThemeService.h"
@@ -18,7 +18,7 @@
 #include <memory>
 #include <optional>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -79,7 +79,7 @@ private:
     // Components
     std::unique_ptr<InlineEditLabel> nameLabel_;
     std::unique_ptr<PaneActionBar> actionBar_;
-    std::unique_ptr<OscilButton> closeButton_;
+    std::unique_ptr<MultiScoperButton> closeButton_;
 
     // Badge data - stored by value to avoid dangling pointer when vector reallocates
     std::optional<Oscillator> primaryOscillator_;
@@ -102,9 +102,9 @@ private:
     static constexpr int DRAG_START_THRESHOLD_PX = 5;
 
     // TestIdSupport
-    OSCIL_TESTABLE();
+    MULTISCOPER_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PaneHeader)
 };
 
-} // namespace oscil
+} // namespace multiscoper

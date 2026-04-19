@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Architecture boundary lint for the Oscil project.
+Architecture boundary lint for the MultiScoper project.
 
 Enforces the include dependency DAG to prevent layer violations:
 

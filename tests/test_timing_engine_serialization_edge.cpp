@@ -1,5 +1,5 @@
 /*
-    Oscil - Timing Engine Tests (Serialization Edge Cases)
+    MultiScoper - Timing Engine Tests (Serialization Edge Cases)
     Invalid trees, entity config integration, note interval conversion, empty buffers
 */
 

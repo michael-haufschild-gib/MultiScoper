@@ -16,14 +16,14 @@ What bugs these tests catch:
 """
 
 import pytest
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 
 
 class TestOscillatorLifecycleFlow:
     """Full lifecycle: add, configure, verify state, save, load, verify again."""
 
     def test_add_configure_save_load_verify(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: state serialization losing properties set after initial add.
@@ -43,7 +43,7 @@ class TestOscillatorLifecycleFlow:
         assert osc["visible"] is False
 
         # Save state
-        state_path = "/tmp/oscil_e2e_lifecycle.xml"
+        state_path = "/tmp/multiscoper_e2e_lifecycle.xml"
         saved = editor.save_state(state_path)
         if not saved:
             pytest.fail("State save API not available")
@@ -67,7 +67,7 @@ class TestOscillatorLifecycleFlow:
         )
 
     def test_add_multiple_delete_middle_verify_order(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: deleting a middle oscillator corrupts order indices
@@ -106,11 +106,11 @@ class TestOscillatorLifecycleFlow:
         )
 
     def test_oscillator_survives_editor_close_reopen(
-        self, client: OscilTestClient
+        self, client: MultiScoperTestClient
     ):
         """
         Bug caught: oscillator state lost when editor is closed and reopened
-        (e.g., state held only in UI components, not persisted to OscilState).
+        (e.g., state held only in UI components, not persisted to MultiScoperState).
         """
         # Open first, then reset to clear the default oscillator
         # that createDefaultOscillatorIfNeeded creates on editor open.
@@ -145,7 +145,7 @@ class TestTimingAndOscillatorInteraction:
     """Verify timing settings are not affected by oscillator operations."""
 
     def test_adding_oscillator_preserves_timing(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: adding an oscillator triggers a state change listener
@@ -184,7 +184,7 @@ class TestTimingAndOscillatorInteraction:
         )
 
     def test_deleting_all_oscillators_preserves_timing(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: deleting the last oscillator triggers cleanup that
@@ -227,7 +227,7 @@ class TestTransportAndRenderingInteraction:
     """Verify transport state interacts correctly with rendering."""
 
     def test_transport_stop_does_not_crash_with_oscillators(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: stopping transport while waveforms are actively rendering
@@ -262,7 +262,7 @@ class TestTransportAndRenderingInteraction:
         assert state is not None, "Transport state should be queryable after stop"
 
     def test_waveform_type_change_during_playback(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: changing waveform type while playing causes audio callback
@@ -293,7 +293,7 @@ class TestPaneStateConsistency:
     """Verify pane state stays consistent with oscillator operations."""
 
     def test_pane_auto_created_on_first_oscillator(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: first oscillator added with no panes causes crash
@@ -317,7 +317,7 @@ class TestPaneStateConsistency:
         )
 
     def test_pane_properties_returned_correctly(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: pane serialization returning empty/null fields.
@@ -334,7 +334,7 @@ class TestPaneStateConsistency:
         assert "name" in pane, "Pane should have a name field"
 
     def test_multiple_oscillators_same_pane(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: second oscillator added to same pane overwrites the first
@@ -365,7 +365,7 @@ class TestStatePersistenceEdgeCases:
     """Edge cases in state save/load that are easy to miss."""
 
     def test_save_load_with_multiple_oscillators_different_modes(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: processing mode enum serialization not round-tripping
@@ -378,7 +378,7 @@ class TestStatePersistenceEdgeCases:
         oscs_before = editor.get_oscillators()
         modes_before = {o["name"]: o.get("mode") for o in oscs_before}
 
-        path = "/tmp/oscil_e2e_modes.xml"
+        path = "/tmp/multiscoper_e2e_modes.xml"
         saved = editor.save_state(path)
         if not saved:
             pytest.fail("State save API not available")
@@ -400,7 +400,7 @@ class TestStatePersistenceEdgeCases:
                 )
 
     def test_load_nonexistent_file_fails_gracefully(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: loading a nonexistent file causes crash instead of
@@ -409,7 +409,7 @@ class TestStatePersistenceEdgeCases:
         osc_id = editor.add_oscillator(source_id, name="Before Bad Load")
         editor.wait_for_oscillator_count(1, timeout_s=3.0)
 
-        result = editor.load_state("/tmp/nonexistent_oscil_state_12345.xml")
+        result = editor.load_state("/tmp/nonexistent_multiscoper_state_12345.xml")
         # Should fail gracefully (return False), not crash
         assert result is False, "Loading nonexistent file should return False"
 
@@ -417,14 +417,14 @@ class TestStatePersistenceEdgeCases:
         oscs = editor.get_oscillators()
         assert len(oscs) == 1, "State should be unchanged after failed load"
 
-    def test_save_empty_state_and_reload(self, editor: OscilTestClient):
+    def test_save_empty_state_and_reload(self, editor: MultiScoperTestClient):
         """
         Bug caught: saving empty state produces invalid XML that cannot
         be loaded back.
         """
         assert len(editor.get_oscillators()) == 0
 
-        path = "/tmp/oscil_e2e_empty.xml"
+        path = "/tmp/multiscoper_e2e_empty.xml"
         saved = editor.save_state(path)
         if not saved:
             pytest.fail("State save API not available")
@@ -441,7 +441,7 @@ class TestColorAssignment:
     """Verify oscillator colors are stored and retrievable."""
 
     def test_color_stored_on_creation(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: colour parameter ignored during oscillator creation,
@@ -462,7 +462,7 @@ class TestColorAssignment:
         )
 
     def test_color_differs_between_oscillators(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: all oscillators get the same default color because
@@ -485,7 +485,7 @@ class TestColorAssignment:
             )
 
     def test_color_survives_save_load(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: colour hex string not serialized in state XML,
@@ -499,7 +499,7 @@ class TestColorAssignment:
         osc_before = editor.get_oscillator_by_id(osc_id)
         colour_before = osc_before.get("colour", osc_before.get("color", ""))
 
-        path = "/tmp/oscil_e2e_color.xml"
+        path = "/tmp/multiscoper_e2e_color.xml"
         saved = editor.save_state(path)
         if not saved:
             pytest.fail("State save API not available")
@@ -524,7 +524,7 @@ class TestSimultaneousVisibility:
     """Verify bulk visibility operations on multiple oscillators."""
 
     def test_hide_all_oscillators(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: hiding multiple oscillators in sequence causes the
@@ -554,7 +554,7 @@ class TestSimultaneousVisibility:
         assert state is not None
 
     def test_show_all_after_hiding(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: re-showing a hidden oscillator does not re-register
@@ -588,7 +588,7 @@ class TestModeChangeDuringPlayback:
     """Verify processing mode changes during active audio."""
 
     def test_mode_change_preserves_waveform_data(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: changing processing mode while audio is flowing
@@ -625,7 +625,7 @@ class TestModeChangeDuringPlayback:
         editor.transport_stop()
 
     def test_visibility_toggle_during_playback_waveform_recovers(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: hiding and re-showing an oscillator during playback
@@ -673,7 +673,7 @@ class TestEditorWithActiveTransport:
     """Editor lifecycle while transport is playing."""
 
     def test_close_reopen_during_playback(
-        self, client: OscilTestClient
+        self, client: MultiScoperTestClient
     ):
         """
         Bug caught: closing editor while transport is playing causes the
@@ -730,7 +730,7 @@ class TestDeleteDuringActiveRendering:
     """Deleting oscillators while waveforms are actively rendering."""
 
     def test_delete_while_rendering(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: deleting an oscillator while the render loop is

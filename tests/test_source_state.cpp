@@ -1,5 +1,5 @@
 /*
-    Oscil - Source State Tests
+    MultiScoper - Source State Tests
     Tests for Source state machine, transitions, validation, and activity tracking
 */
 
@@ -10,7 +10,7 @@
 #include <thread>
 #include <vector>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class SourceStateTest : public ::testing::Test
 {

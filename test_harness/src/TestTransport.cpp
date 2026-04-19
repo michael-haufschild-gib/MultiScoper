@@ -1,10 +1,10 @@
 /*
-    Oscil Test Harness - Transport Implementation
+    MultiScoper Test Harness - Transport Implementation
 */
 
 #include "TestTransport.h"
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 TestTransport::TestTransport() {}
@@ -70,4 +70,4 @@ juce::AudioPlayHead::PositionInfo TestTransport::getPositionInfo() const
     return info;
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

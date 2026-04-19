@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Oscil pre-commit hook — zero-tolerance lint gate.
+# MultiScoper pre-commit hook — zero-tolerance lint gate.
 # Every check is pass/fail. No warnings, no skips, no soft failures.
 # AI agents ignore anything that isn't a hard error — so everything is.
 #
@@ -20,7 +20,7 @@ STAGED_CPP=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(cpp|h
 STAGED_TESTS=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^tests/test_.*\.cpp$' || true)
 STAGED_E2E=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^tests/e2e/.*\.py$' || true)
 
-echo "━━━ Oscil Pre-Commit Checks ━━━"
+echo "━━━ MultiScoper Pre-Commit Checks ━━━"
 
 # ─── Helper: require a tool or fail ───
 require_tool() {
@@ -220,7 +220,45 @@ if [ -n "$STAGED_CPP" ]; then
     fi
 fi
 
-# ─── 8. clang-tidy ───
+# ─── 8. Forbidden-patterns lint (ADR-014 + past-bug ratchets) ───
+if [ -n "$STAGED_CPP" ]; then
+    echo -n "  forbidden-patterns... "
+    if require_tool "python3" "install python3" && require_script "$REPO_ROOT/scripts/forbidden_patterns_lint.py"; then
+        FP_EXIT=0
+        FP_OUTPUT=$(python3 "$REPO_ROOT/scripts/forbidden_patterns_lint.py" \
+            --root "$REPO_ROOT" \
+            --paths include src 2>&1) || FP_EXIT=$?
+        if [ $FP_EXIT -ne 0 ]; then
+            echo -e "${RED}FAILED${NC}"
+            echo "$FP_OUTPUT" | grep -E "(FAILED|forbidden|offenders)" | head -20
+            FAILED=1
+        else
+            echo -e "${GREEN}OK${NC}"
+        fi
+    fi
+fi
+
+# ─── 9. Harness MT-dispatch capture lint (ADR-016) ───
+# Scoped to test_harness/ — no-op when no harness files are staged.
+STAGED_HARNESS=$(echo "$STAGED_CPP" | grep -E '^test_harness/' || true)
+if [ -n "$STAGED_HARNESS" ]; then
+    echo -n "  harness-mt-capture... "
+    if require_tool "python3" "install python3" && require_script "$REPO_ROOT/scripts/harness_mt_capture_lint.py"; then
+        HM_EXIT=0
+        HM_OUTPUT=$(python3 "$REPO_ROOT/scripts/harness_mt_capture_lint.py" \
+            --root "$REPO_ROOT" \
+            --paths test_harness/src test_harness/include 2>&1) || HM_EXIT=$?
+        if [ $HM_EXIT -ne 0 ]; then
+            echo -e "${RED}FAILED${NC}"
+            echo "$HM_OUTPUT" | grep -E "(FAILED|violation|offenders)" | head -20
+            FAILED=1
+        else
+            echo -e "${GREEN}OK${NC}"
+        fi
+    fi
+fi
+
+# ─── 10. clang-tidy ───
 # Staged src/*.cpp files are always checked. Additionally, if any headers are
 # staged, find src/*.cpp files that include them so clang-tidy's
 # HeaderFilterRegex also covers the changed headers.
@@ -290,8 +328,8 @@ if [ -n "$STAGED_SRC" ]; then
         # serial fan-out over many files bottlenecks the hook. Dispatch one job
         # per core via xargs and collect per-file failures through a tempfile.
         CT_JOBS=$(sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 4)
-        CT_ERR_FILE=$(mktemp -t oscil-clang-tidy-errs.XXXXXX)
-        CT_LOG_FILE=$(mktemp -t oscil-clang-tidy-log.XXXXXX)
+        CT_ERR_FILE=$(mktemp -t multiscoper-clang-tidy-errs.XXXXXX)
+        CT_LOG_FILE=$(mktemp -t multiscoper-clang-tidy-log.XXXXXX)
         printf '%s\n' $STAGED_SRC | xargs -P "$CT_JOBS" -I {} bash -c '
             out=$("$1" -p "$2" "$3/$4" --quiet 2>&1)
             status=$?

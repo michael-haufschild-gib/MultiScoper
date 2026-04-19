@@ -1,5 +1,5 @@
 /*
-    Oscil - Render Bootstrapper
+    MultiScoper - Render Bootstrapper
     Handles OpenGL context initialization and global shader compilation.
 */
 
@@ -9,7 +9,7 @@
 
 #include <memory>
 
-namespace oscil
+namespace multiscoper
 {
 
 class RenderBootstrapper
@@ -46,4 +46,4 @@ private:
     GLint compositeTextureLoc_ = -1;
 };
 
-} // namespace oscil
+} // namespace multiscoper

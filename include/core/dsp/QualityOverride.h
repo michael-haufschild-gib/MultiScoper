@@ -1,5 +1,5 @@
 /*
-    Oscil - Per-Oscillator Quality Override
+    MultiScoper - Per-Oscillator Quality Override
     Allows individual oscillators to use different quality than the global setting
 */
 
@@ -11,7 +11,7 @@
 
 #include <cstdint>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -99,4 +99,4 @@ inline juce::String qualityOverrideToDisplayName(QualityOverride override)
     return "Use Global";
 }
 
-} // namespace oscil
+} // namespace multiscoper

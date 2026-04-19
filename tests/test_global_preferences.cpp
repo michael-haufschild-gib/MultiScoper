@@ -1,5 +1,5 @@
 /*
-    Oscil - Global Preferences Tests
+    MultiScoper - Global Preferences Tests
     Tests for user-wide preference storage, defaults, persistence, and edge cases.
 
     Bug targets:
@@ -20,7 +20,7 @@
 #include <thread>
 #include <vector>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class GlobalPreferencesTest : public ::testing::Test
 {
@@ -49,7 +49,7 @@ protected:
     static juce::File getPreferencesFilePath()
     {
         return juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
-            .getChildFile("Oscil")
+            .getChildFile("MultiScoper")
             .getChildFile("preferences.xml");
     }
 
@@ -175,7 +175,7 @@ TEST_F(GlobalPreferencesTest, PreferencesFilePathIsValid)
 {
     auto file = prefs_->getPreferencesFile();
     EXPECT_TRUE(file.getFullPathName().isNotEmpty());
-    EXPECT_TRUE(file.getFullPathName().contains("Oscil"));
+    EXPECT_TRUE(file.getFullPathName().contains("MultiScoper"));
     EXPECT_TRUE(file.getFullPathName().contains("preferences.xml"));
 }
 

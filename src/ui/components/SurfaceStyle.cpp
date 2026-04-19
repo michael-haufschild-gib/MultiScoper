@@ -1,7 +1,7 @@
 /*
-    Oscil - Surface Style (flat) — Implementation
+    MultiScoper - Surface Style (flat) — Implementation
 
-    Historical name: "GlassStyle" / "glassmorphism". The 2026 Oscil uplift
+    Historical name: "GlassStyle" / "glassmorphism". The 2026 MultiScoper uplift
     removed that aesthetic entirely. The struct was renamed to SurfaceStyle
     but some *Glass* field names (`bgGlass`, `glassAlpha`) remain as stable
     ValueTree serialization tokens — changing them would break user theme
@@ -22,7 +22,7 @@
 
 #include "ui/theme/ThemeManager.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 void SurfaceStyle::computeFrom(const ColorTheme& theme)
@@ -56,4 +56,4 @@ void SurfaceStyle::computeFrom(const ColorTheme& theme)
     shadowSpread = theme.shadowSpread;
 }
 
-} // namespace oscil
+} // namespace multiscoper

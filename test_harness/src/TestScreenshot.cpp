@@ -1,5 +1,5 @@
 /*
-    Oscil Test Harness - Screenshot Capture & Image Comparison
+    MultiScoper Test Harness - Screenshot Capture & Image Comparison
 */
 
 #include "TestScreenshot.h"
@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 // Forward declaration for macOS native window capture (defined in TestScreenshotMac.mm)
@@ -196,4 +196,4 @@ juce::Image TestScreenshot::generateDiffImage(const juce::Image& image1, const j
     return diffImage;
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

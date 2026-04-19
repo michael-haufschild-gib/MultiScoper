@@ -1,5 +1,5 @@
 /*
-    Oscil - Animation Settings macOS Implementation
+    MultiScoper - Animation Settings macOS Implementation
     Detects system accessibility preferences for reduced motion
 */
 
@@ -8,7 +8,7 @@
 #if JUCE_MAC
 #import <Cocoa/Cocoa.h>
 
-namespace oscil
+namespace multiscoper
 {
 
 void AnimationSettings::updateFromSystem()
@@ -22,6 +22,6 @@ void AnimationSettings::updateFromSystem()
     }
 }
 
-}  // namespace oscil
+}  // namespace multiscoper
 
 #endif  // JUCE_MAC

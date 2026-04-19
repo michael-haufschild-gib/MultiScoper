@@ -1,5 +1,5 @@
 /*
-    Oscil - Shader Registry
+    MultiScoper - Shader Registry
     Registry managing shader registration and retrieval
 */
 
@@ -15,7 +15,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -95,4 +95,4 @@ private:
     }
 };
 
-} // namespace oscil
+} // namespace multiscoper

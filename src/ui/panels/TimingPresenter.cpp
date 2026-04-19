@@ -1,10 +1,10 @@
 /*
-    Oscil - Timing Presenter Implementation
+    MultiScoper - Timing Presenter Implementation
 */
 
 #include "ui/panels/TimingPresenter.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 TimingPresenter::TimingPresenter() = default;
@@ -100,4 +100,4 @@ void TimingPresenter::notifyStateChanged()
         onStateChanged_();
 }
 
-} // namespace oscil
+} // namespace multiscoper

@@ -1,5 +1,5 @@
 /*
-    Oscil - Framebuffer Pool Tests
+    MultiScoper - Framebuffer Pool Tests
     Verifies FBO lifecycle, resize behavior, shutdown cleanup, and edge cases.
     Uses mock framebuffers since OpenGL context is not available in headless tests.
 */
@@ -9,7 +9,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class MockFramebuffer : public Framebuffer
 {

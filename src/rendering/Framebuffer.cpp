@@ -1,12 +1,12 @@
 /*
-    Oscil - Framebuffer Implementation
+    MultiScoper - Framebuffer Implementation
 */
 
 #include "rendering/Framebuffer.h"
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
-namespace oscil
+namespace multiscoper
 {
 
 using namespace juce::gl;
@@ -301,6 +301,6 @@ void Framebuffer::destroy(juce::OpenGLContext& context)
     hasDepthTexture = false;
 }
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

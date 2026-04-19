@@ -1,10 +1,10 @@
 /*
-    Oscil Test Harness - HTTP Server: Screenshot & Verification Handlers
+    MultiScoper Test Harness - HTTP Server: Screenshot & Verification Handlers
 */
 
 #include "TestHttpServer.h"
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 void TestHttpServer::setupVerificationRoutes()
@@ -259,4 +259,4 @@ void TestHttpServer::handleAnalyzeWaveform(const httplib::Request& req, httplib:
     }
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

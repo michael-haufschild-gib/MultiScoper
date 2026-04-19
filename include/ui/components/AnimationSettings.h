@@ -1,5 +1,5 @@
 /*
-    Oscil - Animation Settings
+    MultiScoper - Animation Settings
     System-aware animation preferences including reduced motion support
 */
 
@@ -13,7 +13,7 @@
     #include <windows.h>
 #endif
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -214,4 +214,4 @@ T easeInOut(const T& from, const T& to, float progress)
 }
 } // namespace AnimationHelper
 
-} // namespace oscil
+} // namespace multiscoper

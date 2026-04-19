@@ -1,11 +1,11 @@
 /*
-    Oscil - Sidebar Section Constants
+    MultiScoper - Sidebar Section Constants
     Shared layout constants for sidebar section components
 */
 
 #pragma once
 
-namespace oscil::SectionLayout
+namespace multiscoper::SectionLayout
 {
 
 static constexpr int SECTION_PADDING = 8;
@@ -18,4 +18,4 @@ static constexpr int SPACING_SMALL = 2;
 static constexpr int SPACING_MEDIUM = 4;
 static constexpr int SPACING_LARGE = 8;
 
-} // namespace oscil::SectionLayout
+} // namespace multiscoper::SectionLayout

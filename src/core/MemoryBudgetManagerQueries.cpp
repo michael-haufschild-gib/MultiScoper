@@ -1,5 +1,5 @@
 /*
-    Oscil - Memory Budget Manager Read/Query Methods
+    MultiScoper - Memory Budget Manager Read/Query Methods
     All read-only queries, snapshot generation, listener management,
     and internal helpers that support both the query and mutation paths.
 */
@@ -7,7 +7,7 @@
 #include "core/DecimatingCaptureBuffer.h"
 #include "core/MemoryBudgetManager.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 //==============================================================================
@@ -305,4 +305,4 @@ void MemoryBudgetManager::notifyEffectiveQualityChanged(QualityPreset newQuality
     });
 }
 
-} // namespace oscil
+} // namespace multiscoper

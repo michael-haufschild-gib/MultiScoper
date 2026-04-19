@@ -1,5 +1,5 @@
 /*
-    Oscil - Shared Capture Buffer Analysis
+    MultiScoper - Shared Capture Buffer Analysis
     Peak and RMS level analysis over the SeqLock-protected ring buffer.
     Split from SharedCaptureBuffer.cpp: the read/write hot path is one
     concept, peak/RMS telemetry is a second concern that reuses only the
@@ -12,7 +12,7 @@
 #include <cmath>
 #include <thread>
 
-namespace oscil
+namespace multiscoper
 {
 
 float SharedCaptureBuffer::getPeakLevel(int channel, int numSamples) const
@@ -123,4 +123,4 @@ float SharedCaptureBuffer::getRMSLevel(int channel, int numSamples) const
     }
 }
 
-} // namespace oscil
+} // namespace multiscoper

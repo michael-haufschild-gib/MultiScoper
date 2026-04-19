@@ -1,5 +1,5 @@
 /*
-    Oscil - Waveform Component Header
+    MultiScoper - Waveform Component Header
     Renders waveform visualization for an oscillator
 */
 
@@ -20,7 +20,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 // Forward declarations
@@ -37,7 +37,7 @@ enum class StereoDisplayMode : std::uint8_t
     Stacked // L channel on top, R channel on bottom
 };
 
-class OscilPluginProcessor;
+class MultiScoperPluginProcessor;
 
 /**
  * Component that renders a waveform visualization for a single oscillator
@@ -234,4 +234,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WaveformComponent)
 };
 
-} // namespace oscil
+} // namespace multiscoper

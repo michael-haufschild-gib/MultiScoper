@@ -1,5 +1,5 @@
 /*
-    Oscil - Capture Buffer Tests: Threading
+    MultiScoper - Capture Buffer Tests: Threading
     Core thread safety: torn reads, data integrity, ring wrap, metadata consistency.
     Extended concurrency tests in test_capture_buffer_concurrent.cpp.
 */
@@ -15,8 +15,8 @@
 #include <thread>
 #include <vector>
 
-using namespace oscil;
-using namespace oscil::test;
+using namespace multiscoper;
+using namespace multiscoper::test;
 
 class CaptureBufferThreadingTest : public ::testing::Test
 {

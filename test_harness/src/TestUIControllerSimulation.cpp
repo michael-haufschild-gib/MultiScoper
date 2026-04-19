@@ -1,43 +1,64 @@
 /*
-    Oscil Test Harness - UI Controller: Simulation Methods & JSON Serialization
+    MultiScoper Test Harness - UI Controller: Simulation Methods & JSON Serialization
 */
 
 #include "ui/components/InlineEditLabel.h"
-#include "ui/components/OscilAccordion.h"
-#include "ui/components/OscilButton.h"
-#include "ui/components/OscilDropdown.h"
-#include "ui/components/OscilSlider.h"
-#include "ui/components/OscilTextField.h"
-#include "ui/components/OscilToggle.h"
+#include "ui/components/MultiScoperAccordion.h"
+#include "ui/components/MultiScoperButton.h"
+#include "ui/components/MultiScoperDropdown.h"
+#include "ui/components/MultiScoperSlider.h"
+#include "ui/components/MultiScoperTextField.h"
+#include "ui/components/MultiScoperToggle.h"
 #include "ui/layout/SidebarComponent.h"
 #include "ui/panels/OscillatorListComponent.h"
 #include "ui/panels/OscillatorListItem.h"
 
 #include "TestUIController.h"
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 // ================== Private Simulation Methods ==================
 
 bool TestUIController::tryClickFastPath(juce::Component* component)
 {
-    if (auto* oscilButton = dynamic_cast<OscilButton*>(component))
+    if (auto* multiscoperButton = dynamic_cast<MultiScoperButton*>(component))
     {
-        oscilButton->triggerClick();
+        multiscoperButton->triggerClick();
         return true;
     }
-    if (auto* toggle = dynamic_cast<oscil::OscilToggle*>(component))
+    if (auto* toggle = dynamic_cast<multiscoper::MultiScoperToggle*>(component))
     {
         toggle->toggle();
         return true;
     }
-    if (auto* accordion = dynamic_cast<oscil::OscilAccordionSection*>(component))
+    if (auto* accordion = dynamic_cast<multiscoper::MultiScoperAccordionSection*>(component))
     {
         accordion->toggle();
         return true;
     }
     return false;
+}
+
+void TestUIController::simulateMouseClickAtPoint(juce::Component* component, juce::Point<int> localPoint,
+                                                 bool doubleClick, const juce::ModifierKeys& mods)
+{
+    if (component == nullptr)
+        return;
+
+    auto point = localPoint;
+    auto mouseSource = juce::Desktop::getInstance().getMainMouseSource();
+    auto clickMods = mods.getRawFlags() == 0 ? juce::ModifierKeys(juce::ModifierKeys::leftButtonModifier) : mods;
+
+    juce::MouseEvent mouseDown(mouseSource, point.toFloat(), clickMods, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, component,
+                               component, juce::Time::getCurrentTime(), point.toFloat(), juce::Time::getCurrentTime(),
+                               doubleClick ? 2 : 1, false);
+
+    component->mouseDown(mouseDown);
+    component->mouseUp(mouseDown);
+
+    if (doubleClick)
+        component->mouseDoubleClick(mouseDown);
 }
 
 void TestUIController::simulateMouseClick(juce::Component* component, bool doubleClick, const juce::ModifierKeys& mods)
@@ -85,14 +106,14 @@ void TestUIController::simulateMouseRightClick(juce::Component* component)
 
 bool TestUIController::tryDragFastPathListItems(juce::Component* from, juce::Component* to)
 {
-    auto* fromItem = dynamic_cast<oscil::OscillatorListItemComponent*>(from);
-    auto* toItem = dynamic_cast<oscil::OscillatorListItemComponent*>(to);
+    auto* fromItem = dynamic_cast<multiscoper::OscillatorListItemComponent*>(from);
+    auto* toItem = dynamic_cast<multiscoper::OscillatorListItemComponent*>(to);
     if (!fromItem || !toItem)
         return false;
 
     for (auto* p = from->getParentComponent(); p != nullptr; p = p->getParentComponent())
     {
-        if (auto* list = dynamic_cast<oscil::OscillatorListComponent*>(p))
+        if (auto* list = dynamic_cast<multiscoper::OscillatorListComponent*>(p))
         {
             int direction = (to->getY() > from->getY()) ? 1 : -1;
             list->oscillatorMoveRequested(fromItem->getOscillatorId(), direction);
@@ -129,7 +150,7 @@ void TestUIController::simulateMouseDrag(juce::Component* from, juce::Component*
 
 bool TestUIController::tryDragOffsetFastPathSidebar(juce::Component* component, int deltaX)
 {
-    auto* handle = dynamic_cast<oscil::SidebarResizeHandle*>(component);
+    auto* handle = dynamic_cast<multiscoper::SidebarResizeHandle*>(component);
     if (!handle)
         return false;
 
@@ -144,7 +165,7 @@ bool TestUIController::tryDragOffsetFastPathSidebar(juce::Component* component, 
     // Snap the sidebar's width spring so getEffectiveWidth() reflects the new width immediately
     for (auto* p = component->getParentComponent(); p != nullptr; p = p->getParentComponent())
     {
-        if (auto* sidebar = dynamic_cast<oscil::SidebarComponent*>(p))
+        if (auto* sidebar = dynamic_cast<multiscoper::SidebarComponent*>(p))
         {
             sidebar->snapWidthToTarget();
             break;
@@ -237,7 +258,7 @@ void TestUIController::simulateKeyPress(juce::Component* component, const juce::
 namespace
 {
 
-json buildDropdownItems(oscil::OscilDropdown* dropdown)
+json buildDropdownItems(multiscoper::MultiScoperDropdown* dropdown)
 {
     json items = json::array();
     for (int i = 0; i < dropdown->getNumItems(); ++i)
@@ -258,39 +279,51 @@ json buildComboBoxItems(juce::ComboBox* comboBox)
 
 } // anonymous namespace
 
-bool TestUIController::appendOscilTypeInfo(json& info, juce::Component* component)
+bool TestUIController::appendMultiScoperTypeInfo(json& info, juce::Component* component)
 {
-    if (auto* toggle = dynamic_cast<oscil::OscilToggle*>(component))
+    if (auto* toggle = dynamic_cast<multiscoper::MultiScoperToggle*>(component))
     {
         info["type"] = "toggle";
         info["toggled"] = toggle->getValue();
         info["value"] = toggle->getValue();
     }
-    else if (auto* oscilSlider = dynamic_cast<oscil::OscilSlider*>(component))
+    else if (auto* multiscoperButton = dynamic_cast<multiscoper::MultiScoperButton*>(component))
     {
-        info["type"] = "oscilSlider";
-        info["value"] = oscilSlider->getValue();
+        // MultiScoperButton is not a juce::Button subclass, so its toggle
+        // state was invisible to assertions without this specialization.
+        // Expose text, toggled, and toggleable so tests can verify hold
+        // button state, stats pane toggle, and other MultiScoperButton-
+        // driven UI.
+        info["type"] = "multiscoperButton";
+        info["text"] = multiscoperButton->getText().toStdString();
+        info["toggled"] = multiscoperButton->isToggled();
+        info["toggleable"] = multiscoperButton->isToggleable();
     }
-    else if (auto* oscilText = dynamic_cast<oscil::OscilTextField*>(component))
+    else if (auto* multiscoperSlider = dynamic_cast<multiscoper::MultiScoperSlider*>(component))
     {
-        info["type"] = "oscilTextField";
-        info["text"] = oscilText->getText().toStdString();
-        info["value"] = oscilText->getText().toStdString();
+        info["type"] = "multiscoperSlider";
+        info["value"] = multiscoperSlider->getValue();
     }
-    else if (auto* oscilDropdown = dynamic_cast<oscil::OscilDropdown*>(component))
+    else if (auto* multiscoperText = dynamic_cast<multiscoper::MultiScoperTextField*>(component))
+    {
+        info["type"] = "multiscoperTextField";
+        info["text"] = multiscoperText->getText().toStdString();
+        info["value"] = multiscoperText->getText().toStdString();
+    }
+    else if (auto* multiscoperDropdown = dynamic_cast<multiscoper::MultiScoperDropdown*>(component))
     {
         info["type"] = "combobox";
-        info["selectedId"] = oscilDropdown->getSelectedId().toStdString();
-        info["selectedText"] = oscilDropdown->getSelectedLabel().toStdString();
-        info["numItems"] = oscilDropdown->getNumItems();
-        info["items"] = buildDropdownItems(oscilDropdown);
+        info["selectedId"] = multiscoperDropdown->getSelectedId().toStdString();
+        info["selectedText"] = multiscoperDropdown->getSelectedLabel().toStdString();
+        info["numItems"] = multiscoperDropdown->getNumItems();
+        info["items"] = buildDropdownItems(multiscoperDropdown);
     }
-    else if (auto* accordion = dynamic_cast<oscil::OscilAccordionSection*>(component))
+    else if (auto* accordion = dynamic_cast<multiscoper::MultiScoperAccordionSection*>(component))
     {
         info["type"] = "accordion";
         info["expanded"] = accordion->isExpanded();
     }
-    else if (auto* inlineLabel = dynamic_cast<oscil::InlineEditLabel*>(component))
+    else if (auto* inlineLabel = dynamic_cast<multiscoper::InlineEditLabel*>(component))
     {
         info["type"] = "inlineEditLabel";
         info["text"] = inlineLabel->getText().toStdString();
@@ -305,7 +338,7 @@ bool TestUIController::appendOscilTypeInfo(json& info, juce::Component* componen
 
 void TestUIController::appendComponentTypeInfo(json& info, juce::Component* component)
 {
-    if (appendOscilTypeInfo(info, component))
+    if (appendMultiScoperTypeInfo(info, component))
         return;
 
     if (auto* button = dynamic_cast<juce::Button*>(component))
@@ -377,4 +410,4 @@ json TestUIController::componentToJson(juce::Component* component, const juce::S
     return info;
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

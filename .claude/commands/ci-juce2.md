@@ -7,7 +7,7 @@ description: Autonomous continuous improvement session with safety checks for Ju
 **Purpose:** Autonomously explore the codebase to discover and fix bugs, issues, and improvement opportunities of any kind.
 
 **Context:**
-- **Project:** Oscil Multi-Track Oscilloscope (professional audio plugin)
+- **Project:** MultiScoper Multi-Track Oscilloscope (professional audio plugin)
 - **Framework:** JUCE 8.0.5
 - **Language:** C++20
 - **Rendering:** OpenGL 3.3 with shaders and effects

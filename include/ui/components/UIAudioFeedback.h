@@ -1,5 +1,5 @@
 /*
-    Oscil - UI Audio Feedback
+    MultiScoper - UI Audio Feedback
     Optional sound effects for UI interactions
 */
 
@@ -11,7 +11,7 @@
 #include <map>
 #include <memory>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -101,4 +101,4 @@ private:
     std::mutex mutex_;
 };
 
-} // namespace oscil
+} // namespace multiscoper

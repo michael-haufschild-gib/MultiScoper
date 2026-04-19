@@ -1,5 +1,5 @@
 /*
-    Oscil - Waveform Component Implementation
+    MultiScoper - Waveform Component Implementation
 */
 
 #include "ui/panels/WaveformComponent.h"
@@ -9,13 +9,13 @@
 #include "rendering/ShaderRegistry.h"
 #include "rendering/VisualConfiguration.h"
 #include "rendering/WaveformShader.h"
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     #include "rendering/WaveformGLRenderer.h"
 
     #include <juce_audio_processors/juce_audio_processors.h>
 #endif
 
-namespace oscil
+namespace multiscoper
 {
 
 // Static counter for unique waveform IDs
@@ -294,7 +294,7 @@ juce::Component* WaveformComponent::findEditorAncestor() const
 
 void WaveformComponent::populateGLRenderData(WaveformRenderData& data) const
 {
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     data.id = waveformId_;
 
     auto* editorComponent = findEditorAncestor();
@@ -344,4 +344,4 @@ std::shared_ptr<IAudioBuffer> WaveformComponent::getCaptureBuffer() const
     return presenter_ ? presenter_->getCaptureBuffer() : nullptr;
 }
 
-} // namespace oscil
+} // namespace multiscoper

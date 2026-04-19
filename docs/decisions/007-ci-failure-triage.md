@@ -8,7 +8,7 @@ Accepted
 
 A `copilot-auto-fix.yml` GitHub Actions workflow was previously configured to automatically file a GitHub issue and assign it to `copilot-swe-agent` whenever the main CI workflow failed. The assigned AI agent would attempt to investigate logs, identify root cause, and submit a fix PR.
 
-This pattern conflicts with the engineering discipline applied elsewhere in the project. Oscil enforces:
+This pattern conflicts with the engineering discipline applied elsewhere in the project. MultiScoper enforces:
 
 - strict C++ warnings (`-Werror`) with clang-tidy in the critical path,
 - a pre-commit hook with 8 independent lint gates (`scripts/pre-commit`),

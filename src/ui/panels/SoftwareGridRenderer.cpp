@@ -1,5 +1,5 @@
 /*
-    Oscil - Software Grid Renderer Implementation
+    MultiScoper - Software Grid Renderer Implementation
     CPU-based grid rendering extracted from WaveformComponent
 */
 
@@ -10,7 +10,7 @@
 
 #include <cmath>
 
-namespace oscil
+namespace multiscoper
 {
 
 SoftwareGridRenderer::SoftwareGridRenderer(IThemeService& themeService) : themeService_(themeService) {}
@@ -367,4 +367,4 @@ void SoftwareGridRenderer::drawAmplitudeLabels(juce::Graphics& g, juce::Rectangl
     }
 }
 
-} // namespace oscil
+} // namespace multiscoper

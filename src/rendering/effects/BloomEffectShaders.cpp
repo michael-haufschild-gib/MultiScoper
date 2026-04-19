@@ -1,14 +1,14 @@
 /*
-    Oscil - Bloom Effect GLSL Shader Sources
+    MultiScoper - Bloom Effect GLSL Shader Sources
     Embedded GLSL 3.30 source strings for the dual-filter bloom chain.
     Split from BloomEffect.cpp to isolate shader text from compile/bind logic.
 */
 
 #include "rendering/effects/BloomEffect.h"
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
-namespace oscil::detail
+namespace multiscoper::detail
 {
 
 // Prefilter: Extracts bright pixels and performs the first downsample (13-tap Dual Filter)
@@ -242,6 +242,6 @@ const char* kBloomCombineFragmentShader = R"(
     }
 )";
 
-} // namespace oscil::detail
+} // namespace multiscoper::detail
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

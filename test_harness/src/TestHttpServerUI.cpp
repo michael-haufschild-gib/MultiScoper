@@ -1,11 +1,11 @@
 /*
-    Oscil Test Harness - HTTP Server: UI Mouse Interaction Handlers
+    MultiScoper Test Harness - HTTP Server: UI Mouse Interaction Handlers
 */
 
 #include "TestElementRegistry.h"
 #include "TestHttpServer.h"
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 void TestHttpServer::setupUIMouseRoutes()
@@ -14,6 +14,11 @@ void TestHttpServer::setupUIMouseRoutes()
                   [this](const httplib::Request& req, httplib::Response& res) { handleUIClick(req, res); });
     server_->Post("/ui/doubleClick",
                   [this](const httplib::Request& req, httplib::Response& res) { handleUIDoubleClick(req, res); });
+    server_->Post("/ui/clickAtOffset",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleUIClickAtOffset(req, res); });
+    server_->Post("/ui/doubleClickAtOffset", [this](const httplib::Request& req, httplib::Response& res) {
+        handleUIDoubleClickAtOffset(req, res);
+    });
     server_->Post("/ui/rightClick",
                   [this](const httplib::Request& req, httplib::Response& res) { handleUIRightClick(req, res); });
     server_->Post("/ui/hover",
@@ -76,6 +81,60 @@ void TestHttpServer::handleUIDoubleClick(const httplib::Request& req, httplib::R
     }
     catch (const std::exception& e)
     {
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+    }
+}
+
+void TestHttpServer::handleUIClickAtOffset(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        auto body = json::parse(req.body);
+        std::string elementId = body.value("elementId", "");
+        int offsetX = body.value("offsetX", 0);
+        int offsetY = body.value("offsetY", 0);
+
+        if (body.contains("trackId"))
+            uiController_.setTrackScope(body["trackId"].get<int>(), &daw_);
+
+        bool ok = uiController_.clickAtOffset(elementId, offsetX, offsetY);
+        uiController_.clearTrackScope();
+
+        if (ok)
+            res.set_content(successResponse().dump(), "application/json");
+        else
+            res.set_content(errorResponse("Element not found: " + elementId).dump(), "application/json");
+    }
+    catch (const std::exception& e)
+    {
+        uiController_.clearTrackScope();
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+    }
+}
+
+void TestHttpServer::handleUIDoubleClickAtOffset(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        auto body = json::parse(req.body);
+        std::string elementId = body.value("elementId", "");
+        int offsetX = body.value("offsetX", 0);
+        int offsetY = body.value("offsetY", 0);
+
+        if (body.contains("trackId"))
+            uiController_.setTrackScope(body["trackId"].get<int>(), &daw_);
+
+        bool ok = uiController_.doubleClickAtOffset(elementId, offsetX, offsetY);
+        uiController_.clearTrackScope();
+
+        if (ok)
+            res.set_content(successResponse().dump(), "application/json");
+        else
+            res.set_content(errorResponse("Element not found: " + elementId).dump(), "application/json");
+    }
+    catch (const std::exception& e)
+    {
+        uiController_.clearTrackScope();
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -395,4 +454,4 @@ void TestHttpServer::handleUIScroll(const httplib::Request& req, httplib::Respon
     }
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

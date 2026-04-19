@@ -1,18 +1,18 @@
 /*
-    Oscil Test Harness - UI Controller: Mouse & Keyboard Interactions
+    MultiScoper Test Harness - UI Controller: Mouse & Keyboard Interactions
 */
 
 #include "TestUIController.h"
 
-#include "ui/components/OscilButton.h"
-#include "ui/components/OscilDropdown.h"
+#include "ui/components/MultiScoperButton.h"
+#include "ui/components/MultiScoperDropdown.h"
 
 #include "TestDAW.h"
 
 #include <chrono>
 #include <thread>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 // ================== Track Scope ==================
@@ -118,6 +118,32 @@ bool TestUIController::doubleClick(const juce::String& elementId)
         if (!comp)
             return false;
         simulateMouseClick(comp, true);
+        return true;
+    });
+}
+
+bool TestUIController::clickAtOffset(const juce::String& elementId, int offsetX, int offsetY)
+{
+    return runOnMessageThreadSync(elementId, [this, offsetX, offsetY](juce::Component* comp) -> bool {
+        if (!comp)
+            return false;
+        auto localBounds = comp->getLocalBounds();
+        juce::Point<int> p(juce::jlimit(0, juce::jmax(0, localBounds.getWidth() - 1), offsetX),
+                           juce::jlimit(0, juce::jmax(0, localBounds.getHeight() - 1), offsetY));
+        simulateMouseClickAtPoint(comp, p, false);
+        return true;
+    });
+}
+
+bool TestUIController::doubleClickAtOffset(const juce::String& elementId, int offsetX, int offsetY)
+{
+    return runOnMessageThreadSync(elementId, [this, offsetX, offsetY](juce::Component* comp) -> bool {
+        if (!comp)
+            return false;
+        auto localBounds = comp->getLocalBounds();
+        juce::Point<int> p(juce::jlimit(0, juce::jmax(0, localBounds.getWidth() - 1), offsetX),
+                           juce::jlimit(0, juce::jmax(0, localBounds.getHeight() - 1), offsetY));
+        simulateMouseClickAtPoint(comp, p, true);
         return true;
     });
 }
@@ -345,4 +371,4 @@ bool TestUIController::typeCharacters(const juce::String& text, const juce::Stri
     });
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

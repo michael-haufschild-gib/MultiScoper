@@ -1,5 +1,5 @@
 -- 03_au_save_reopen.lua
--- Task 3.4 — Oscil AU save/reopen round-trip (macOS only).
+-- Task 3.4 — MultiScoper AU save/reopen round-trip (macOS only).
 --
 -- Validates: AU wrapper persistence works end-to-end in a real DAW. Mirrors
 -- scenario 01 but exercises the Audio Unit code path, which differs from VST3
@@ -14,13 +14,13 @@
 --
 -- Assumptions (cannot be verified without running Reaper):
 --   * `reaper.GetOS()` returns a string starting with "OSX" on macOS per docs.
---   * The AU bundle name exposed to Reaper is "oscil4" (matches VST3 name).
---   * `TrackFX_AddByName` with prefix "AU:oscil4" is the correct form on mac.
+--   * The AU bundle name exposed to Reaper is "MultiScoper" (matches VST3 name).
+--   * `TrackFX_AddByName` with prefix "AU:MultiScoper" is the correct form on mac.
 
 local T = require("reaper_test_lib")
 
 local SAVE_PATH = (os.getenv("TMPDIR") or os.getenv("TMP") or os.getenv("TEMP") or "/tmp")
-  .. "/oscil_reaper_scenario_03.rpp"
+  .. "/multiscoper_reaper_scenario_03.rpp"
 
 local function is_macos()
   local os_name = reaper.GetOS() or ""
@@ -41,16 +41,16 @@ local function run()
 
   T.new_project()
 
-  local fx = T.load_au("oscil4", 0)
-  T.assert_true(fx >= 0, "AU oscil4 load returned negative fx index")
+  local fx = T.load_au("MultiScoper", 0)
+  T.assert_true(fx >= 0, "AU MultiScoper load returned negative fx index")
   T.assert_eq(T.count_fx(0), 1, "expected exactly 1 FX on track 0 after AU load")
 
   T.play_seconds(3.0)
 
   local before = T.dump_plugin_state(0, 0)
   T.assert_true(#before > 0, "pre-save AU plugin state chunk was empty")
-  T.assert_true(T.state_mentions_plugin(before, "oscil4"),
-    "pre-save AU chunk does not mention oscil4")
+  T.assert_true(T.state_mentions_plugin(before, "MultiScoper"),
+    "pre-save AU chunk does not mention MultiScoper")
   local before_len = #before
 
   pcall(os.remove, SAVE_PATH)
@@ -61,13 +61,13 @@ local function run()
   T.assert_true(reaper.CountTracks(0) >= 1, "no tracks after AU reopen")
   T.assert_eq(T.count_fx(0), 1, "expected 1 FX on track 0 after AU reopen")
   local name = T.fx_name(0, 0)
-  T.assert_true(name:find("oscil4", 1, true) ~= nil,
-    "FX at track 0 slot 0 is not oscil4 after AU reopen (got '" .. name .. "')")
+  T.assert_true(name:find("MultiScoper", 1, true) ~= nil,
+    "FX at track 0 slot 0 is not MultiScoper after AU reopen (got '" .. name .. "')")
 
   local after = T.dump_plugin_state(0, 0)
   T.assert_true(#after > 0, "post-reopen AU plugin state chunk was empty")
-  T.assert_true(T.state_mentions_plugin(after, "oscil4"),
-    "post-reopen AU chunk does not mention oscil4")
+  T.assert_true(T.state_mentions_plugin(after, "MultiScoper"),
+    "post-reopen AU chunk does not mention MultiScoper")
 
   local delta = math.abs(#after - before_len)
   T.assert_true(delta <= 64,

@@ -1,5 +1,5 @@
 /*
-    Oscil - Basic Shader Implementation
+    MultiScoper - Basic Shader Implementation
 */
 
 #include "rendering/shaders/BasicShader.h"
@@ -9,14 +9,14 @@
 #include <algorithm>
 #include <cmath>
 
-namespace oscil
+namespace multiscoper
 {
 
 // Debug-only logging macro — no output in release builds
 // NOLINTNEXTLINE(bugprone-macro-parentheses)
 #define BASIC_LOG(msg) DBG("[BASIC] " << msg)
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 using namespace juce::gl;
 
 struct BasicShader::GLResources : WaveformShader::WaveformGLResources
@@ -31,7 +31,7 @@ struct BasicShader::GLResources : WaveformShader::WaveformGLResources
 #endif
 
 BasicShader::BasicShader()
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     : gl_(std::make_unique<GLResources>())
 #endif
 {
@@ -39,7 +39,7 @@ BasicShader::BasicShader()
 
 BasicShader::~BasicShader()
 {
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     // Resources should be released before destruction
     // but we can't call OpenGL functions here without context
     if (gl_ && gl_->compiled)
@@ -52,7 +52,7 @@ BasicShader::~BasicShader()
 #endif
 }
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
 void BasicShader::resolveUniforms(juce::OpenGLContext& context)
 {
@@ -265,4 +265,4 @@ void BasicShader::renderSoftware(juce::Graphics& g, const std::vector<float>& ch
     }
 }
 
-} // namespace oscil
+} // namespace multiscoper

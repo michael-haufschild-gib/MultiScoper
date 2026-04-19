@@ -1,5 +1,5 @@
 /*
-    Oscil Test Harness - Test Track
+    MultiScoper Test Harness - Test Track
     Represents a single DAW track with plugin instance
 */
 
@@ -15,12 +15,12 @@
 
 #include <mutex>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 /**
  * Represents a single DAW track with:
- * - OscilPluginProcessor instance
+ * - MultiScoperPluginProcessor instance
  * - Audio generator for test signals
  * - Unique source ID registered with InstanceRegistry
  */
@@ -58,8 +58,8 @@ public:
     /**
      * Get the plugin processor
      */
-    OscilPluginProcessor& getProcessor() { return *processor_; }
-    const OscilPluginProcessor& getProcessor() const { return *processor_; }
+    MultiScoperPluginProcessor& getProcessor() { return *processor_; }
+    const MultiScoperPluginProcessor& getProcessor() const { return *processor_; }
 
     /**
      * Get the audio generator
@@ -85,6 +85,24 @@ public:
                 sourceId_ = live;
         }
         return sourceId_;
+    }
+
+    /**
+     * Drop the cached SourceId and re-read it from the processor.
+     *
+     * The cache is populated once in ``prepare()`` after the first
+     * registration. setStateInformation may replace the processor's
+     * SourceId mid-session (via ``reRegisterUnderPersistedTrackIdentifier``
+     * when a persisted trackIdentifier arrives that differs from the one
+     * assigned by prepareToPlay). Callers that drive state restore must
+     * invoke this so subsequent ``getSourceId()`` reads return the
+     * post-restore value rather than the stale prepareToPlay value.
+     */
+    void refreshSourceIdFromProcessor()
+    {
+        std::lock_guard<std::mutex> lock(sourceIdMutex_);
+        if (processor_ != nullptr)
+            sourceId_ = processor_->getSourceId();
     }
 
     /**
@@ -170,7 +188,7 @@ private:
     mutable SourceId sourceId_;
     TestTransport& transport_;
 
-    std::unique_ptr<OscilPluginProcessor> processor_;
+    std::unique_ptr<MultiScoperPluginProcessor> processor_;
     // Non-owning pointer to the registry the processor was constructed with.
     // Null if we used the factory default (which is the common path).
     IInstanceRegistry* overrideRegistry_{nullptr};
@@ -187,4 +205,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TestTrack)
 };
 
-} // namespace oscil::test
+} // namespace multiscoper::test

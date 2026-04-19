@@ -14,7 +14,7 @@ No backward compatibility code - clean DI-only architecture.
 | `InstanceRegistry::getInstance()` | src/core/ | PluginFactory, test_server, tests | P0 |
 | `ShaderRegistry::getInstance()` | src/rendering/ | PluginFactory, tests | P0 |
 | `MemoryBudgetManager::getInstance()` | src/core/ | PluginProcessor | P1 |
-| `GlobalPreferences::getInstance()` | src/core/ | OscilState | P1 |
+| `GlobalPreferences::getInstance()` | src/core/ | MultiScoperState | P1 |
 | `UIAudioFeedback::getInstance()` | src/ui/ | UI components | P2 |
 | `PluginFactory::getInstance()` | src/plugin/ | JUCE entry point | Special |
 
@@ -32,9 +32,9 @@ PluginFactory (composition root)
 ├── owns: InstanceRegistry (implements IInstanceRegistry)
 ├── owns: ShaderRegistry
 ├── owns: MemoryBudgetManager (implements IMemoryBudgetService)
-└── creates: OscilPluginProcessor
+└── creates: MultiScoperPluginProcessor
              ├── receives: ServiceContext& (references to all services)
-             └── creates: OscilPluginEditor
+             └── creates: MultiScoperPluginEditor
                           └── receives: ServiceContext&
 ```
 
@@ -82,9 +82,10 @@ struct ServiceContext
 
 ### Phase 2: Update Tests
 
-#### Step 2.1: Update OscilTestFixtures.h
+#### Step 2.1: Update MultiScoperTestFixtures.h
+
 - Remove `getThemeManager()` and `getRegistry()` static methods
-- Make `OscilPluginTestFixture` own service instances (like `OscilComponentTestFixture`)
+- Make `MultiScoperPluginTestFixture` own service instances (like `MultiScoperComponentTestFixture`)
 - All fixtures use mocks or owned instances
 
 #### Step 2.2: Update Individual Test Files
@@ -105,7 +106,7 @@ struct ServiceContext
 
 #### Step 3.3: Handle GlobalPreferences
 - Option A: Add to ServiceContext
-- Option B: Move to OscilState (it's already accessed via state)
+- Option B: Move to MultiScoperState (it's already accessed via state)
 
 ### Phase 4: UI Services (P2)
 
@@ -144,7 +145,7 @@ calls `createPluginInstance()` which needs a factory. Options:
 - `src/tools/test_server/*.cpp` - Receive services via DI
 
 ### Test Files to Modify (Many)
-- `tests/OscilTestFixtures.h` - Own services in fixtures
+- `tests/MultiScoperTestFixtures.h` - Own services in fixtures
 - All test files using `ThemeManager::getInstance()`
 - All test files using `InstanceRegistry::getInstance()`
 

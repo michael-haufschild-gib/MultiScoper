@@ -1,11 +1,11 @@
 /*
-    Oscil - Oscillator List Item Implementation
+    MultiScoper - Oscillator List Item Implementation
     Compact list item that expands when selected to show controls
 */
 
 #include "ui/panels/OscillatorListItem.h"
 
-#include "core/OscilLog.h"
+#include "core/MultiScoperLog.h"
 #include "core/interfaces/IInstanceRegistry.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/InlineEditLabel.h"
@@ -13,7 +13,7 @@
 #include "ui/components/ProcessingModeIcons.h"
 #include "ui/theme/Typography.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 OscillatorListItemComponent::OscillatorListItemComponent(const Oscillator& oscillator,
@@ -90,26 +90,29 @@ void OscillatorListItemComponent::setupLabels()
 void OscillatorListItemComponent::setupActionButtons()
 {
     // testIds for action buttons are assigned by setListIndex() after construction.
-    deleteButton_ = std::make_unique<OscilButton>(getThemeService(), "");
+    deleteButton_ = std::make_unique<MultiScoperButton>(getThemeService(), "");
     deleteButton_->setVariant(ButtonVariant::Icon);
     deleteButton_->setIconPath(ListItemIcons::createTrashIcon(static_cast<float>(ICON_BUTTON_SIZE)));
+    deleteButton_->setIconPadding(6.0f); // +4px icon vs SPACING_SM default
     deleteButton_->setTooltip("Delete Oscillator (Delete/Backspace)");
     deleteButton_->onClick = [this]() {
         listeners_.call([this](Listener& l) { l.oscillatorDeleteRequested(oscillatorId_); });
     };
     addChildComponent(*deleteButton_);
 
-    settingsButton_ = std::make_unique<OscilButton>(getThemeService(), "");
+    settingsButton_ = std::make_unique<MultiScoperButton>(getThemeService(), "");
     settingsButton_->setVariant(ButtonVariant::Icon);
     settingsButton_->setIconPath(ListItemIcons::createGearIcon(static_cast<float>(ICON_BUTTON_SIZE)));
+    settingsButton_->setIconPadding(6.0f); // +4px icon vs SPACING_SM default
     settingsButton_->setTooltip("Configure Oscillator (Enter)");
     settingsButton_->onClick = [this]() {
         listeners_.call([this](Listener& l) { l.oscillatorConfigRequested(oscillatorId_); });
     };
     addChildComponent(*settingsButton_);
 
-    visibilityButton_ = std::make_unique<OscilButton>(getThemeService(), "");
+    visibilityButton_ = std::make_unique<MultiScoperButton>(getThemeService(), "");
     visibilityButton_->setVariant(ButtonVariant::Icon);
+    visibilityButton_->setIconPadding(6.0f); // +4px icon vs SPACING_SM default
     visibilityButton_->onClick = [this]() {
         if (!isVisible_ && !paneId_.isValid())
         {
@@ -156,7 +159,7 @@ void OscillatorListItemComponent::setupComponents()
     updateVisibility();
 }
 
-void OscillatorListItemComponent::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
+void OscillatorListItemComponent::registerTestId() { MULTISCOPER_REGISTER_TEST_ID(testId_); }
 
 OscillatorListItemComponent::~OscillatorListItemComponent() = default;
 
@@ -318,7 +321,7 @@ void OscillatorListItemComponent::setListIndex(int index)
         deleteButton_->setTestId(newTestId + "_delete");
         settingsButton_->setTestId(newTestId + "_settings");
         visibilityButton_->setTestId(newTestId + "_vis_btn");
-        OSCIL_REGISTER_CHILD_TEST_ID(*modeButtons_, newTestId + "_mode");
+        MULTISCOPER_REGISTER_CHILD_TEST_ID(*modeButtons_, newTestId + "_mode");
         nameLabel_->setTestId(newTestId + "_name");
     }
 }
@@ -327,4 +330,4 @@ void OscillatorListItemComponent::addListener(Listener* listener) { listeners_.a
 
 void OscillatorListItemComponent::removeListener(Listener* listener) { listeners_.remove(listener); }
 
-} // namespace oscil
+} // namespace multiscoper

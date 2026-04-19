@@ -1,5 +1,5 @@
 /*
-    Oscil - Plugin Processor Edge Case Tests
+    MultiScoper - Plugin Processor Edge Case Tests
     Tests for processBlock with adversarial audio, bus layout validation,
     track property updates, and sample rate change behavior.
 
@@ -15,7 +15,7 @@
 #include "core/MemoryBudgetManager.h"
 #include "ui/theme/ThemeManager.h"
 
-#include "OscilTestUtils.h"
+#include "MultiScoperTestUtils.h"
 #include "plugin/PluginProcessor.h"
 #include "rendering/PresetManager.h"
 #include "rendering/ShaderRegistry.h"
@@ -24,8 +24,8 @@
 #include <gtest/gtest.h>
 #include <limits>
 
-using namespace oscil;
-using namespace oscil::test;
+using namespace multiscoper;
+using namespace multiscoper::test;
 
 class PluginProcessorEdgeTest : public ::testing::Test
 {
@@ -35,7 +35,7 @@ protected:
     std::unique_ptr<ShaderRegistry> shaderRegistry_;
     std::unique_ptr<PresetManager> presetManager_;
     std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
-    std::unique_ptr<OscilPluginProcessor> processor;
+    std::unique_ptr<MultiScoperPluginProcessor> processor;
 
     void SetUp() override
     {
@@ -44,8 +44,8 @@ protected:
         shaderRegistry_ = std::make_unique<ShaderRegistry>();
         presetManager_ = std::make_unique<PresetManager>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
-        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                           *presetManager_, *memoryBudgetManager_);
+        processor = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                                 *presetManager_, *memoryBudgetManager_);
         processor->prepareToPlay(44100.0, 512);
         pumpMessageQueue(200);
     }
@@ -204,7 +204,7 @@ TEST_F(PluginProcessorEdgeTest, BusLayoutRejectsSurroundSound)
 TEST_F(PluginProcessorEdgeTest, UpdateTrackPropertiesUpdatesSourceName)
 {
     // Bug caught: track name not propagating to InstanceRegistry, causing
-    // all sources to show as "Oscil Track" in the aggregator UI.
+    // all sources to show as "MultiScoper Track" in the aggregator UI.
     // Registration is deferred via callAsync, so we must pump the message queue.
     auto sourceId = processor->getSourceId();
     ASSERT_TRUE(sourceId.isValid()) << "Source not registered after prepareToPlay + pumpMessageQueue";
@@ -231,7 +231,7 @@ TEST_F(PluginProcessorEdgeTest, UpdateTrackPropertiesWithEmptyNameUsesDefault)
 
     auto info = registry_->getSource(sourceId);
     ASSERT_TRUE(info.has_value());
-    EXPECT_EQ(info->name, juce::String("Oscil Track"));
+    EXPECT_EQ(info->name, juce::String("MultiScoper Track"));
 }
 
 TEST_F(PluginProcessorEdgeTest, UpdateTrackPropertiesWithWhitespaceOnlyTrimsToDefault)
@@ -246,7 +246,7 @@ TEST_F(PluginProcessorEdgeTest, UpdateTrackPropertiesWithWhitespaceOnlyTrimsToDe
 
     auto info = registry_->getSource(sourceId);
     ASSERT_TRUE(info.has_value());
-    EXPECT_EQ(info->name, juce::String("Oscil Track"));
+    EXPECT_EQ(info->name, juce::String("MultiScoper Track"));
 }
 
 TEST_F(PluginProcessorEdgeTest, UpdateTrackPropertiesSameNameIsNoOp)
@@ -345,7 +345,7 @@ TEST_F(PluginProcessorEdgeTest, ReleaseResourcesThenProcessDoesNotCrash)
 
 TEST_F(PluginProcessorEdgeTest, PluginMetadataIsCorrect)
 {
-    EXPECT_EQ(processor->getName(), juce::String("Oscil"));
+    EXPECT_EQ(processor->getName(), juce::String("MultiScoper"));
     EXPECT_TRUE(processor->acceptsMidi());
     EXPECT_FALSE(processor->producesMidi());
     EXPECT_FALSE(processor->isMidiEffect());

@@ -1,5 +1,5 @@
 /*
-    Oscil Test Harness - Screenshot Waveform & Color Analysis
+    MultiScoper Test Harness - Screenshot Waveform & Color Analysis
 */
 
 #include "TestScreenshot.h"
@@ -10,7 +10,7 @@
 #include <cmath>
 #include <map>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 namespace
@@ -395,4 +395,4 @@ juce::Image TestScreenshot::loadImage(const juce::File& file)
     return pngFormat.decodeImage(stream);
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

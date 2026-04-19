@@ -1,5 +1,5 @@
 /*
-    Oscil - Decimating Capture Buffer
+    MultiScoper - Decimating Capture Buffer
     Capture buffer with configurable sample rate decimation and anti-aliasing
     Reduces memory usage while maintaining visual fidelity for waveform display
 */
@@ -18,7 +18,7 @@
 #include <optional>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -351,4 +351,4 @@ private:
     std::vector<GraveyardItem> graveyard_;
 };
 
-} // namespace oscil
+} // namespace multiscoper

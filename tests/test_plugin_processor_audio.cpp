@@ -1,5 +1,5 @@
 /*
-    Oscil - Plugin Processor Audio Tests
+    MultiScoper - Plugin Processor Audio Tests
     Tests for processBlock correctness, edge cases, capture integrity,
     and lifecycle robustness of the audio processing path.
 */
@@ -19,7 +19,7 @@
 #include <limits>
 #include <thread>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class PluginProcessorAudioTest : public ::testing::Test
 {
@@ -29,7 +29,7 @@ protected:
     std::unique_ptr<ShaderRegistry> shaderRegistry_;
     std::unique_ptr<PresetManager> presetManager_;
     std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
-    std::unique_ptr<OscilPluginProcessor> processor;
+    std::unique_ptr<MultiScoperPluginProcessor> processor;
 
     void SetUp() override
     {
@@ -38,8 +38,8 @@ protected:
         shaderRegistry_ = std::make_unique<ShaderRegistry>();
         presetManager_ = std::make_unique<PresetManager>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
-        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                           *presetManager_, *memoryBudgetManager_);
+        processor = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                                 *presetManager_, *memoryBudgetManager_);
     }
 
     void TearDown() override

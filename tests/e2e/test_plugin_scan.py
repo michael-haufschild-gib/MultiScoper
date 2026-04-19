@@ -27,10 +27,10 @@ from __future__ import annotations
 
 import pytest
 
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 
 
-def _scan_cycle(client: OscilTestClient, cycles: int, name: str = "ScanTrack") -> dict:
+def _scan_cycle(client: MultiScoperTestClient, cycles: int, name: str = "ScanTrack") -> dict:
     # Scans include full plugin construct/destroy/register/unregister — ~50ms per
     # cycle on a warm debug build.  Scale the client timeout to match the server's
     # own scanCycle timeout (handleDawScanCycle caps at 2s base + 50ms/cycle, up
@@ -44,7 +44,7 @@ def _scan_cycle(client: OscilTestClient, cycles: int, name: str = "ScanTrack") -
 
 
 class TestScanCycle:
-    def test_baseline_is_restored_after_scan(self, client: OscilTestClient):
+    def test_baseline_is_restored_after_scan(self, client: MultiScoperTestClient):
         """
         Primary correctness gate: after N scans the track count and
         source count must be identical to what they were before.
@@ -69,7 +69,7 @@ class TestScanCycle:
             desc=f"source count to return to baseline ({baseline_sources})",
         )
 
-    def test_memory_growth_bounded(self, client: OscilTestClient):
+    def test_memory_growth_bounded(self, client: MultiScoperTestClient):
         """
         Bug caught: any per-scan allocation that is not freed on
         unregister would compound across 200 cycles and show up here.
@@ -101,7 +101,7 @@ class TestScanCycle:
             "investigation task."
         )
 
-    def test_small_scan_burst(self, client: OscilTestClient):
+    def test_small_scan_burst(self, client: MultiScoperTestClient):
         """Sanity: a 10-cycle run also cleans up fully."""
         baseline_tracks = len(client.get_tracks())
         data = _scan_cycle(client, cycles=10, name="SmallBurst")
@@ -110,15 +110,15 @@ class TestScanCycle:
 
 
 class TestScanCycleValidation:
-    def test_reject_zero_cycles(self, client: OscilTestClient):
+    def test_reject_zero_cycles(self, client: MultiScoperTestClient):
         resp = client._post("/daw/scanCycle", {"cycles": 0, "name": "x"})
         assert resp.status_code == 400
 
-    def test_reject_negative_cycles(self, client: OscilTestClient):
+    def test_reject_negative_cycles(self, client: MultiScoperTestClient):
         resp = client._post("/daw/scanCycle", {"cycles": -5, "name": "x"})
         assert resp.status_code == 400
 
-    def test_reject_excessive_cycles(self, client: OscilTestClient):
+    def test_reject_excessive_cycles(self, client: MultiScoperTestClient):
         """Cap at 10,000 — above that the handler rejects outright to
         avoid DoS-ing the harness with a single request."""
         resp = client._post("/daw/scanCycle", {"cycles": 100_000, "name": "x"})

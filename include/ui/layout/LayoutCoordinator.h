@@ -1,5 +1,5 @@
 /*
-    Oscil - Layout Coordinator
+    MultiScoper - Layout Coordinator
     Handles WindowLayout::Listener callbacks for layout changes
 */
 
@@ -9,7 +9,7 @@
 
 #include <functional>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -53,4 +53,4 @@ private:
     LayoutChangedCallback onLayoutChanged_;
 };
 
-} // namespace oscil
+} // namespace multiscoper

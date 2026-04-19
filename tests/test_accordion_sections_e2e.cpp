@@ -1,10 +1,10 @@
 /*
-    Oscil - E2E Tests for Accordion Sidebar Sections
-    Verifies OscilAccordionSection and OptionsSection behavior
+    MultiScoper - E2E Tests for Accordion Sidebar Sections
+    Verifies MultiScoperAccordionSection and OptionsSection behavior
 */
 
 #include "core/dsp/TimingConfig.h"
-#include "ui/components/OscilAccordion.h"
+#include "ui/components/MultiScoperAccordion.h"
 #include "ui/layout/sections/DynamicHeightContent.h"
 #include "ui/layout/sections/OptionsSection.h"
 #include "ui/layout/sections/TimingSidebarSection.h"
@@ -14,10 +14,10 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 // ============================================================================
-// OscilAccordionSection Tests
+// MultiScoperAccordionSection Tests
 // ============================================================================
 
 class AccordionSectionTest : public ::testing::Test
@@ -29,7 +29,7 @@ protected:
     void SetUp() override
     {
         themeManager_ = std::make_unique<ThemeManager>();
-        section_ = std::make_unique<OscilAccordionSection>(getThemeService(), "Test Section", "test_section");
+        section_ = std::make_unique<MultiScoperAccordionSection>(getThemeService(), "Test Section", "test_section");
         content_ = std::make_unique<juce::Component>();
         content_->setSize(200, 100);
     }
@@ -42,7 +42,7 @@ protected:
     }
 
     std::unique_ptr<ThemeManager> themeManager_;
-    std::unique_ptr<OscilAccordionSection> section_;
+    std::unique_ptr<MultiScoperAccordionSection> section_;
     std::unique_ptr<juce::Component> content_;
 };
 
@@ -54,7 +54,7 @@ protected:
     void SetUp() override
     {
         themeManager_ = std::make_unique<ThemeManager>();
-        accordion_ = std::make_unique<OscilAccordion>(getThemeService());
+        accordion_ = std::make_unique<MultiScoperAccordion>(getThemeService());
     }
 
     void TearDown() override
@@ -64,10 +64,10 @@ protected:
     }
 
     std::unique_ptr<ThemeManager> themeManager_;
-    std::unique_ptr<OscilAccordion> accordion_;
+    std::unique_ptr<MultiScoperAccordion> accordion_;
 };
 
-// Test: OscilAccordionSection initializes in collapsed state by default (unlike CollapsibleSection)
+// Test: MultiScoperAccordionSection initializes in collapsed state by default (unlike CollapsibleSection)
 TEST_F(AccordionSectionTest, InitializesCollapsed) { EXPECT_FALSE(section_->isExpanded()); }
 
 // Test: setExpanded updates state
@@ -148,7 +148,7 @@ TEST_F(AccordionSectionTest, PreferredHeightIncludesContentWhenExpanded)
 {
     section_->setContent(content_.get());
     section_->setExpanded(true, false);
-    // OscilAccordionSection::getPreferredHeight uses expandSpring_.position
+    // MultiScoperAccordionSection::getPreferredHeight uses expandSpring_.position
     // With animate=false, position is set instantly.
 
     int expectedHeight = section_->getHeaderHeight() + content_->getHeight();
@@ -166,7 +166,7 @@ TEST_F(AccordionSectionTest, ContentVisibilityFollowsExpandedState)
 
     // Collapsed: content should be hidden (or transitioning)
     // With animate=false, visibility is updated immediately in setExpanded logic if using standard impl
-    // OscilAccordionSection::setExpanded logic:
+    // MultiScoperAccordionSection::setExpanded logic:
     // if (!animate) { ... if (content_) content_->setVisible(expanded); ... }
     section_->setExpanded(false, false);
     EXPECT_FALSE(content_->isVisible());
@@ -223,8 +223,8 @@ TEST_F(OptionsSectionTest, DefaultGainIsZero) { EXPECT_FLOAT_EQ(section_->getGai
 
 TEST_F(OptionsSectionTest, QualityPresetDropdownStartsDisabledWhenAutoAdjustEnabled)
 {
-    auto* qualityDropdown = dynamic_cast<OscilDropdown*>(
-        oscil::test::TestElementRegistry::getInstance().findElement("sidebar_options_qualityPresetDropdown"));
+    auto* qualityDropdown = dynamic_cast<MultiScoperDropdown*>(
+        multiscoper::test::TestElementRegistry::getInstance().findElement("sidebar_options_qualityPresetDropdown"));
 
     ASSERT_NE(qualityDropdown, nullptr);
     EXPECT_FALSE(qualityDropdown->isEnabled());
@@ -233,7 +233,7 @@ TEST_F(OptionsSectionTest, QualityPresetDropdownStartsDisabledWhenAutoAdjustEnab
 // ... other OptionsSection tests ...
 
 // ============================================================================
-// Integration Tests: OscilAccordionSection with OptionsSection
+// Integration Tests: MultiScoperAccordionSection with OptionsSection
 // ============================================================================
 
 class AccordionOptionsSectionTest : public ::testing::Test
@@ -245,7 +245,8 @@ protected:
     void SetUp() override
     {
         themeManager_ = std::make_unique<ThemeManager>();
-        accordionSection_ = std::make_unique<OscilAccordionSection>(getThemeService(), "OPTIONS", "sidebar_options");
+        accordionSection_ =
+            std::make_unique<MultiScoperAccordionSection>(getThemeService(), "OPTIONS", "sidebar_options");
         options_ = std::make_unique<OptionsSection>(getThemeService());
         accordionSection_->setContent(options_.get());
         accordionSection_->setBounds(0, 0, 200, 400);
@@ -259,7 +260,7 @@ protected:
     }
 
     std::unique_ptr<ThemeManager> themeManager_;
-    std::unique_ptr<OscilAccordionSection> accordionSection_;
+    std::unique_ptr<MultiScoperAccordionSection> accordionSection_;
     std::unique_ptr<OptionsSection> options_;
 };
 
@@ -278,7 +279,7 @@ TEST_F(AccordionOptionsSectionTest, OptionsHiddenWhenCollapsed)
 }
 
 // ============================================================================
-// Integration Tests: OscilAccordionSection with TimingSidebarSection
+// Integration Tests: MultiScoperAccordionSection with TimingSidebarSection
 // ============================================================================
 
 class AccordionTimingSectionTest : public ::testing::Test
@@ -290,7 +291,8 @@ protected:
     void SetUp() override
     {
         themeManager_ = std::make_unique<ThemeManager>();
-        accordionSection_ = std::make_unique<OscilAccordionSection>(getThemeService(), "TIMING", "sidebar_timing");
+        accordionSection_ =
+            std::make_unique<MultiScoperAccordionSection>(getThemeService(), "TIMING", "sidebar_timing");
         timing_ = std::make_unique<TimingSidebarSection>(getThemeService());
         accordionSection_->setContent(timing_.get());
         accordionSection_->setBounds(0, 0, 200, 400);
@@ -304,7 +306,7 @@ protected:
     }
 
     std::unique_ptr<ThemeManager> themeManager_;
-    std::unique_ptr<OscilAccordionSection> accordionSection_;
+    std::unique_ptr<MultiScoperAccordionSection> accordionSection_;
     std::unique_ptr<TimingSidebarSection> timing_;
 };
 
@@ -340,7 +342,7 @@ TEST_F(AccordionTimingSectionTest, TimingModeChangeAffectsPreferredHeight)
 // Test: DynamicHeightContent callback is wired up correctly
 TEST_F(AccordionTimingSectionTest, CallbackWiredUpCorrectly)
 {
-    // OscilAccordionSection should trigger parent resized() when content height changes.
+    // MultiScoperAccordionSection should trigger parent resized() when content height changes.
     // Since we don't have a parent here, we can't verify parent->resized() call easily.
     // However, we can check if the callback is set on the content.
 

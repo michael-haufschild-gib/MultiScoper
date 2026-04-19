@@ -1,5 +1,5 @@
 /*
-    Oscil - Oscillator List Item Tests
+    MultiScoper - Oscillator List Item Tests
     Tests for the item-level OscillatorListItemComponent (construction, label binding).
 */
 
@@ -9,15 +9,15 @@
 #include "ui/panels/OscillatorListItem.h"
 #include "ui/theme/ThemeManager.h"
 
-#include "OscilTestFixtures.h"
-#include "OscilTestUtils.h"
+#include "MultiScoperTestFixtures.h"
+#include "MultiScoperTestUtils.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
-using namespace oscil::test;
+using namespace multiscoper;
+using namespace multiscoper::test;
 
 namespace
 {

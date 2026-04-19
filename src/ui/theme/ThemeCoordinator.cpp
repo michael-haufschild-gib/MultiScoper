@@ -1,10 +1,10 @@
 /*
-    Oscil - Theme Coordinator Implementation
+    MultiScoper - Theme Coordinator Implementation
 */
 
 #include "ui/theme/ThemeCoordinator.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 ThemeCoordinator::ThemeCoordinator(IThemeService& themeService, ThemeChangedCallback onThemeChanged)
@@ -31,4 +31,4 @@ void ThemeCoordinator::themeChanged(const ColorTheme& newTheme)
 
 const ColorTheme& ThemeCoordinator::getCurrentTheme() const { return themeService_.getCurrentTheme(); }
 
-} // namespace oscil
+} // namespace multiscoper

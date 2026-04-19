@@ -1,8 +1,8 @@
 /*
-    Oscil Test Harness - HTTP Server: State Handlers
+    MultiScoper Test Harness - HTTP Server: State Handlers
 */
 
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "core/dsp/TimingEngine.h"
 
 #include "TestAudioGenerator.h"
@@ -11,7 +11,7 @@
 #include "plugin/PluginEditor.h"
 #include "plugin/PluginFactory.h"
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 namespace
@@ -36,7 +36,7 @@ json oscillatorToJson(const Oscillator& osc)
 }
 
 // Configure an Oscillator from JSON request body fields
-void configureOscillatorFromJson(Oscillator& osc, const json& body, OscilState& state, TestTrack* track)
+void configureOscillatorFromJson(Oscillator& osc, const json& body, MultiScoperState& state, TestTrack* track)
 {
     std::string name = body.value("name", "");
     if (name.empty())
@@ -131,6 +131,12 @@ void TestHttpServer::setupStateRoutes()
                   [this](const httplib::Request& req, httplib::Response& res) { handlePaneRemove(req, res); });
     server_->Post("/state/oscillator/move",
                   [this](const httplib::Request& req, httplib::Response& res) { handleOscillatorMove(req, res); });
+    server_->Post("/project/save",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleProjectSave(req, res); });
+    server_->Post("/project/close",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleProjectClose(req, res); });
+    server_->Post("/project/reopen",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleProjectReopen(req, res); });
 }
 
 void TestHttpServer::handleStateReset(const httplib::Request& req, httplib::Response& res)
@@ -164,8 +170,8 @@ void TestHttpServer::handleStateReset(const httplib::Request& req, httplib::Resp
             // mode/hostSync/BPM don't suppress the next test's changes via
             // its `if (currentMode_ != mode)` early-outs.
             if (auto* editor = track.getEditor())
-                if (auto* oscilEditor = dynamic_cast<OscilPluginEditor*>(editor))
-                    oscilEditor->refreshTimingSidebarFromEngine();
+                if (auto* multiscoperEditor = dynamic_cast<MultiScoperPluginEditor*>(editor))
+                    multiscoperEditor->refreshTimingSidebarFromEngine();
         },
         5000);
 
@@ -210,112 +216,9 @@ void TestHttpServer::resetOptionsControls()
     uiController_.selectById("sidebar_options_layoutDropdown", "1");
 }
 
-void TestHttpServer::handleStateSave(const httplib::Request& req, httplib::Response& res)
-{
-    try
-    {
-        auto body = json::parse(req.body);
-        std::string path = body.value("path", "/tmp/state.xml");
-        const auto trackIdOpt = tryResolveTrackId(req, res);
-        if (!trackIdOpt)
-            return;
-        const int trackId = *trackIdOpt;
-
-        auto xml = std::make_shared<juce::String>();
-        const auto result = runOnTrackSync(
-            trackId,
-            [xml](TestTrack& track) {
-                auto& processor = track.getProcessor();
-                auto& stateTree = processor.getState().getState();
-                auto timingState = processor.getTimingEngine().toValueTree();
-                auto existingTiming = stateTree.getChildWithName(StateIds::Timing);
-                if (existingTiming.isValid())
-                    stateTree.removeChild(existingTiming, nullptr);
-                stateTree.appendChild(timingState, nullptr);
-                *xml = processor.getState().toXmlString();
-            },
-            5000);
-
-        if (respondIfTrackCallFailed(result, res, "No tracks available", "Timeout serializing state"))
-            return;
-
-        juce::File file(path);
-        bool written = file.replaceWithText(*xml);
-        if (written && file.existsAsFile())
-            res.set_content(successResponse().dump(), "application/json");
-        else
-            res.set_content(errorResponse("Failed to write state to: " + path).dump(), "application/json");
-    }
-    catch (const std::exception& e)
-    {
-        res.set_content(errorResponse(e.what()).dump(), "application/json");
-    }
-}
-
-bool TestHttpServer::restoreLoadedState(OscilPluginProcessor& processor, OscilPluginEditor* editor,
-                                        const juce::String& xml)
-{
-    auto& state = processor.getState();
-    if (!state.fromXmlString(xml))
-        return false;
-
-    auto timingTree = state.getState().getChildWithName(StateIds::Timing);
-    if (timingTree.isValid())
-        processor.getTimingEngine().fromValueTree(timingTree);
-
-    uiController_.toggle("sidebar_options_gridToggle", state.isShowGridEnabled());
-    uiController_.setSliderValue("sidebar_options_gainSlider", static_cast<double>(state.getGainDb()));
-    uiController_.selectById("sidebar_options_layoutDropdown", juce::String(static_cast<int>(state.getColumnLayout())));
-
-    if (editor)
-        editor->refreshPanels();
-
-    return true;
-}
-
-void TestHttpServer::handleStateLoad(const httplib::Request& req, httplib::Response& res)
-{
-    try
-    {
-        auto body = json::parse(req.body);
-        std::string path = body.value("path", "");
-
-        juce::File file(path);
-        if (!file.existsAsFile())
-        {
-            res.set_content(errorResponse("File not found").dump(), "application/json");
-            return;
-        }
-
-        juce::String xml = file.loadFileAsString();
-        const auto trackIdOpt = tryResolveTrackId(req, res);
-        if (!trackIdOpt)
-            return;
-        const int trackId = *trackIdOpt;
-
-        auto success = std::make_shared<bool>(false);
-        const auto result = runOnTrackSync(
-            trackId,
-            [this, success, xml](TestTrack& track) {
-                auto& processor = track.getProcessor();
-                auto* editor = dynamic_cast<OscilPluginEditor*>(track.getEditor());
-                *success = restoreLoadedState(processor, editor, xml);
-            },
-            5000);
-
-        if (respondIfTrackCallFailed(result, res, "No tracks available", "Timeout restoring state"))
-            return;
-
-        if (*success)
-            res.set_content(successResponse().dump(), "application/json");
-        else
-            res.set_content(errorResponse("Failed to restore state from XML").dump(), "application/json");
-    }
-    catch (const std::exception& e)
-    {
-        res.set_content(errorResponse(e.what()).dump(), "application/json");
-    }
-}
+// handleStateSave, handleStateLoad, and restoreLoadedState are defined in
+// TestHttpServerStatePersistence.cpp — they share the "apply XML" sidebar
+// refresh logic.
 
 void TestHttpServer::handleStateOscillators(const httplib::Request& req, httplib::Response& res)
 {
@@ -422,7 +325,7 @@ void TestHttpServer::handleStateUpdateOscillator(const httplib::Request& req, ht
                 *osc = existingOsc.value();
                 applyOscillatorJsonUpdates(*osc, *body);
                 state.updateOscillator(*osc);
-                if (auto* ed = dynamic_cast<OscilPluginEditor*>(track.getEditor()))
+                if (auto* ed = dynamic_cast<MultiScoperPluginEditor*>(track.getEditor()))
                     ed->refreshPanels();
             },
             5000);
@@ -449,6 +352,9 @@ void TestHttpServer::handleStateUpdateOscillator(const httplib::Request& req, ht
     }
 }
 
+// handleStateReorderOscillators is the last handler in this translation unit.
+// Project-bundle handlers (handleProjectSave/Close/Reopen) are defined in
+// TestHttpServerProject.cpp — they are wired into setupStateRoutes above.
 void TestHttpServer::handleStateReorderOscillators(const httplib::Request& req, httplib::Response& res)
 {
     try
@@ -473,7 +379,7 @@ void TestHttpServer::handleStateReorderOscillators(const httplib::Request& req, 
             [fromIndex, toIndex, oscillators](TestTrack& track) {
                 auto& state = track.getProcessor().getState();
                 state.reorderOscillators(fromIndex, toIndex);
-                if (auto* ed = dynamic_cast<OscilPluginEditor*>(track.getEditor()))
+                if (auto* ed = dynamic_cast<MultiScoperPluginEditor*>(track.getEditor()))
                     ed->refreshPanels();
                 for (const auto& osc : state.getOscillators())
                 {
@@ -497,4 +403,4 @@ void TestHttpServer::handleStateReorderOscillators(const httplib::Request& req, 
     }
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

@@ -1,5 +1,5 @@
 /*
-    Oscil - StatusBarComponent Tests
+    MultiScoper - StatusBarComponent Tests
     Verifies the two-zone layout's hint-text API, elision, and separator gating.
 */
 
@@ -10,7 +10,7 @@
 #include <gtest/gtest.h>
 #include <memory>
 
-namespace oscil
+namespace multiscoper
 {
 
 /// Test-only accessor that forwards to the component's private layout
@@ -136,4 +136,4 @@ TEST_F(StatusBarComponentTest, RenderingModeIsPreservedAcrossSetters)
     EXPECT_EQ(bar.getRenderingMode(), initial);
 }
 
-} // namespace oscil
+} // namespace multiscoper

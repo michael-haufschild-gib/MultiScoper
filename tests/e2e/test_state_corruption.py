@@ -15,7 +15,7 @@ What bugs these tests catch:
 """
 
 import pytest
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 from page_objects import StateManager, TransportControl
 
 
@@ -23,7 +23,7 @@ class TestOrderIndexIntegrity:
     """Verify oscillator order indices remain valid after complex operations."""
 
     def test_indices_contiguous_after_alternating_add_delete(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: adding oscillator A, B, C, deleting B, adding D produces
@@ -55,7 +55,7 @@ class TestOrderIndexIntegrity:
         )
 
     def test_indices_survive_reorder_then_delete(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: reordering oscillators then deleting one produces
@@ -92,7 +92,7 @@ class TestSnapshotStateConsistency:
     """Verify diagnostic snapshot stays consistent with state API."""
 
     def test_snapshot_matches_after_rapid_operations(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: diagnostic snapshot caches state and does not invalidate
@@ -133,7 +133,7 @@ class TestSnapshotStateConsistency:
         )
 
     def test_snapshot_timing_matches_after_mode_switch(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: switching timing mode does not update the snapshot's
@@ -171,7 +171,7 @@ class TestPaneIntegrity:
     """Verify pane-oscillator relationships remain valid under stress."""
 
     def test_all_oscillators_have_valid_pane_after_operations(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: sequence of add pane, move oscillator, remove pane,
@@ -214,7 +214,7 @@ class TestPaneIntegrity:
             )
 
     def test_pane_oscillator_count_consistent(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: waveform state pane oscillator count does not match
@@ -254,7 +254,7 @@ class TestSaveLoadCornerCases:
     """State save/load edge cases that expose serialization bugs."""
 
     def test_save_with_hidden_oscillator_roundtrips(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: visible=false not serialized to XML, so hidden
@@ -272,7 +272,7 @@ class TestSaveLoadCornerCases:
 
         state_mgr = StateManager(editor)
         oscs = state_mgr.save_load_roundtrip(
-            "/tmp/oscil_e2e_hidden_save.xml", 1
+            "/tmp/multiscoper_e2e_hidden_save.xml", 1
         )
 
         assert oscs[0].get("visible") is False, (
@@ -280,7 +280,7 @@ class TestSaveLoadCornerCases:
         )
 
     def test_save_with_custom_opacity_linewidth_roundtrips(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: float properties (opacity, lineWidth) serialized with
@@ -298,7 +298,7 @@ class TestSaveLoadCornerCases:
 
         state_mgr = StateManager(editor)
         oscs = state_mgr.save_load_roundtrip(
-            "/tmp/oscil_e2e_float_props.xml", 1
+            "/tmp/multiscoper_e2e_float_props.xml", 1
         )
 
         if opacity_before is not None:
@@ -313,7 +313,7 @@ class TestSaveLoadCornerCases:
             )
 
     def test_save_load_with_multiple_panes_and_moved_oscillators(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: oscillators moved between panes have their new paneId
@@ -342,7 +342,7 @@ class TestSaveLoadCornerCases:
 
         state_mgr = StateManager(editor)
         oscs = state_mgr.save_load_roundtrip(
-            "/tmp/oscil_e2e_multi_pane_move.xml", 2
+            "/tmp/multiscoper_e2e_multi_pane_move.xml", 2
         )
 
         panes_after = editor.get_panes()
@@ -370,7 +370,7 @@ class TestTransportStatePersistence:
     """Verify transport-related state during save/load."""
 
     def test_bpm_survives_save_load(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: BPM value not serialized in state XML, reverting
@@ -386,7 +386,7 @@ class TestTransportStatePersistence:
         assert abs(bpm_before - 95.0) < 1.0
 
         state_mgr = StateManager(editor)
-        state_mgr.save_load_roundtrip("/tmp/oscil_e2e_bpm.xml", 1)
+        state_mgr.save_load_roundtrip("/tmp/multiscoper_e2e_bpm.xml", 1)
 
         bpm_after = editor.get_bpm()
         # BPM may or may not persist (depends on design), but should not crash

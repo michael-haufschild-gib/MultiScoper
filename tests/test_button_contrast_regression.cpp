@@ -1,14 +1,14 @@
 /*
-    Oscil - Button / Modal Contrast Regression Tests
+    MultiScoper - Button / Modal Contrast Regression Tests
 
     Guards two previously-observed bugs:
 
-    (1) "Blue text on blue button" — OscilButton Primary variant previously
+    (1) "Blue text on blue button" — MultiScoperButton Primary variant previously
         rendered `glass.accent` text on `glass.accentSubtle` bg (same hue,
         different alpha). For HSV(220°, 0.7, 0.6) accent the rendered pair
         gave ~2.65:1 WCAG contrast on Glass Dark Blue — AA fail.
 
-    (2) "White modal header on dark theme" — OscilModal titlebar painted
+    (2) "White modal header on dark theme" — MultiScoperModal titlebar painted
         `glass.bgHover.withAlpha(alpha)` where `bgHover` pre-bakes
         `textPrimary @ 0.08` and `withAlpha` REPLACES alpha, so the
         steady-state titlebar fill became `textPrimary @ 1.0` — near-white.
@@ -19,7 +19,7 @@
     not actually read, so the decoupling gap was invisible to CI.
 */
 
-#include "ui/components/OscilButton.h"
+#include "ui/components/MultiScoperButton.h"
 #include "ui/components/SurfaceStyle.h"
 #include "ui/theme/ColorTheme.h"
 #include "ui/theme/ThemeManager.h"
@@ -28,7 +28,7 @@
 #include <cmath>
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 namespace
 {
@@ -38,16 +38,16 @@ namespace
 // if the same bug lands in both places, duplicated-formula tests stay green.
 void primaryButtonColours(IThemeService& themeService, juce::Colour& bg, juce::Colour& text)
 {
-    OscilButton button(themeService);
+    MultiScoperButton button(themeService);
     button.setVariant(ButtonVariant::Primary);
     bg = button.getBackgroundColour();
     text = button.getTextColour();
 }
 
 // Modal titlebar steady-state fill still has no public accessor; render
-// the production OscilModal-equivalent composition by calling the real
+// the production MultiScoperModal-equivalent composition by calling the real
 // SurfaceStyle tokens through the same helpers paint() uses, and guard
-// the test with a doc reference to OscilModalPainting.cpp so any future
+// the test with a doc reference to MultiScoperModalPainting.cpp so any future
 // drift is visible in review.
 // NOTE: keep this narrowly scoped; if the titlebar logic grows, expose a
 // production helper and delete this local mirror.

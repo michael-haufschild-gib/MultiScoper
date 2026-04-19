@@ -1,5 +1,5 @@
 /*
-    Oscil - SharedCaptureBuffer Property-Based Tests (rapidcheck)
+    MultiScoper - SharedCaptureBuffer Property-Based Tests (rapidcheck)
 
     Ring-buffer correctness invariants.
     See docs/decisions/011-property-based-dsp-tests.md.
@@ -14,7 +14,7 @@
 #include <rapidcheck/gtest.h>
 #include <vector>
 
-using namespace oscil;
+using namespace multiscoper;
 
 namespace
 {

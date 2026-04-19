@@ -1,5 +1,5 @@
 /*
-    Oscil - Source Entity Implementation
+    MultiScoper - Source Entity Implementation
 */
 
 #include "core/Source.h"
@@ -10,7 +10,7 @@
 #include <cmath>
 #include <utility>
 
-namespace oscil
+namespace multiscoper
 {
 
 // === SourceId Implementation ===
@@ -290,4 +290,4 @@ void Source::updateSignalMetrics(float rms, float peak, float dcOffset) noexcept
     signalMetrics_.hasSignal = signalMetrics_.rmsLevel > -60.0f; // Signal detected if above -60 dBFS
 }
 
-} // namespace oscil
+} // namespace multiscoper

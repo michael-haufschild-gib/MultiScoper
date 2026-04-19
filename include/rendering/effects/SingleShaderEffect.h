@@ -1,5 +1,5 @@
 /*
-    Oscil - Single Shader Effect Base Class
+    MultiScoper - Single Shader Effect Base Class
     Intermediate base for post-processing effects that use a single shader program
 */
 
@@ -9,9 +9,9 @@
 
 #include <memory>
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -71,6 +71,6 @@ protected:
     bool compiled_ = false;
 };
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

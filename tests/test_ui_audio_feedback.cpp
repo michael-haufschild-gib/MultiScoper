@@ -1,12 +1,12 @@
 /*
-    Oscil - UI Audio Feedback Tests
+    MultiScoper - UI Audio Feedback Tests
 */
 
 #include "ui/components/UIAudioFeedback.h"
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class UIAudioFeedbackTest : public ::testing::Test
 {

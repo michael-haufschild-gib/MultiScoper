@@ -1,5 +1,5 @@
 /*
-    Oscil - Screenshot Handler
+    MultiScoper - Screenshot Handler
     Handles screenshot test server endpoints
 */
 
@@ -7,7 +7,7 @@
 
 #include "TestServerHandlerBase.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -22,4 +22,4 @@ public:
     void handleTakeScreenshot(const httplib::Request& req, httplib::Response& res);
 };
 
-} // namespace oscil
+} // namespace multiscoper

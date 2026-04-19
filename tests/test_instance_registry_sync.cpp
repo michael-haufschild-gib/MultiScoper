@@ -1,5 +1,5 @@
 /*
-    Oscil - Instance Registry Sync Tests
+    MultiScoper - Instance Registry Sync Tests
     Tests for cross-instance sync, discovery, deduplication, and listener notifications
 */
 
@@ -12,7 +12,7 @@
 #include <gtest/gtest.h>
 #include <thread>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class InstanceRegistrySyncTest : public ::testing::Test
 {
@@ -67,6 +67,31 @@ TEST_F(InstanceRegistrySyncTest, DeduplicationRefreshesBufferAndMetadataForExist
     auto sourceInfo = getRegistry().getSource(sourceId);
     ASSERT_TRUE(sourceInfo.has_value());
     EXPECT_EQ(sourceInfo->name, "Backup Track");
+}
+
+TEST_F(InstanceRegistrySyncTest, DeduplicationPreservesBufferOnNullReRegistration)
+{
+    // Bug caught: a dedup re-registration passing a null captureBuffer
+    // silently erases the registry's weak_ref to the primary buffer
+    // even though the caller still owns it. Parallels the name-preserves-
+    // on-empty rule — null should preserve, not erase.
+    auto primaryBuffer = std::make_shared<SharedCaptureBuffer>();
+    auto sourceId = getRegistry().registerInstance("track_preserve", primaryBuffer, "Primary", 2, 48000.0);
+    ASSERT_TRUE(sourceId.isValid());
+    EXPECT_EQ(getRegistry().getCaptureBuffer(sourceId), primaryBuffer);
+
+    // Re-register with null buffer to update metadata only (e.g. sample-rate
+    // bump on prepareToPlay). Buffer must survive the call.
+    auto reReg = getRegistry().registerInstance("track_preserve", nullptr, "Primary Renamed", 1, 96000.0);
+    EXPECT_EQ(reReg, sourceId);
+    EXPECT_EQ(getRegistry().getCaptureBuffer(sourceId), primaryBuffer)
+        << "Null re-registration must preserve the existing buffer";
+
+    auto info = getRegistry().getSource(sourceId);
+    ASSERT_TRUE(info.has_value());
+    EXPECT_EQ(info->name, "Primary Renamed");
+    EXPECT_EQ(info->channelCount, 1);
+    EXPECT_DOUBLE_EQ(info->sampleRate, 96000.0);
 }
 
 TEST_F(InstanceRegistrySyncTest, DeduplicationPromotesNewBufferWhenPrimaryExpired)
@@ -252,7 +277,12 @@ TEST_F(InstanceRegistrySyncTest, ConcurrentRegistration)
         thread.join();
     }
 
-    // All should succeed (64 or fewer unique tracks)
+    // Each trackIdentifier is unique, so no dedup. MAX_TRACKS caps the
+    // registry at 64 — so with numThreads * registrationsPerThread = 100
+    // registration attempts, exactly 64 succeed (Added) and 36 are
+    // Rejected returning SourceId::invalid(). This also validates that
+    // the cap is enforced deterministically regardless of which threads
+    // win the race.
     EXPECT_EQ(successCount.load(), std::min(64, numThreads * registrationsPerThread));
 }
 
@@ -307,7 +337,13 @@ TEST_F(InstanceRegistrySyncTest, ConcurrentReadWriteDataIntegrity)
     writer.join();
 
     EXPECT_EQ(updateCount.load(), 200);
-    EXPECT_GT(readCount.load(), 10);
+    // Bound is a "reader alive" sanity check, not a throughput assertion.
+    // The real assertion is inconsistentCount==0 below; reader throughput
+    // varies by 10× under ctest -j8 load and OS scheduler jitter. 20 is
+    // "reader got at least some work" — the old `> 10` was nearly right;
+    // a much tighter bound would fail under load without catching a real
+    // starvation regression (which would drop readCount to 0–1 anyway).
+    EXPECT_GT(readCount.load(), 20) << "Reader made no progress — shared_mutex starvation";
     EXPECT_EQ(inconsistentCount.load(), 0) << "Source info torn read: name and sampleRate from different updates";
 }
 

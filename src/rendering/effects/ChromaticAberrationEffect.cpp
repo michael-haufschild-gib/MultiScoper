@@ -1,12 +1,12 @@
 /*
-    Oscil - Chromatic Aberration Effect Implementation
+    MultiScoper - Chromatic Aberration Effect Implementation
 */
 
 #include "rendering/effects/ChromaticAberrationEffect.h"
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
-namespace oscil
+namespace multiscoper
 {
 
 // Chromatic aberration fragment shader
@@ -60,6 +60,6 @@ void ChromaticAberrationEffect::setUniforms(const Framebuffer& source, float del
     juce::OpenGLExtensionFunctions::glUniform1f(intensityLoc_, settings_.intensity * getIntensity());
 }
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

@@ -1,10 +1,10 @@
 /*
-    Oscil - Test Runner Handler - Layout & Rendering Tests
+    MultiScoper - Test Runner Handler - Layout & Rendering Tests
 */
 
 #include "tools/test_server/TestRunnerHandler.h"
 
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "core/Pane.h"
 #include "ui/layout/PaneComponent.h"
 #include "ui/panels/WaveformComponent.h"
@@ -12,13 +12,13 @@
 #include "plugin/PluginEditor.h"
 #include "plugin/PluginProcessor.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 namespace
 {
-nlohmann::json testSingleColumnLayout(OscilState& state, OscilPluginEditor& editor, PaneLayoutManager& layoutManager,
-                                      const juce::Rectangle<int>& availableArea)
+nlohmann::json testSingleColumnLayout(MultiScoperState& state, MultiScoperPluginEditor& editor,
+                                      PaneLayoutManager& layoutManager, const juce::Rectangle<int>& availableArea)
 {
     nlohmann::json test;
     test["name"] = "SingleColumnLayout";
@@ -30,8 +30,8 @@ nlohmann::json testSingleColumnLayout(OscilState& state, OscilPluginEditor& edit
     return test;
 }
 
-nlohmann::json testDoubleColumnLayout(OscilState& state, OscilPluginEditor& editor, PaneLayoutManager& layoutManager,
-                                      const juce::Rectangle<int>& availableArea)
+nlohmann::json testDoubleColumnLayout(MultiScoperState& state, MultiScoperPluginEditor& editor,
+                                      PaneLayoutManager& layoutManager, const juce::Rectangle<int>& availableArea)
 {
     nlohmann::json test;
     test["name"] = "DoubleColumnLayout";
@@ -48,8 +48,8 @@ nlohmann::json testDoubleColumnLayout(OscilState& state, OscilPluginEditor& edit
     return test;
 }
 
-nlohmann::json testTripleColumnLayout(OscilState& state, OscilPluginEditor& editor, PaneLayoutManager& layoutManager,
-                                      const juce::Rectangle<int>& availableArea)
+nlohmann::json testTripleColumnLayout(MultiScoperState& state, MultiScoperPluginEditor& editor,
+                                      PaneLayoutManager& layoutManager, const juce::Rectangle<int>& availableArea)
 {
     nlohmann::json test;
     test["name"] = "TripleColumnLayout";
@@ -69,7 +69,7 @@ nlohmann::json testTripleColumnLayout(OscilState& state, OscilPluginEditor& edit
     return test;
 }
 
-nlohmann::json testUIResponsiveness(OscilPluginEditor& editor)
+nlohmann::json testUIResponsiveness(MultiScoperPluginEditor& editor)
 {
     nlohmann::json test;
     test["name"] = "UIResponsiveness";
@@ -97,7 +97,7 @@ nlohmann::json testUIResponsiveness(OscilPluginEditor& editor)
     return test;
 }
 
-nlohmann::json testScreenshotGeneration(OscilPluginEditor& editor)
+nlohmann::json testScreenshotGeneration(MultiScoperPluginEditor& editor)
 {
     nlohmann::json test;
     test["name"] = "ScreenshotGeneration";
@@ -176,7 +176,7 @@ void TestRunnerHandler::handleRunRenderingTest(const httplib::Request& /*req*/, 
         {
             nlohmann::json test;
             test["name"] = "RenderingModeCheck";
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
             test["renderingMode"] = "OpenGL";
             test["passed"] = true;
             test["details"] = "OpenGL rendering is enabled";
@@ -217,4 +217,4 @@ void TestRunnerHandler::handleRunRenderingTest(const httplib::Request& /*req*/, 
     res.set_content(result.dump(), "application/json");
 }
 
-} // namespace oscil
+} // namespace multiscoper

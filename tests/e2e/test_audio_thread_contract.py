@@ -30,10 +30,10 @@ from __future__ import annotations
 
 import pytest
 
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 
 
-def _arm_audio_thread_prepare(client: OscilTestClient, enabled: bool) -> None:
+def _arm_audio_thread_prepare(client: MultiScoperTestClient, enabled: bool) -> None:
     resp = client._post_json("/daw/audioThreadPrepare", {"enabled": enabled})
     assert resp is not None and resp.get("success"), (
         f"Failed to set audioThreadPrepare={enabled}: {resp}"
@@ -42,13 +42,13 @@ def _arm_audio_thread_prepare(client: OscilTestClient, enabled: bool) -> None:
 
 
 class TestAudioThreadPrepareContract:
-    def test_mode_toggle_round_trip(self, client: OscilTestClient):
+    def test_mode_toggle_round_trip(self, client: MultiScoperTestClient):
         """Sanity: the flag can be turned on and off via HTTP."""
         _arm_audio_thread_prepare(client, True)
         _arm_audio_thread_prepare(client, False)
 
     def test_twenty_sample_rate_toggles_no_crash(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         With audio-thread-prepare armed, flip between 44.1k and 48k 20
@@ -85,7 +85,7 @@ class TestAudioThreadPrepareContract:
             _arm_audio_thread_prepare(editor, False)
 
     def test_source_id_stable_under_audio_thread_prepare(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: if `deferRegistration` ever re-registers (instead of

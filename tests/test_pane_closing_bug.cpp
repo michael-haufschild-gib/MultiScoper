@@ -1,5 +1,5 @@
 /*
-    Oscil - Pane Closing Bug Test
+    MultiScoper - Pane Closing Bug Test
     Regression test for issue where closing a pane affected other panes
 */
 
@@ -9,17 +9,17 @@
 #include "ui/layout/PaneContainerComponent.h"
 #include "ui/panels/WaveformComponent.h"
 
-#include "OscilTestFixtures.h"
+#include "MultiScoperTestFixtures.h"
 
-using namespace oscil;
-using namespace oscil::test;
+using namespace multiscoper;
+using namespace multiscoper::test;
 
-class PaneClosingBugTest : public OscilPluginTestFixture
+class PaneClosingBugTest : public MultiScoperPluginTestFixture
 {
 protected:
     void SetUp() override
     {
-        OscilPluginTestFixture::SetUp();
+        MultiScoperPluginTestFixture::SetUp();
 
         container = std::make_unique<PaneContainerComponent>(getThemeManager());
         // Hacky but we need a coordinator.
@@ -64,8 +64,8 @@ protected:
             state.removeOscillator(osc.getId());
     }
 
-    // Find the close button for a pane (the direct OscilButton child of PaneHeader)
-    OscilButton* findCloseButton(const PaneId& paneId)
+    // Find the close button for a pane (the direct MultiScoperButton child of PaneHeader)
+    MultiScoperButton* findCloseButton(const PaneId& paneId)
     {
         auto* paneComp = findPaneComponent(paneId);
         if (paneComp == nullptr)
@@ -85,7 +85,7 @@ protected:
 
         for (auto* child : header->getChildren())
         {
-            if (auto* btn = dynamic_cast<OscilButton*>(child))
+            if (auto* btn = dynamic_cast<MultiScoperButton*>(child))
                 return btn;
         }
         return nullptr;

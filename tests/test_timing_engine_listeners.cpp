@@ -1,5 +1,5 @@
 /*
-    Oscil - Timing Engine Tests (Listeners & Thread Safety)
+    MultiScoper - Timing Engine Tests (Listeners & Thread Safety)
 */
 
 #include "test_timing_engine_fixture.h"

@@ -1,5 +1,5 @@
 /*
-    Oscil - Transient Detector
+    MultiScoper - Transient Detector
     Detects attack and decay phases in audio signals using envelope following
 */
 
@@ -10,7 +10,7 @@
 #include <atomic>
 #include <cstdint>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -94,4 +94,4 @@ private:
     friend struct TransientDetectorTestAccess;
 };
 
-} // namespace oscil
+} // namespace multiscoper

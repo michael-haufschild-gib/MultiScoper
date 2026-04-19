@@ -1,4 +1,4 @@
-# Oscil Multi-Track Oscilloscope Plugin - Behavior Matrix
+# MultiScoper Multi-Track Oscilloscope Plugin - Behavior Matrix
 
 ## SCOPE
 
@@ -2108,7 +2108,7 @@ Output: {
   scrolledToNew: true
 }
 UI_Context: {
-  before: "User drags Oscil plugin to 'Lead Vocal' track in DAW",
+  before: "User drags MultiScoper plugin to 'Lead Vocal' track in DAW",
   action: "Plugin initializes and detects audio source",
   after: "Oscillator list shows new 'Lead Vocal' entry, immediately displays waveform"
 }
@@ -3569,7 +3569,7 @@ MinMaxPair decimateToMinMax(const float* samples, size_t count, size_t stride);
 
 **ValueTree Structure:**
 ```
-OscilState (root)
+MultiScoperState (root)
 ├── Sources[] (global, shared across instances)
 │   ├── id: UUID
 │   ├── dawTrackId: string
@@ -3726,16 +3726,16 @@ BENCHMARK("64 Track Rendering") {
 **CMake Targets:**
 ```cmake
 # Main plugin targets
-add_library(oscil_plugin SHARED ${PLUGIN_SOURCES})
-add_executable(oscil_standalone ${STANDALONE_SOURCES})
+add_library(MultiScoperPlugin SHARED ${PLUGIN_SOURCES})
+add_executable(MultiScoperStandalone ${STANDALONE_SOURCES})
 
 # Test targets
-add_executable(oscil_tests ${TEST_SOURCES})
-add_executable(oscil_benchmarks ${BENCHMARK_SOURCES})
+add_executable(MultiScoperTests ${TEST_SOURCES})
+add_executable(MultiScoperBenchmarks ${BENCHMARK_SOURCES})
 
 # JUCE configuration
-juce_add_plugin(oscil_plugin
-    PRODUCT_NAME "Oscil"
+juce_add_plugin(MultiScoperPlugin
+    PRODUCT_NAME "MultiScoper"
     FORMATS VST3 AU Standalone
     VST3_CATEGORIES "Analyzer"
     AU_MAIN_TYPE "kAudioUnitType_Effect"
@@ -3784,7 +3784,7 @@ public:
 private:
     MultiTrackEngine multiTrackEngine;
     TimingEngine timingEngine;
-    juce::ValueTree oscilState;
+    MultiScoperState state_;
 };
 ```
 
@@ -4672,7 +4672,7 @@ plan and then implement the following new feature:
 2. if the user tries to set the oscillator to visible, a modal appears.
 3. the modal has:
    1. a title "Select Pane"
-   2. an x close button in the top right (already provided in src/ui/components/OscilModal.cpp)
+   2. an x close button in the top right (already provided in src/ui/components/MultiScoperModal.cpp)
    3. a dropdown to select a pane or create a new pane
    4. an ok button
 4. when closing the modal via the header x close icon, the process gets canceled
@@ -4714,13 +4714,13 @@ PluginEditor.cpp (~1.1K LOC across constructor/timer/layout handlers) currently 
 
 We have a "god class/file" which needs refactoring. Review and plan and implement. Update tests.
 File:
-OscilDropdown.cpp (~1.1K LOC) owns popup chrome, filtering, search field, painting, keyboard navigation, and animation tweening inside one translation unit. Extract DropdownList, DropdownSearch, and painting helpers, and move shared painting constants to a style module to keep custom component logic digestible.
+MultiScoperDropdown.cpp (~1.1K LOC) owns popup chrome, filtering, search field, painting, keyboard navigation, and animation tweening inside one translation unit. Extract DropdownList, DropdownSearch, and painting helpers, and move shared painting constants to a style module to keep custom component logic digestible.
 High – test_oscillator.cpp (~1.3K LOC) exercises construction, modulation, routing, and UI contracts in a single mega fixture. Split into thematic suites (creation/state, UI bindings, DSP edge cases) to shorten arrange/act/assert blocks and speed bisecting when regressions appear.
 
 
-Medium – OscilSlider.cpp (~900 LOC) implements multiple slider variants, painting modes, gesture logic, spring animations, APVTS attachment, and tooltip rendering inside one class. Separate variant-specific drawing/interaction into strategy classes (e.g., HorizontalSliderSkin, RangeGestureHandler) and move APVTS glue into a lightweight adapter.
+Medium – MultiScoperSlider.cpp (~900 LOC) implements multiple slider variants, painting modes, gesture logic, spring animations, APVTS attachment, and tooltip rendering inside one class. Separate variant-specific drawing/interaction into strategy classes (e.g., HorizontalSliderSkin, RangeGestureHandler) and move APVTS glue into a lightweight adapter.
 
-Medium – OscilButton.cpp, OscilTabs.cpp, OscilRadioButton.cpp, OscilModal.cpp, OscilAccordion.cpp, OscilTextField.cpp, src/ui/components/OscilDropdown companions (each 520–720 LOC) all mix painting constants, animation state machines, accessibility hooks, and JUCE input callbacks. Adopt a shared “design system” module for colors/metrics and per-feature subcomponents (e.g., ModalBackdrop, TabsScroller) to cut duplication and keep each widget under ~300 LOC.
+Medium – MultiScoperButton.cpp, MultiScoperTabs.cpp, MultiScoperRadioButton.cpp, MultiScoperModal.cpp, MultiScoperAccordion.cpp, MultiScoperTextField.cpp, src/ui/components/MultiScoperDropdown companions (each 520–720 LOC) all mix painting constants, animation state machines, accessibility hooks, and JUCE input callbacks. Adopt a shared “design system” module for colors/metrics and per-feature subcomponents (e.g., ModalBackdrop, TabsScroller) to cut duplication and keep each widget under ~300 LOC.
 
 Medium – WaveformComponent.cpp (~680 LOC) conflates data ingestion, OpenGL vs software rendering toggles, gesture handling, overlay drawing, and metrics logging. Introduce a renderer abstraction and move gesture/selection logic to dedicated helpers so waveform rendering stays deterministic.
 
@@ -4728,7 +4728,7 @@ Medium – ThemeManager.cpp & ThemeEditorComponent.cpp (~665 & 709 LOC) currentl
 
 Medium – SourceSelectorComponent.cpp, OscillatorConfigPopup.cpp, SidebarComponent.cpp, WaveformComponent.cpp (≈500–600 LOC) each orchestrate multiple sub-controls inline. Break them into child components per section (e.g., “sources header”, “filter row”, “pane list”) to keep responsibilities narrow.
 
-Medium – Rendering/DSP support files ParticleSystem.cpp, WaveformGLRenderer.cpp, VisualConfiguration.cpp, BasicShader.cpp, TimingEngine.cpp, OscilState.cpp (560–680 LOC) combine shader strings, CPU data structures, serialization, and runtime logic. Extract shader sources into .glsl assets or dedicated headers, move math helpers into utility modules, and isolate serialization/state-diff code so real-time paths stay lean and testable.
+Medium – Rendering/DSP support files ParticleSystem.cpp, WaveformGLRenderer.cpp, VisualConfiguration.cpp, BasicShader.cpp, TimingEngine.cpp, MultiScoperState.cpp (560–680 LOC) combine shader strings, CPU data structures, serialization, and runtime logic. Extract shader sources into .glsl assets or dedicated headers, move math helpers into utility modules, and isolate serialization/state-diff code so real-time paths stay lean and testable.
 ----
 
 we have several "god files" in our project. here is the result of a review of such files in our test setup that need refactoring. review what is to do, plan the refactoring project, write the todos and delegate the refactoring to subagents with detailed prompts that give them all the context they need (but not unnecessary information):
@@ -4763,8 +4763,8 @@ The largest translation units (threshold ≈500 LOC) span UI, rendering, DSP, an
   We have 4 god classes that need to be split:
   - PluginEditor
   - WaveformComponent
-  - OscilSlider
-  - OscilDropdown
+  - MultiScoperSlider
+  - MultiScoperDropdown
   Do a review, discuss and decide for each class how to best split the class for the benefit of our project, plan the todos, implement, update tests, test.
 
   If save to do, parallize the work and distribute the refactoring with detailed instructions to 4 subagents
@@ -4778,11 +4778,11 @@ Add this feature:
 3. The lines are getting their own color in the theme's color scheme. the colors are not shared with other elemenets.
 
 
-⊶  Shell cmake --build --preset dev --target OscilTests && ./build/dev/OscilTests --gtest_filter=PaneClosingBugTest.* [current working directory /Users/Spare/Documents/code/MultiScoper]               (Focused) │
+⊶  Shell cmake --build --preset dev --target MultiScoperTests && ./build/dev/MultiScoperTests --gtest_filter=PaneClosingBugTest.* [current working directory /Users/Spare/Documents/code/MultiScoper]               (Focused) │
 │                                                                                                                                                                                                                   │
 │ ninja: warning: premature end of file; recovering                                                                                                                                                                 │
 │ [0/2] Re-checking globbed directories...                                                                                                                                                                          │
-│ [235/236] Linking CXX executable OscilTests                                                                                                                                                                       │
+│ [235/236] Linking CXX executable MultiScoperTests                                                                                                                                                                       │
 │ JUCE v8.0.5                                                                                                                                                                                                       │
 │ JUCE v8.0.5                                                                                                                                                                                                       │
 │ Note: Google Test filter = PaneClosingBugTest.*                                                                                                                                                                   │

@@ -1,11 +1,11 @@
 /*
-    Oscil - Common Test Fixtures
+    MultiScoper - Common Test Fixtures
     Reusable test fixture base classes for reducing setup boilerplate
 */
 
 #pragma once
 
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "core/Oscillator.h"
 #include "core/Source.h"
 #include "core/dsp/TimingEngine.h"
@@ -20,7 +20,7 @@
 #include <gtest/gtest.h>
 #include <memory>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 /**
@@ -150,19 +150,19 @@ protected:
 
 /**
  * Base fixture for State persistence tests
- * Provides OscilState instances
+ * Provides MultiScoperState instances
  */
 class StateTestFixture : public ::testing::Test
 {
 protected:
-    void SetUp() override { state = std::make_unique<OscilState>(); }
+    void SetUp() override { state = std::make_unique<MultiScoperState>(); }
 
     void TearDown() override { state.reset(); }
 
     /**
      * Create a state with oscillators
      */
-    std::unique_ptr<OscilState> createStateWithOscillators(int count)
+    std::unique_ptr<MultiScoperState> createStateWithOscillators(int count)
     {
         auto builder = StateBuilder();
 
@@ -181,15 +181,15 @@ protected:
     /**
      * Serialize and deserialize state (round-trip test helper)
      */
-    std::unique_ptr<OscilState> roundTripState(OscilState& original)
+    std::unique_ptr<MultiScoperState> roundTripState(MultiScoperState& original)
     {
         juce::String xml = original.toXmlString();
-        auto restored = std::make_unique<OscilState>();
+        auto restored = std::make_unique<MultiScoperState>();
         (void) restored->fromXmlString(xml);
         return restored;
     }
 
-    std::unique_ptr<OscilState> state;
+    std::unique_ptr<MultiScoperState> state;
 };
 
 /**
@@ -201,7 +201,7 @@ class IntegrationTestFixture : public ::testing::Test
 protected:
     void SetUp() override
     {
-        state = std::make_unique<OscilState>();
+        state = std::make_unique<MultiScoperState>();
         sourceId = SourceId::generate();
         instanceId = InstanceId::generate();
 
@@ -222,7 +222,7 @@ protected:
      */
     void addOscillatorToState() { state->addOscillator(*oscillator); }
 
-    std::unique_ptr<OscilState> state;
+    std::unique_ptr<MultiScoperState> state;
     SourceId sourceId;
     InstanceId instanceId;
     std::unique_ptr<Source> source;
@@ -287,4 +287,4 @@ protected:
     HostTimingInfo hostInfo;
 };
 
-} // namespace oscil::test
+} // namespace multiscoper::test

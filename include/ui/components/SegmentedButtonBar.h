@@ -1,12 +1,12 @@
 /*
-    Oscil - Segmented Button Bar Component
+    MultiScoper - Segmented Button Bar Component
     Reusable segmented control for exclusive selection (radio-button style)
-    Now uses OscilButton internally for consistent styling and animations
+    Now uses MultiScoperButton internally for consistent styling and animations
 */
 
 #pragma once
 
-#include "ui/components/OscilButton.h"
+#include "ui/components/MultiScoperButton.h"
 #include "ui/components/SpringAnimation.h"
 #include "ui/components/ThemedComponent.h"
 
@@ -14,14 +14,14 @@
 
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
  * Segmented button bar for exclusive selection
  * Used for: TIME/MELODIC toggle, Processing Mode selection, Filter tabs
  *
- * Now uses OscilButton internally with toggleable and segment position support
+ * Now uses MultiScoperButton internally with toggleable and segment position support
  * for consistent styling, animations, and accessibility across the UI.
  */
 class SegmentedButtonBar
@@ -110,7 +110,7 @@ private:
     int getSelectedIndex() const;
     void timerCallback() override;
 
-    std::vector<std::unique_ptr<OscilButton>> buttons_;
+    std::vector<std::unique_ptr<MultiScoperButton>> buttons_;
     int selectedId_ = -1;
     bool enabled_ = true;
     int minButtonWidth_ = 60;
@@ -123,4 +123,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SegmentedButtonBar)
 };
 
-} // namespace oscil
+} // namespace multiscoper

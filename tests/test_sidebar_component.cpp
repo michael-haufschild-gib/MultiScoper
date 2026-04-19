@@ -1,5 +1,5 @@
 /*
-    Oscil - Sidebar Component Tests
+    MultiScoper - Sidebar Component Tests
 */
 
 #include "core/InstanceRegistry.h"
@@ -13,7 +13,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class SidebarComponentTest : public ::testing::Test
 {
@@ -23,7 +23,7 @@ protected:
     std::unique_ptr<ShaderRegistry> shaderRegistry_;
     std::unique_ptr<PresetManager> presetManager_;
     std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
-    std::unique_ptr<OscilPluginProcessor> processor_;
+    std::unique_ptr<MultiScoperPluginProcessor> processor_;
     std::unique_ptr<SidebarComponent> sidebar_;
 
     void SetUp() override
@@ -34,8 +34,8 @@ protected:
         presetManager_ = std::make_unique<PresetManager>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
-        processor_ = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                            *presetManager_, *memoryBudgetManager_);
+        processor_ = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                                  *presetManager_, *memoryBudgetManager_);
 
         ServiceContext context{*registry_, *themeManager_, *shaderRegistry_, *presetManager_};
         sidebar_ = std::make_unique<SidebarComponent>(context);

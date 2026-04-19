@@ -105,12 +105,12 @@
     - action: {update_oscillator: {index: 0, opacity: 0.5, lineWidth: 3.0}}
     - action: {update_oscillator: {index: 1, visible: false}}
     - wait: 200ms
-    - action: {save_state: "/tmp/oscil_diverse.xml"}
+    - action: {save_state: "/tmp/multiscoper_diverse.xml"}
     - action: {reset_state: true}
     - wait: 300ms
     - check:
         - {check: oscillator_count, expected: 0}
-    - action: {load_state: "/tmp/oscil_diverse.xml"}
+    - action: {load_state: "/tmp/multiscoper_diverse.xml"}
     - wait: 500ms
     - check:
         - {check: oscillator_count, expected: 3}

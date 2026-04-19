@@ -1,5 +1,5 @@
 /*
-    Oscil - Dual Outline Shader Implementation
+    MultiScoper - Dual Outline Shader Implementation
 */
 
 #include "rendering/shaders/DualOutlineShader.h"
@@ -8,10 +8,10 @@
 
 #include <cmath>
 
-namespace oscil
+namespace multiscoper
 {
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 using namespace juce::gl;
 
 struct DualOutlineShader::GLResources : WaveformShader::WaveformGLResources
@@ -22,7 +22,7 @@ struct DualOutlineShader::GLResources : WaveformShader::WaveformGLResources
 #endif
 
 DualOutlineShader::DualOutlineShader()
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     : gl_(std::make_unique<GLResources>())
 #endif
 {
@@ -30,7 +30,7 @@ DualOutlineShader::DualOutlineShader()
 
 DualOutlineShader::~DualOutlineShader()
 {
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     if (gl_ && gl_->compiled)
     {
         jassertfalse;
@@ -39,7 +39,7 @@ DualOutlineShader::~DualOutlineShader()
 #endif
 }
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 bool DualOutlineShader::compile(juce::OpenGLContext& context)
 {
     if (!compileFromBinaryData(*gl_, context, BinaryData::dual_outline_vert, BinaryData::dual_outline_vertSize,
@@ -149,4 +149,4 @@ void DualOutlineShader::render(juce::OpenGLContext& context, const std::vector<f
 }
 #endif
 
-} // namespace oscil
+} // namespace multiscoper

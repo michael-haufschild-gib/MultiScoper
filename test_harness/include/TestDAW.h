@@ -1,5 +1,5 @@
 /*
-    Oscil Test Harness - Test DAW
+    MultiScoper Test Harness - Test DAW
     Main coordinator for multi-track DAW simulation
 */
 
@@ -16,7 +16,7 @@
 #include <mutex>
 #include <vector>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 /**
@@ -200,7 +200,7 @@ public:
      * prepare work onto the audio thread pool instead of the caller's thread.
      *
      * This surfaces the non-message-thread branch of
-     * `OscilPluginProcessor::deferRegistration` that is otherwise unreachable
+     * `MultiScoperPluginProcessor::deferRegistration` that is otherwise unreachable
      * from harness tests.  A single flag — both host-triggered reprepares
      * happen on the same thread in real DAWs.
      */
@@ -291,4 +291,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TestDAW)
 };
 
-} // namespace oscil::test
+} // namespace multiscoper::test

@@ -1,12 +1,12 @@
 /*
-    Oscil Test Harness - Audio Generator Implementation
+    MultiScoper Test Harness - Audio Generator Implementation
 */
 
 #include "TestAudioGenerator.h"
 
 #include <cmath>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 TestAudioGenerator::TestAudioGenerator() : rng_(std::random_device{}()) {}
@@ -14,8 +14,9 @@ TestAudioGenerator::TestAudioGenerator() : rng_(std::random_device{}()) {}
 void TestAudioGenerator::prepare(double sampleRate)
 {
     // Guard against invalid sample rate
-    sampleRate_ = sampleRate > 0.0 ? sampleRate : 48000.0;
-    phaseIncrement_ = frequency_.load() / sampleRate_;
+    const double sr = sampleRate > 0.0 ? sampleRate : 48000.0;
+    sampleRate_.store(sr, std::memory_order_relaxed);
+    phaseIncrement_.store(frequency_.load() / sr, std::memory_order_relaxed);
     reset();
 }
 
@@ -27,9 +28,15 @@ void TestAudioGenerator::generateBlock(juce::AudioBuffer<float>& buffer)
     const Waveform wf = waveform_.load();
     const int burst = burstSamples_.load();
 
-    // Update phase increment in case frequency changed (sampleRate_ validated in prepare())
-    if (sampleRate_ > 0.0)
-        phaseIncrement_ = frequency_.load() / sampleRate_;
+    // Update phase increment in case frequency changed (sampleRate_ validated in prepare()).
+    // Snapshot the atomic into a local so the per-sample loop below doesn't reload.
+    const double sr = sampleRate_.load(std::memory_order_relaxed);
+    double phaseInc = phaseIncrement_.load(std::memory_order_relaxed);
+    if (sr > 0.0)
+    {
+        phaseInc = frequency_.load() / sr;
+        phaseIncrement_.store(phaseInc, std::memory_order_relaxed);
+    }
 
     for (int sample = 0; sample < numSamples; ++sample)
     {
@@ -62,10 +69,11 @@ void TestAudioGenerator::generateBlock(juce::AudioBuffer<float>& buffer)
             buffer.setSample(ch, sample, value);
         }
 
-        // Advance phase (for tonal waveforms)
+        // Advance phase (for tonal waveforms) using the snapshotted
+        // phaseInc — avoids per-sample atomic loads.
         if (wf != Waveform::Noise && wf != Waveform::Silence)
         {
-            phase_ += phaseIncrement_;
+            phase_ += phaseInc;
             if (phase_ >= 1.0)
                 phase_ -= 1.0;
         }
@@ -113,8 +121,9 @@ void TestAudioGenerator::setFrequency(float hz)
     // Allow LFO rates (sub-audio frequencies) for test visualization
     frequency_.store(juce::jlimit(0.01f, 20000.0f, hz));
     // Guard against division by zero if prepare() wasn't called
-    if (sampleRate_ > 0.0)
-        phaseIncrement_ = frequency_.load() / sampleRate_;
+    const double sr = sampleRate_.load(std::memory_order_relaxed);
+    if (sr > 0.0)
+        phaseIncrement_.store(frequency_.load() / sr, std::memory_order_relaxed);
 }
 
 void TestAudioGenerator::setAmplitude(float gain) { amplitude_.store(juce::jlimit(0.0f, 1.0f, gain)); }
@@ -175,4 +184,4 @@ Waveform TestAudioGenerator::stringToWaveform(const juce::String& str)
     return Waveform::Silence;
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

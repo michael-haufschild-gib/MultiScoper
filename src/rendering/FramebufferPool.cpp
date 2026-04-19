@@ -1,12 +1,12 @@
 /*
-    Oscil - Framebuffer Pool Implementation
+    MultiScoper - Framebuffer Pool Implementation
 */
 
 #include "rendering/FramebufferPool.h"
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
-namespace oscil
+namespace multiscoper
 {
 
 using namespace juce::gl;
@@ -206,6 +206,6 @@ void FramebufferPool::renderFullscreenQuad()
     juce::OpenGLExtensionFunctions::glBindVertexArray(0);
 }
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

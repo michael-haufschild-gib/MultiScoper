@@ -3,7 +3,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class TimingPresenterTest : public ::testing::Test
 {

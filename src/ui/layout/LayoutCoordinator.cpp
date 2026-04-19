@@ -1,10 +1,10 @@
 /*
-    Oscil - Layout Coordinator Implementation
+    MultiScoper - Layout Coordinator Implementation
 */
 
 #include "ui/layout/LayoutCoordinator.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 LayoutCoordinator::LayoutCoordinator(WindowLayout& layout, LayoutChangedCallback onLayoutChanged)
@@ -37,4 +37,4 @@ void LayoutCoordinator::sidebarCollapseStateChanged(bool /*collapsed*/)
     }
 }
 
-} // namespace oscil
+} // namespace multiscoper

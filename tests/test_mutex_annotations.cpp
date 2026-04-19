@@ -1,7 +1,7 @@
 /*
-    Oscil - Mutex wrapper behavioral tests.
+    MultiScoper - Mutex wrapper behavioral tests.
 
-    Verifies that oscil::Mutex / oscil::SharedMutex and their scoped-lock
+    Verifies that multiscoper::Mutex / multiscoper::SharedMutex and their scoped-lock
     RAII wrappers preserve the behavior of std::mutex / std::shared_mutex.
     Clang thread-safety-analysis annotations are compile-time; these tests
     only exercise runtime semantics (mutual exclusion, shared read access,
@@ -22,12 +22,12 @@ namespace
 {
 
 // ============================================================================
-// oscil::Mutex — exclusive mutual exclusion
+// multiscoper::Mutex — exclusive mutual exclusion
 // ============================================================================
 
 TEST(MutexAnnotations, ExclusiveMutexSerializesIncrements)
 {
-    oscil::Mutex mutex;
+    multiscoper::Mutex mutex;
     long long counter = 0;
     constexpr int kThreads = 8;
     constexpr int kIterations = 5000;
@@ -54,7 +54,7 @@ TEST(MutexAnnotations, ExclusiveMutexSerializesIncrements)
 
 TEST(MutexAnnotations, TryLockSucceedsWhenFreeAndFailsWhenHeld)
 {
-    oscil::Mutex mutex;
+    multiscoper::Mutex mutex;
 
     // Free: try_lock must succeed.
     ASSERT_TRUE(mutex.try_lock());
@@ -85,12 +85,12 @@ TEST(MutexAnnotations, TryLockSucceedsWhenFreeAndFailsWhenHeld)
 }
 
 // ============================================================================
-// oscil::SharedMutex — shared (reader) access in parallel, exclusive blocks all
+// multiscoper::SharedMutex — shared (reader) access in parallel, exclusive blocks all
 // ============================================================================
 
 TEST(MutexAnnotations, SharedMutexAllowsConcurrentReaders)
 {
-    oscil::SharedMutex mutex;
+    multiscoper::SharedMutex mutex;
     std::atomic<int> readersInside{0};
     std::atomic<int> peakReadersInside{0};
     constexpr int kReaders = 4;
@@ -121,7 +121,7 @@ TEST(MutexAnnotations, SharedMutexAllowsConcurrentReaders)
 
 TEST(MutexAnnotations, SharedMutexExclusiveWriterExcludesReaders)
 {
-    oscil::SharedMutex mutex;
+    multiscoper::SharedMutex mutex;
     std::atomic<bool> writerHolding{false};
     std::atomic<bool> writerRelease{false};
     std::atomic<int> readersAcquiredDuringWrite{0};
@@ -157,9 +157,9 @@ TEST(MutexAnnotations, SharedMutexExclusiveWriterExcludesReaders)
 
 TEST(MutexAnnotations, ScopedLockReleasesOnScopeExit)
 {
-    oscil::Mutex mutex;
+    multiscoper::Mutex mutex;
     {
-        oscil::ScopedLock lock(mutex);
+        multiscoper::ScopedLock lock(mutex);
         // Cannot re-acquire while holding exclusive lock in this thread.
         EXPECT_FALSE(mutex.try_lock());
     }
@@ -170,13 +170,13 @@ TEST(MutexAnnotations, ScopedLockReleasesOnScopeExit)
 
 TEST(MutexAnnotations, ScopedSharedLockAllowsParallelReaders)
 {
-    oscil::SharedMutex mutex;
+    multiscoper::SharedMutex mutex;
     std::atomic<int> inside{0};
     std::atomic<int> maxInside{0};
     constexpr int kReaders = 3;
 
     auto reader = [&]() {
-        oscil::ScopedSharedLock lock(mutex);
+        multiscoper::ScopedSharedLock lock(mutex);
         const int n = inside.fetch_add(1) + 1;
         int prev = maxInside.load();
         while (n > prev && !maxInside.compare_exchange_weak(prev, n))
@@ -200,7 +200,7 @@ TEST(MutexAnnotations, ScopedSharedLockAllowsParallelReaders)
 
 TEST(MutexAnnotations, ScopedLockOnSharedMutexGivesExclusiveAccess)
 {
-    oscil::SharedMutex mutex;
+    multiscoper::SharedMutex mutex;
     long long counter = 0;
     constexpr int kThreads = 6;
     constexpr int kIterations = 2000;
@@ -212,7 +212,7 @@ TEST(MutexAnnotations, ScopedLockOnSharedMutexGivesExclusiveAccess)
         threads.emplace_back([&]() {
             for (int j = 0; j < kIterations; ++j)
             {
-                oscil::ScopedLock lock(mutex);
+                multiscoper::ScopedLock lock(mutex);
                 ++counter;
             }
         });

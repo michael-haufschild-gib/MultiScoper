@@ -1,5 +1,5 @@
 /*
-    Oscil - Pane Header Tests
+    MultiScoper - Pane Header Tests
 */
 
 #include "ui/layout/pane/PaneHeader.h"
@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 namespace
 {

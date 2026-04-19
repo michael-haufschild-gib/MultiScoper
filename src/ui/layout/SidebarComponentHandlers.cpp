@@ -1,11 +1,11 @@
 /*
-    Oscil - Sidebar Component Handlers
+    MultiScoper - Sidebar Component Handlers
     Section listener callbacks forwarded to parent listeners
 */
 
 #include "ui/layout/SidebarComponent.h"
 
-namespace oscil
+namespace multiscoper
 {
 void SidebarComponent::addOscillatorDialogRequested()
 {
@@ -135,4 +135,4 @@ void SidebarComponent::autoAdjustQualityChanged(bool enabled)
     listeners_.call([enabled](Listener& l) { l.autoAdjustQualityChanged(enabled); });
 }
 
-} // namespace oscil
+} // namespace multiscoper

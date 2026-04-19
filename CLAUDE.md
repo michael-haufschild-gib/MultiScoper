@@ -97,13 +97,13 @@ If you cannot check all boxes, DELEGATE.
 
 ## Project Overview
 
-**Project**: Oscil Multi-Track Oscilloscope
+**Project**: MultiScoper Multi-Track Oscilloscope
 **Type**: Professional Audio Plugin (VST3, AU, CLAP, Standalone)
 **Language**: C++20
 **Framework**: JUCE 8.0.12
 **Build System**: CMake 3.31+ (with Ninja & ccache support)
 
-Oscil is a professional audio visualization platform designed for engineers and producers to analyze multi-track audio signals. It offers real-time oscilloscope visualization with cross-DAW compatibility, allowing multiple plugin instances to communicate and display signals on a single aggregator interface.
+MultiScoper is a professional audio visualization platform designed for engineers and producers to analyze multi-track audio signals. It offers real-time oscilloscope visualization with cross-DAW compatibility, allowing multiple plugin instances to communicate and display signals on a single aggregator interface.
 
 **Key Features:**
 - Real-time visualization of unlimited simultaneous audio sources.
@@ -116,7 +116,7 @@ Oscil is a professional audio visualization platform designed for engineers and 
 
 ```
 src/                        # Implementation files (.cpp, .mm)
-├── core/                   # Business logic (Oscillator, OscilState, InstanceRegistry, Source)
+├── core/                   # Business logic (Oscillator, MultiScoperState, InstanceRegistry, Source)
 │   └── dsp/                # Signal processing (SignalProcessor, TimingEngine)
 ├── platform/macos/         # Platform-specific implementations
 ├── plugin/                 # Plugin entry points (PluginProcessor, PluginEditor)
@@ -129,7 +129,7 @@ src/                        # Implementation files (.cpp, .mm)
 ├── tools/                  # Test infrastructure (PluginTestServer)
 │   └── test_server/
 └── ui/                     # User interface
-    ├── components/         # Reusable widgets (OscilButton, OscilSlider, etc.)
+    ├── components/         # Reusable widgets (MultiScoperButton, MultiScoperSlider, etc.)
     ├── dialogs/            # Modal dialogs (AddOscillator, ColorPicker)
     ├── layout/             # Layout management (Sidebar, Pane, Coordinators)
     │   └── sections/       # Accordion sections
@@ -137,7 +137,7 @@ src/                        # Implementation files (.cpp, .mm)
     └── theme/              # Theming (ThemeManager, ColorPicker)
 
 include/                    # Header files (.h), mirrors src/ structure
-├── Oscil.h                 # Main convenience header
+├── MultiScoper.h                 # Main convenience header
 ├── core/                   # Core headers
 │   ├── dsp/                # DSP headers (TimingConfig, TimingEngine)
 │   └── interfaces/         # Abstract interfaces (IInstanceRegistry, IAudioBuffer)
@@ -172,34 +172,37 @@ The project uses CMake Presets for configuration.
 | **Build Release** | `cmake --preset release && cmake --build --preset release` | Builds optimized release binaries. |
 
 **Artifact Locations (after `dev` build):**
-- **VST3**: `build/dev/Oscil_artefacts/Debug/VST3/oscil4.vst3`
-- **AU**: `build/dev/Oscil_artefacts/Debug/AU/oscil4.component`
-- **Standalone**: `build/dev/Oscil_artefacts/Debug/Standalone/oscil4.app`
-- **Test Binary**: `build/dev/OscilTests`
+- **VST3**: `build/dev/MultiScoper_artefacts/Debug/VST3/MultiScoper.vst3`
+- **AU**: `build/dev/MultiScoper_artefacts/Debug/AU/MultiScoper.component`
+- **Standalone**: `build/dev/MultiScoper_artefacts/Debug/Standalone/MultiScoper.app`
+- **Test Binary**: `build/dev/MultiScoperTests`
 
 ## Testing
 
-- **Unit Tests**: Located in `tests/`. Built automatically with `OSCIL_BUILD_TESTS=ON` (default in `dev` preset).
+- **Unit Tests**: Located in `tests/`. Built automatically with `MULTISCOPER_BUILD_TESTS=ON` (default in `dev` preset).
 - **E2E Tests**: Located in `test_harness/`.
 - **Requirement**: All new features and bug fixes must be accompanied by meaningful tests.
 
 ### E2E Testing
 
-The project includes a standalone `OscilTestHarness` that hosts the plugin and exposes an HTTP API for automation.
+The project includes a standalone `MultiScoperTestHarness` that hosts the plugin and exposes an HTTP API for automation.
 
 1.  **Build Harness**:
+
     ```bash
-    cmake --preset dev -DOSCIL_BUILD_TEST_HARNESS=ON
-    cmake --build --preset dev --target OscilTestHarness
+    cmake --preset dev -DMULTISCOPER_BUILD_TEST_HARNESS=ON
+    cmake --build --preset dev --target MultiScoperTestHarness
     ```
 
 2.  **Start Harness**:
+
     ```bash
-    "./build/dev/test_harness/OscilTestHarness_artefacts/Debug/Oscil Test Harness.app/Contents/MacOS/Oscil Test Harness" &
+    "./build/dev/test_harness/MultiScoperTestHarness_artefacts/Debug/MultiScoper Test Harness.app/Contents/MacOS/MultiScoper Test Harness" &
     ```
 
 3.  **Run Python Tests**:
     Interact with `http://localhost:8765`. Ensure you **open the editor** first.
+
     ```python
     import requests, time
     URL = "http://localhost:8765"

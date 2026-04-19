@@ -1,10 +1,10 @@
 /*
-    Oscil Test Harness - Log Capture Implementation
+    MultiScoper Test Harness - Log Capture Implementation
 */
 
 #include "TestLogCapture.h"
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 TestLogCapture::TestLogCapture() : startTimeMs_(juce::Time::getMillisecondCounter()) {}
@@ -44,4 +44,4 @@ void TestLogCapture::clear()
     entries_.clear();
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

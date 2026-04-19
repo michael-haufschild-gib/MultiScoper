@@ -19,7 +19,7 @@
 #include <span>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 namespace
 {
@@ -45,7 +45,7 @@ static void BM_CalculatePeak(benchmark::State& state)
 
     for (auto _ : state)
     {
-        float peak = oscil::SignalProcessor::calculatePeak(span);
+        float peak = multiscoper::SignalProcessor::calculatePeak(span);
         benchmark::DoNotOptimize(peak);
     }
 
@@ -63,7 +63,7 @@ static void BM_CalculateRMS(benchmark::State& state)
 
     for (auto _ : state)
     {
-        float rms = oscil::SignalProcessor::calculateRMS(span);
+        float rms = multiscoper::SignalProcessor::calculateRMS(span);
         benchmark::DoNotOptimize(rms);
     }
 
@@ -84,7 +84,7 @@ static void BM_CalculateCorrelation(benchmark::State& state)
 
     for (auto _ : state)
     {
-        float c = oscil::SignalProcessor::calculateCorrelation(l, r);
+        float c = multiscoper::SignalProcessor::calculateCorrelation(l, r);
         benchmark::DoNotOptimize(c);
     }
 
@@ -107,7 +107,7 @@ static void BM_EnvelopeDecimator(benchmark::State& state)
     std::vector<float> input(static_cast<size_t>(inputSamples));
     fillDeterministic(input, 0);
 
-    oscil::AdaptiveDecimator decimator;
+    multiscoper::AdaptiveDecimator decimator;
     decimator.setDisplayWidth(displayWidth);
 
     std::vector<float> minEnv, maxEnv;
@@ -149,7 +149,7 @@ static void BM_PeakDecimator(benchmark::State& state)
     std::vector<float> input(static_cast<size_t>(inputSamples));
     fillDeterministic(input, 0);
 
-    oscil::AdaptiveDecimator decimator;
+    multiscoper::AdaptiveDecimator decimator;
     decimator.setDisplayWidth(displayWidth);
 
     std::vector<float> out;
@@ -170,4 +170,4 @@ static void BM_PeakDecimator(benchmark::State& state)
 }
 BENCHMARK(BM_PeakDecimator)->ArgsProduct({{2048, 4096, 8192, 16384}, {800, 1600}});
 
-} // namespace oscil
+} // namespace multiscoper

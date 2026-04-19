@@ -1,5 +1,5 @@
 /*
-    Oscil Test Harness - Element Registry Implementation
+    MultiScoper Test Harness - Element Registry Implementation
 */
 
 #include "TestElementRegistry.h"
@@ -8,7 +8,7 @@
     #include "TestDAW.h"
 #endif
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 TestElementRegistry& TestElementRegistry::getInstance()
@@ -311,4 +311,4 @@ juce::Rectangle<int> TestElementRegistry::getElementBounds(const juce::String& t
     return {};
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

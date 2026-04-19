@@ -1,5 +1,5 @@
 /*
-    Oscil - Animation Settings Tests: Validation
+    MultiScoper - Animation Settings Tests: Validation
     Tests for settings validation, duration calculations, and intensity
 */
 
@@ -8,7 +8,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class AnimationSettingsValidationTest : public ::testing::Test
 {

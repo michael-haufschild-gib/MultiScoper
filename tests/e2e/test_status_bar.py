@@ -11,7 +11,7 @@ What bugs these tests catch:
 """
 
 import pytest
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 
 
 class TestStatusBarVisibility:
@@ -28,7 +28,7 @@ class TestStatusBarVisibility:
 
     @pytest.mark.parametrize("label_id,description", STATUS_BAR_LABELS)
     def test_label_exists(
-        self, editor: OscilTestClient, label_id: str, description: str
+        self, editor: MultiScoperTestClient, label_id: str, description: str
     ):
         """
         Bug caught: status bar label not registered in element registry,
@@ -46,7 +46,7 @@ class TestStatusBarContent:
     """Verify status bar labels show meaningful content."""
 
     def test_oscillator_count_updates(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: oscillator count label not updating after add operation.
@@ -70,7 +70,7 @@ class TestStatusBarContent:
             desc="oscillator count label to update",
         )
 
-    def test_source_count_positive(self, editor: OscilTestClient):
+    def test_source_count_positive(self, editor: MultiScoperTestClient):
         """
         Bug caught: source count label showing 0 when sources exist.
         """
@@ -95,7 +95,7 @@ class TestStatusBarDuringPlayback:
     """Verify status bar labels update meaningfully during audio activity."""
 
     def test_fps_positive_during_playback(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: FPS counter stuck at 0 when rendering is active because
@@ -131,7 +131,7 @@ class TestStatusBarDuringPlayback:
             editor.transport_stop()
 
     def test_oscillator_count_after_delete(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: oscillator count label not decrementing after deletion.
@@ -175,7 +175,7 @@ class TestStatusBarDuringPlayback:
             pytest.fail(f"Osc count label did not update after delete, got '{text}'")
 
     def test_render_mode_label_updates_after_gpu_toggle(
-        self, editor: OscilTestClient
+        self, editor: MultiScoperTestClient
     ):
         """
         Bug caught: render mode label showing stale value after GPU toggle.
@@ -219,7 +219,7 @@ class TestStatusBarDuringPlayback:
         assert state is not None
 
     def test_all_labels_have_text_during_activity(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: status bar labels showing empty strings during active
@@ -259,7 +259,7 @@ class TestStatusBarDuringPlayback:
             f"got {labels_with_text}"
         )
 
-    def test_labels_survive_editor_lifecycle(self, client: OscilTestClient):
+    def test_labels_survive_editor_lifecycle(self, client: MultiScoperTestClient):
         """
         Bug caught: status bar labels not re-registered after editor
         close/reopen, making them invisible to test automation.

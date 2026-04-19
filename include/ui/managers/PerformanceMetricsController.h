@@ -1,5 +1,5 @@
 /*
-    Oscil - Performance Metrics Controller
+    MultiScoper - Performance Metrics Controller
     Handles calculation and reporting of performance metrics (FPS, CPU, Memory)
 */
 
@@ -7,7 +7,7 @@
 
 #include "ui/panels/StatusBarComponent.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 class IAudioDataProvider;
@@ -43,4 +43,4 @@ private:
     int lastSourceCount_ = -1;
 };
 
-} // namespace oscil
+} // namespace multiscoper

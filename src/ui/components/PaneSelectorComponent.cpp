@@ -1,11 +1,11 @@
 /*
-    Oscil - Pane Selector Component Implementation
+    MultiScoper - Pane Selector Component Implementation
     Reusable dropdown for selecting an existing pane or creating a new one
 */
 
 #include "ui/components/PaneSelectorComponent.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 PaneSelectorComponent::PaneSelectorComponent(IThemeService& themeService, bool allowNewPane, const juce::String& testId)
@@ -20,12 +20,12 @@ PaneSelectorComponent::PaneSelectorComponent(IThemeService& themeService, bool a
 
 PaneSelectorComponent::~PaneSelectorComponent() = default;
 
-void PaneSelectorComponent::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
+void PaneSelectorComponent::registerTestId() { MULTISCOPER_REGISTER_TEST_ID(testId_); }
 
 void PaneSelectorComponent::setupDropdown()
 {
     juce::String const dropdownTestId = testId_.isNotEmpty() ? testId_ + "_dropdown" : "";
-    dropdown_ = std::make_unique<OscilDropdown>(themeService_, "Select pane...", dropdownTestId);
+    dropdown_ = std::make_unique<MultiScoperDropdown>(themeService_, "Select pane...", dropdownTestId);
     dropdown_->onSelectionChanged = [this](int index) { handleSelectionChange(index); };
     addAndMakeVisible(*dropdown_);
 
@@ -184,4 +184,4 @@ void PaneSelectorComponent::handleSelectionChange(int index)
     }
 }
 
-} // namespace oscil
+} // namespace multiscoper

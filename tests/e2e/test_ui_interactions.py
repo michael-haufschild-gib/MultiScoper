@@ -11,13 +11,13 @@ What bugs these tests catch:
 """
 
 import pytest
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 
 
 class TestHoverInteraction:
     """Verify hover effects work on interactive elements."""
 
-    def test_hover_sidebar_item(self, editor: OscilTestClient, oscillator: str):
+    def test_hover_sidebar_item(self, editor: MultiScoperTestClient, oscillator: str):
         """
         Bug caught: hover handler not registered, or mouse enter/exit
         events not propagating to list items.
@@ -32,7 +32,7 @@ class TestHoverInteraction:
             "Element should still exist after hover"
         )
 
-    def test_hover_add_button(self, editor: OscilTestClient):
+    def test_hover_add_button(self, editor: MultiScoperTestClient):
         """
         Bug caught: hovering over add button causes null dereference
         in tooltip code when no oscillators exist.
@@ -53,7 +53,7 @@ class TestDoubleClick:
     """Verify double-click interactions."""
 
     def test_double_click_list_item(
-        self, editor: OscilTestClient, oscillator: str
+        self, editor: MultiScoperTestClient, oscillator: str
     ):
         """
         Bug caught: double-click handler on list item not wired,
@@ -75,7 +75,7 @@ class TestRightClick:
     """Verify right-click context menu."""
 
     def test_right_click_list_item(
-        self, editor: OscilTestClient, oscillator: str
+        self, editor: MultiScoperTestClient, oscillator: str
     ):
         """
         Bug caught: right-click handler not implemented, or context menu
@@ -97,7 +97,7 @@ class TestScrollInteraction:
     """Verify scroll events are handled."""
 
     def test_scroll_oscillator_list(
-        self, editor: OscilTestClient, three_oscillators
+        self, editor: MultiScoperTestClient, three_oscillators
     ):
         """
         Bug caught: scroll handler not wired, or scroll delta not applied
@@ -115,7 +115,7 @@ class TestScrollInteraction:
         oscs = editor.get_oscillators()
         assert len(oscs) == 3, "Scrolling should not affect oscillator count"
 
-    def test_scroll_up_and_down(self, editor: OscilTestClient, three_oscillators):
+    def test_scroll_up_and_down(self, editor: MultiScoperTestClient, three_oscillators):
         """
         Bug caught: scroll in one direction works but reverse scroll
         causes negative offset or underflow.
@@ -135,9 +135,12 @@ class TestScrollInteraction:
 class TestSliderControls:
     """Verify slider increment/decrement/reset work."""
 
-    def test_slider_increment(self, editor: OscilTestClient, oscillator: str):
+    def test_slider_increment(self, editor: MultiScoperTestClient, oscillator: str):
         """
-        Bug caught: slider increment button click not wired.
+        Bug caught: slider increment button click not wired — a no-op
+        implementation would leave the value unchanged. The old version
+        of this test called the endpoints and verified nothing about the
+        outcome, so a regression that made increment a no-op would pass.
         """
         settings_btn = "sidebar_oscillators_item_0_settings"
         if not editor.element_exists(settings_btn):
@@ -151,28 +154,54 @@ class TestSliderControls:
 
         slider_id = "configPopup_lineWidthSlider"
         if not editor.element_exists(slider_id):
-            # Close popup before failing
             if editor.element_exists("configPopup_closeBtn"):
                 editor.click("configPopup_closeBtn")
             pytest.fail("Line width slider not in config popup")
 
-        # Get initial value (if available from extra)
-        resp = editor.increment_slider(slider_id)
-        # Should not crash; response may be None
+        def _value(resp: dict | None) -> float | None:
+            if resp is None or not resp.get("success"):
+                return None
+            data = resp.get("data") or {}
+            v = data.get("value")
+            return float(v) if v is not None else None
 
-        resp = editor.decrement_slider(slider_id)
-        resp = editor.reset_slider(slider_id)
+        try:
+            reset_resp = editor.reset_slider(slider_id)
+            default_val = _value(reset_resp)
+            assert default_val is not None, (
+                f"reset_slider did not return a value (resp: {reset_resp})"
+            )
 
-        # Clean up
-        if editor.element_exists("configPopup_closeBtn"):
-            editor.click("configPopup_closeBtn")
+            inc_resp = editor.increment_slider(slider_id)
+            inc_val = _value(inc_resp)
+            assert inc_val is not None and inc_val > default_val, (
+                f"increment must raise the slider value above default "
+                f"(default={default_val}, incremented={inc_val})"
+            )
+
+            dec_resp = editor.decrement_slider(slider_id)
+            dec_val = _value(dec_resp)
+            assert dec_val is not None and dec_val < inc_val, (
+                f"decrement must lower the slider below incremented "
+                f"(incremented={inc_val}, decremented={dec_val})"
+            )
+
+            # A second reset should bring us back to the default.
+            reset2_resp = editor.reset_slider(slider_id)
+            reset2_val = _value(reset2_resp)
+            assert reset2_val is not None and abs(reset2_val - default_val) < 0.001, (
+                f"reset must return to default (default={default_val}, got={reset2_val})"
+            )
+        finally:
+            if editor.element_exists("configPopup_closeBtn"):
+                editor.click("configPopup_closeBtn")
 
 
 class TestDragInteraction:
     """Verify drag operations work."""
 
     def test_drag_between_list_items(
-        self, editor: OscilTestClient, two_oscillators
+        self, editor: MultiScoperTestClient, two_oscillators
     ):
         """
         Bug caught: drag-to-reorder handler not wired (regression from
@@ -206,7 +235,7 @@ class TestDragInteraction:
             f"before={ids_before}, after={ids_after}"
         )
 
-    def test_drag_offset_on_resize_handle(self, editor: OscilTestClient):
+    def test_drag_offset_on_resize_handle(self, editor: MultiScoperTestClient):
         """
         Bug caught: drag_offset not applying delta to element position.
         """

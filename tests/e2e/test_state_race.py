@@ -20,7 +20,7 @@ import os
 import time
 
 import pytest
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 
 
 SAVE_ITERATIONS = 500
@@ -30,7 +30,7 @@ class TestStateSaveDuringPlayback:
     """Spam /state/save while transport is playing; assert stability."""
 
     def test_rapid_save_while_playing_does_not_crash_or_corrupt(
-        self, editor: OscilTestClient, source_id: str, tmp_path
+        self, editor: MultiScoperTestClient, source_id: str, tmp_path
     ):
         # Arrange: two oscillators, transport playing, audio flowing.
         id_a = editor.add_oscillator(source_id, name="Race A")
@@ -93,7 +93,7 @@ class TestStateSaveDuringPlayback:
         )
 
     def test_save_burst_then_readback_remains_consistent(
-        self, editor: OscilTestClient, source_id: str, tmp_path
+        self, editor: MultiScoperTestClient, source_id: str, tmp_path
     ):
         """
         Complement to the flood test: save many times, then verify the LAST

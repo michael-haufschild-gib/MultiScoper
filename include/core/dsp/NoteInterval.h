@@ -1,5 +1,5 @@
 /*
-    Oscil - Note Interval Types
+    MultiScoper - Note Interval Types
     Musical note interval definitions for MELODIC timing mode
 */
 
@@ -9,7 +9,7 @@
 
 #include <cstdint>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -238,4 +238,4 @@ inline float getNoteIntervalMultiplier(NoteInterval interval, int timeSigNumerat
     return 1.0f;
 }
 
-} // namespace oscil
+} // namespace multiscoper

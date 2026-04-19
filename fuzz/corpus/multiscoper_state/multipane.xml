@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MultiScoperState version="2">
+  <Oscillators>
+    <Oscillator id="osc-1" sourceId="src-a" name="A1" paneId="pane-1" order="0"
+                processingMode="0" colour="ffff0000" opacity="1.0" visible="1"
+                schemaVersion="2" oscillatorState="1" lineWidth="1.5"
+                timeWindow="100.0" persistence="0.0" shaderId="basic">
+      <Meta author="fuzz"/>
+    </Oscillator>
+    <Oscillator id="osc-2" sourceId="src-b" name="A2" paneId="pane-1" order="1"
+                processingMode="0" colour="ff00ff00" opacity="0.75" visible="1"
+                schemaVersion="2" oscillatorState="1" lineWidth="2.0"
+                timeWindow="250.0" persistence="0.25" shaderId="basic"/>
+    <Oscillator id="osc-3" sourceId="src-c" name="B1" paneId="pane-2" order="0"
+                processingMode="1" colour="ff0000ff" opacity="1.0" visible="1"
+                schemaVersion="2" oscillatorState="1" lineWidth="1.0"
+                timeWindow="500.0" persistence="0.5" shaderId="basic"/>
+    <Oscillator id="osc-4" sourceId="src-c" name="B2" paneId="pane-2" order="1"
+                processingMode="2" colour="ffffff00" opacity="0.5" visible="0"
+                schemaVersion="2" oscillatorState="0" lineWidth="3.0"
+                timeWindow="50.0" persistence="0.1" shaderId="basic">
+      <Children>
+        <Child key="1"/>
+        <Child key="2"/>
+      </Children>
+    </Oscillator>
+  </Oscillators>
+  <Panes>
+    <Pane id="pane-1" orderIndex="0" collapsed="0" name="Top"
+          heightRatio="0.6" columnIndex="0"/>
+    <Pane id="pane-2" orderIndex="1" collapsed="0" name="Bottom"
+          heightRatio="0.4" columnIndex="0"/>
+  </Panes>
+  <Layout columns="1"/>
+  <Theme themeName="Dark Professional"/>
+  <Timing timingMode="1" timeIntervalMs="500" hostSyncEnabled="0"/>
+</MultiScoperState>

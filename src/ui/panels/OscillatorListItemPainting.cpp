@@ -1,5 +1,5 @@
 /*
-    Oscil - Oscillator List Item Painting & Events
+    MultiScoper - Oscillator List Item Painting & Events
     (Core setup and state management are in OscillatorListItem.cpp)
 */
 
@@ -10,7 +10,7 @@
 #include "ui/components/ProcessingModeIcons.h"
 #include "ui/panels/OscillatorListItem.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 void OscillatorListItemComponent::paint(juce::Graphics& g)
@@ -22,7 +22,7 @@ void OscillatorListItemComponent::paint(juce::Graphics& g)
     // backgroundSecondary so the tile reads against the sidebar surface.
     auto const tileBg = (selected_ || isHovered_) ? theme.backgroundRaised : theme.backgroundSecondary;
     g.setColour(tileBg);
-    g.fillRoundedRectangle(bounds, ComponentLayout::RADIUS_SM);
+    g.fillRect(bounds);
 
     // Left colour swatch strip. Widened to 4px after consolidating with the
     // previous colour indicator ellipse — this strip is now the double-click
@@ -30,8 +30,7 @@ void OscillatorListItemComponent::paint(juce::Graphics& g)
     constexpr float kSwatchWidth = 4.0f;
     auto const swatchColour = isVisible_ ? colour_ : colour_.withAlpha(0.3f);
     g.setColour(swatchColour);
-    g.fillRoundedRectangle(juce::Rectangle<float>(0.0f, 0.0f, kSwatchWidth, bounds.getHeight()),
-                           ComponentLayout::RADIUS_SM);
+    g.fillRect(juce::Rectangle<float>(0.0f, 0.0f, kSwatchWidth, bounds.getHeight()));
 
     // Selection + focus outline. Selected tiles get a 1px border in the oscillator's
     // colour. A focused tile — selected or not — also gets an accessibility ring so
@@ -39,19 +38,19 @@ void OscillatorListItemComponent::paint(juce::Graphics& g)
     if (selected_)
     {
         g.setColour(colour_);
-        g.drawRoundedRectangle(bounds.reduced(0.5f), ComponentLayout::RADIUS_SM, 1.0f);
+        g.drawRect(bounds, 1.0f);
 
         if (hasFocus_)
         {
             // Inset ring so the coloured border stays visible beneath the focus indicator.
             g.setColour(theme.controlActive.withAlpha(0.8f));
-            g.drawRoundedRectangle(bounds.reduced(2.0f), ComponentLayout::RADIUS_SM, 1.0f);
+            g.drawRect(bounds.reduced(2.0f), 1.0f);
         }
     }
     else if (hasFocus_)
     {
         g.setColour(theme.controlActive.withAlpha(0.6f));
-        g.drawRoundedRectangle(bounds.reduced(1.0f), ComponentLayout::RADIUS_SM, 2.0f);
+        g.drawRect(bounds.reduced(1.0f), 2.0f);
     }
 
     // Drag handle dots. Tile-wide dim for hidden rows is applied in
@@ -79,7 +78,7 @@ void OscillatorListItemComponent::paintOverChildren(juce::Graphics& g)
     if (!isVisible_)
     {
         g.setColour(juce::Colours::black.withAlpha(0.4f));
-        g.fillRoundedRectangle(getLocalBounds().toFloat(), ComponentLayout::RADIUS_SM);
+        g.fillRect(getLocalBounds().toFloat());
     }
 }
 
@@ -155,12 +154,8 @@ void OscillatorListItemComponent::mouseUp(const juce::MouseEvent& e)
 
 bool OscillatorListItemComponent::keyPressed(const juce::KeyPress& key)
 {
-    // Space/Enter to toggle selection
-    if (key == juce::KeyPress::returnKey || key == juce::KeyPress::spaceKey)
-    {
-        listeners_.call([this](Listener& l) { l.oscillatorSelected(oscillatorId_); });
-        return true;
-    }
+    // Space/return deliberately not handled — they must pass through to the
+    // DAW for transport shortcuts. Selection is mouse-driven.
 
     // Delete key to delete oscillator
     if (key == juce::KeyPress::deleteKey || key == juce::KeyPress::backspaceKey)
@@ -214,4 +209,4 @@ void OscillatorListItemComponent::focusLost(FocusChangeType /*cause*/)
     repaint();
 }
 
-} // namespace oscil
+} // namespace multiscoper

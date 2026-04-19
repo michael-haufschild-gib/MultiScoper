@@ -1,12 +1,12 @@
 /*
-    Oscil - Pane Layout Tests
+    MultiScoper - Pane Layout Tests
 */
 
 #include "core/Pane.h"
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class PaneLayoutManagerTest : public ::testing::Test
 {

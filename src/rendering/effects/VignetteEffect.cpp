@@ -1,12 +1,12 @@
 /*
-    Oscil - Vignette Effect Implementation
+    MultiScoper - Vignette Effect Implementation
 */
 
 #include "rendering/effects/VignetteEffect.h"
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
-namespace oscil
+namespace multiscoper
 {
 
 // Vignette fragment shader
@@ -75,6 +75,6 @@ void VignetteEffect::setUniforms(const Framebuffer& source, float deltaTime)
                                                 settings_.colour.getFloatAlpha());
 }
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

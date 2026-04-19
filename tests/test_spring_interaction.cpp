@@ -1,5 +1,5 @@
 /*
-    Oscil - Ease Animation Tests: Interaction
+    MultiScoper - Ease Animation Tests: Interaction
     Tests for user interaction patterns and interpolation
 */
 
@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class EaseInteractionTest : public ::testing::Test
 {

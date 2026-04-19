@@ -1,5 +1,5 @@
 /*
-    Oscil - Magnetic Snap Controller
+    MultiScoper - Magnetic Snap Controller
     Reusable controller for magnetic snapping behavior in sliders, knobs, and other controls
 */
 
@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -94,4 +94,4 @@ private:
     static constexpr double SNAP_THRESHOLD_PERCENT = 0.02; // 2%
 };
 
-} // namespace oscil
+} // namespace multiscoper

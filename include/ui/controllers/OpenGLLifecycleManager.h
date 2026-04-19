@@ -1,5 +1,5 @@
 /*
-    Oscil - OpenGL Lifecycle Manager
+    MultiScoper - OpenGL Lifecycle Manager
     Manages OpenGL context attachment and renderer lifecycle
 */
 
@@ -11,7 +11,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_opengl/juce_opengl.h>
 
-namespace oscil
+namespace multiscoper
 {
 
 class PaneComponent;
@@ -37,6 +37,12 @@ public:
     /// timer when waveform data has changed or a UI event forces a redraw.
     void triggerRepaint();
 
+    /// Push a theme-derived clear colour into the GL renderer.  The renderer
+    /// defaults to transparent black, which shows through every pane in GPU
+    /// mode regardless of the active theme; call this on theme change and on
+    /// initial GPU enable so the visible clear matches `backgroundPane`.
+    void setBackgroundColour(juce::Colour colour);
+
     WaveformGLRenderer* getRenderer() { return renderer_.get(); }
     juce::OpenGLContext& getContext() { return context_; }
 
@@ -53,4 +59,4 @@ private:
     bool isDetached_ = true;
 };
 
-} // namespace oscil
+} // namespace multiscoper

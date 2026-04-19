@@ -1,5 +1,5 @@
 /*
-    Oscil Test Harness - Main Entry Point
+    MultiScoper Test Harness - Main Entry Point
     Standalone application for E2E testing
 */
 
@@ -15,7 +15,7 @@
 #include <string>
 #include <typeinfo>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 /**
@@ -26,7 +26,7 @@ class TestHarnessWindow : public juce::DocumentWindow
 {
 public:
     TestHarnessWindow(TestDAW& daw, TestHttpServer& server)
-        : DocumentWindow("Oscil Test Harness", juce::Colours::darkgrey, DocumentWindow::allButtons)
+        : DocumentWindow("MultiScoper Test Harness", juce::Colours::darkgrey, DocumentWindow::allButtons)
         , daw_(daw)
         , server_(server)
     {
@@ -150,7 +150,7 @@ private:
 
             // Title
             g.setFont(juce::FontOptions(20.0f).withStyle("Bold"));
-            g.drawText("Oscil Test Harness", 20, y, getWidth() - 40, lineHeight, juce::Justification::centred);
+            g.drawText("MultiScoper Test Harness", 20, y, getWidth() - 40, lineHeight, juce::Justification::centred);
             y += lineHeight + 22;
 
             g.setFont(juce::FontOptions(14.0f));
@@ -324,7 +324,7 @@ class TestHarnessApplication : public juce::JUCEApplication
 public:
     TestHarnessApplication() = default;
 
-    const juce::String getApplicationName() override { return "Oscil Test Harness"; }
+    const juce::String getApplicationName() override { return "MultiScoper Test Harness"; }
     const juce::String getApplicationVersion() override { return "1.0.0"; }
     bool moreThanOneInstanceAllowed() override { return false; }
 
@@ -394,14 +394,14 @@ public:
         // Create the main window
         mainWindow_ = std::make_unique<TestHarnessWindow>(*daw_, *server_);
 
-        std::cout << "Oscil Test Harness started" << std::endl;
+        std::cout << "MultiScoper Test Harness started" << std::endl;
         std::cout << "HTTP API available at: http://localhost:" << port << std::endl;
         std::cout << "Health check: http://localhost:" << port << "/health" << std::endl;
     }
 
     void shutdown() override
     {
-        std::cout << "Shutting down Oscil Test Harness..." << std::endl;
+        std::cout << "Shutting down MultiScoper Test Harness..." << std::endl;
 
         juce::Logger::setCurrentLogger(nullptr);
         mainWindow_.reset();
@@ -430,7 +430,7 @@ private:
     std::unique_ptr<TestHarnessWindow> mainWindow_;
 };
 
-} // namespace oscil::test
+} // namespace multiscoper::test
 
 // Application entry point
-START_JUCE_APPLICATION(oscil::test::TestHarnessApplication)
+START_JUCE_APPLICATION(multiscoper::test::TestHarnessApplication)

@@ -1,5 +1,5 @@
 /*
-    Oscil - Plugin Editor Sidebar and Settings Handlers
+    MultiScoper - Plugin Editor Sidebar and Settings Handlers
 */
 
 #include "ui/controllers/GpuRenderCoordinator.h"
@@ -12,7 +12,7 @@
 
 #include <set>
 
-namespace oscil
+namespace multiscoper
 {
 namespace
 {
@@ -29,13 +29,13 @@ SourceIdSet collectAvailableSourceIds(const std::vector<SourceInfo>& sources)
 bool sourceIdExists(const SourceIdSet& ids, const SourceId& sourceId) { return ids.contains(sourceId.id); }
 } // namespace
 
-void OscilPluginEditor::refreshSidebarOscillatorList(const std::vector<Oscillator>& oscillators)
+void MultiScoperPluginEditor::refreshSidebarOscillatorList(const std::vector<Oscillator>& oscillators)
 {
     if (sidebar_ != nullptr)
         sidebar_->refreshOscillatorList(oscillators);
 }
 
-void OscilPluginEditor::onSourcesChanged()
+void MultiScoperPluginEditor::onSourcesChanged()
 {
     const auto sources = processor_.getInstanceRegistry().getAllSources();
     const auto availableSourceIds = collectAvailableSourceIds(sources);
@@ -50,6 +50,12 @@ void OscilPluginEditor::onSourcesChanged()
     auto oscillators = state.getOscillators();
     bool updated = false;
 
+    // Adopt own source for oscillators that have no source yet, but do NOT
+    // clear persisted-but-currently-unresolved bindings: a sibling plugin's
+    // registration may arrive moments later (async deferRegistration, or
+    // setStateInformation/prepareToPlay racing), and wiping the binding here
+    // would permanently destroy it. Targeted clearing happens only via
+    // onSourceRemoved when the registry explicitly reports a removal.
     for (auto& osc : oscillators)
     {
         const auto currentSourceId = osc.getSourceId();
@@ -57,18 +63,27 @@ void OscilPluginEditor::onSourcesChanged()
         if (currentSourceId.isNoSource())
             continue;
 
-        if (!currentSourceId.isValid())
+        if (!currentSourceId.isValid() && ownSourceAvailable)
         {
-            if (ownSourceAvailable)
-            {
-                osc.setSourceId(ownSourceId);
-                state.updateOscillator(osc);
-                updated = true;
-            }
-            continue;
+            osc.setSourceId(ownSourceId);
+            state.updateOscillator(osc);
+            updated = true;
         }
+    }
 
-        if (!sourceIdExists(availableSourceIds, currentSourceId))
+    if (updated && oscillatorPanelController_ != nullptr)
+        oscillatorPanelController_->refreshPanels();
+}
+
+void MultiScoperPluginEditor::onSourceRemoved(const SourceId& sourceId)
+{
+    auto& state = processor_.getState();
+    auto oscillators = state.getOscillators();
+    bool updated = false;
+
+    for (auto& osc : oscillators)
+    {
+        if (osc.getSourceId() == sourceId)
         {
             osc.clearSource();
             state.updateOscillator(osc);
@@ -80,11 +95,11 @@ void OscilPluginEditor::onSourcesChanged()
         oscillatorPanelController_->refreshPanels();
 }
 
-void OscilPluginEditor::onThemeChanged(const ColorTheme& newTheme)
+void MultiScoperPluginEditor::onThemeChanged(const ColorTheme& newTheme)
 {
     // Push the new theme into the project-wide LookAndFeel so raw JUCE
     // widgets (Label/ListBox/AlertWindow/PopupMenu/etc.) update their
-    // colour IDs in lockstep with Oscil-themed components.
+    // colour IDs in lockstep with MultiScoper-themed components.
     lookAndFeel_.applyTheme(newTheme);
 
     repaint();
@@ -104,56 +119,70 @@ void OscilPluginEditor::onThemeChanged(const ColorTheme& newTheme)
         }
     }
 
-    // Continuous GL repainting is disabled; if audio is silent the GL context
-    // would otherwise skip repainting and the waveforms would render with the
-    // previous theme's colours until audio resumes.  Force one explicit
-    // repaint so the new palette becomes visible immediately.
+    // In GPU mode, PaneComponent/PaneBody/WaveformComponent deliberately skip
+    // their own background fills so the OpenGL layer (which JUCE composites
+    // *beneath* the component tree) shows through.  That means the visible
+    // pane background comes from the GL clear colour — which defaults to
+    // transparent-black.  Push the theme's pane colour into the GL renderer
+    // so light themes don't leave a dark clear behind dark text.
     if (renderCoordinator_ != nullptr)
+    {
+        renderCoordinator_->setBackgroundColour(newTheme.backgroundPane);
+        // Continuous GL repainting is disabled; if audio is silent the GL
+        // context would otherwise skip repainting and the waveforms would
+        // render with the previous theme's colours until audio resumes.
         renderCoordinator_->forceRepaint();
+    }
 }
 
-void OscilPluginEditor::onLayoutChanged()
+void MultiScoperPluginEditor::onLayoutChanged()
 {
     if (editorLayout_ != nullptr)
         resized();
 }
 
-void OscilPluginEditor::toggleSidebar()
+void MultiScoperPluginEditor::toggleSidebar()
 {
     if (sidebar_ != nullptr)
         sidebar_->toggleCollapsed();
 }
 
-void OscilPluginEditor::onSidebarWidthChanged(int newWidth)
+void MultiScoperPluginEditor::onSidebarWidthChanged(int newWidth)
 {
     windowLayout_.setSidebarWidth(newWidth);
     processor_.getState().setSidebarWidth(newWidth);
     resized();
 }
 
-void OscilPluginEditor::onSidebarCollapsedStateChanged(bool collapsed)
+void MultiScoperPluginEditor::onSidebarCollapsedStateChanged(bool collapsed)
 {
     windowLayout_.setSidebarCollapsed(collapsed);
     processor_.getState().setSidebarCollapsed(collapsed);
     resized();
 }
 
-void OscilPluginEditor::sidebarWidthChanged(int newWidth) { onSidebarWidthChanged(newWidth); }
+void MultiScoperPluginEditor::sidebarWidthChanged(int newWidth) { onSidebarWidthChanged(newWidth); }
 
-void OscilPluginEditor::sidebarCollapsedStateChanged(bool collapsed) { onSidebarCollapsedStateChanged(collapsed); }
+void MultiScoperPluginEditor::sidebarCollapsedStateChanged(bool collapsed)
+{
+    onSidebarCollapsedStateChanged(collapsed);
+}
 
-void OscilPluginEditor::timingModeChanged(TimingMode mode) { processor_.getTimingEngine().setTimingMode(mode); }
+void MultiScoperPluginEditor::timingModeChanged(TimingMode mode) { processor_.getTimingEngine().setTimingMode(mode); }
 
-void OscilPluginEditor::noteIntervalChanged(NoteInterval interval)
+void MultiScoperPluginEditor::noteIntervalChanged(NoteInterval interval)
 {
     processor_.getTimingEngine().setNoteIntervalFromEntity(interval);
 }
 
-void OscilPluginEditor::timeIntervalChanged(float ms) { processor_.getTimingEngine().setTimeIntervalMs(ms); }
+void MultiScoperPluginEditor::timeIntervalChanged(float ms) { processor_.getTimingEngine().setTimeIntervalMs(ms); }
 
-void OscilPluginEditor::hostSyncChanged(bool enabled) { processor_.getTimingEngine().setHostSyncEnabled(enabled); }
+void MultiScoperPluginEditor::hostSyncChanged(bool enabled)
+{
+    processor_.getTimingEngine().setHostSyncEnabled(enabled);
+}
 
-void OscilPluginEditor::waveformModeChanged(WaveformMode mode)
+void MultiScoperPluginEditor::waveformModeChanged(WaveformMode mode)
 {
     auto& timingEngine = processor_.getTimingEngine();
 
@@ -174,15 +203,15 @@ void OscilPluginEditor::waveformModeChanged(WaveformMode mode)
     }
 }
 
-void OscilPluginEditor::bpmChanged(float bpm) { processor_.getTimingEngine().setInternalBPM(bpm); }
+void MultiScoperPluginEditor::bpmChanged(float bpm) { processor_.getTimingEngine().setInternalBPM(bpm); }
 
-void OscilPluginEditor::gainChanged(float dB)
+void MultiScoperPluginEditor::gainChanged(float dB)
 {
     processor_.getState().setGainDb(dB);
     setGainDbForAllPanes(dB);
 }
 
-void OscilPluginEditor::showGridChanged(bool enabled)
+void MultiScoperPluginEditor::showGridChanged(bool enabled)
 {
     processor_.getState().setShowGridEnabled(enabled);
     setShowGridForAllPanes(enabled);
@@ -192,7 +221,7 @@ void OscilPluginEditor::showGridChanged(bool enabled)
         renderCoordinator_->forceRepaint();
 }
 
-void OscilPluginEditor::autoScaleChanged(bool enabled)
+void MultiScoperPluginEditor::autoScaleChanged(bool enabled)
 {
     processor_.getState().setAutoScaleEnabled(enabled);
     setAutoScaleForAllPanes(enabled);
@@ -202,22 +231,22 @@ void OscilPluginEditor::autoScaleChanged(bool enabled)
         renderCoordinator_->forceRepaint();
 }
 
-void OscilPluginEditor::layoutChanged(int columnCount)
+void MultiScoperPluginEditor::layoutChanged(int columnCount)
 {
     const int normalizedColumns = juce::jlimit(1, 3, columnCount);
     processor_.getState().setColumnLayout(static_cast<ColumnLayout>(normalizedColumns));
     resized();
 }
 
-void OscilPluginEditor::themeChanged(const juce::String& themeName)
+void MultiScoperPluginEditor::themeChanged(const juce::String& themeName)
 {
     processor_.getState().setThemeName(themeName);
     processor_.getThemeService().setCurrentTheme(themeName);
 }
 
-void OscilPluginEditor::gpuRenderingChanged(bool enabled) { setGpuRenderingEnabled(enabled); }
+void MultiScoperPluginEditor::gpuRenderingChanged(bool enabled) { setGpuRenderingEnabled(enabled); }
 
-void OscilPluginEditor::qualityPresetChanged(QualityPreset preset)
+void MultiScoperPluginEditor::qualityPresetChanged(QualityPreset preset)
 {
     auto config = processor_.getState().getCaptureQualityConfig();
     if (config.qualityPreset == preset)
@@ -227,7 +256,7 @@ void OscilPluginEditor::qualityPresetChanged(QualityPreset preset)
     processor_.getState().setCaptureQualityConfig(config);
 }
 
-void OscilPluginEditor::bufferDurationChanged(BufferDuration duration)
+void MultiScoperPluginEditor::bufferDurationChanged(BufferDuration duration)
 {
     auto config = processor_.getState().getCaptureQualityConfig();
     if (config.bufferDuration == duration)
@@ -237,7 +266,7 @@ void OscilPluginEditor::bufferDurationChanged(BufferDuration duration)
     processor_.getState().setCaptureQualityConfig(config);
 }
 
-void OscilPluginEditor::autoAdjustQualityChanged(bool enabled)
+void MultiScoperPluginEditor::autoAdjustQualityChanged(bool enabled)
 {
     auto config = processor_.getState().getCaptureQualityConfig();
     if (config.autoAdjustQuality == enabled)
@@ -247,13 +276,13 @@ void OscilPluginEditor::autoAdjustQualityChanged(bool enabled)
     processor_.getState().setCaptureQualityConfig(config);
 }
 
-void OscilPluginEditor::onConfigPopupClosed()
+void MultiScoperPluginEditor::onConfigPopupClosed()
 {
     if (dialogManager_ != nullptr)
         dialogManager_->closeConfigPopup();
 }
 
-void OscilPluginEditor::updateTimingSidebarMode(TimingMode mode)
+void MultiScoperPluginEditor::updateTimingSidebarMode(TimingMode mode)
 {
     if (sidebar_ == nullptr)
         return;
@@ -262,7 +291,7 @@ void OscilPluginEditor::updateTimingSidebarMode(TimingMode mode)
         timingSection->setTimingMode(mode);
 }
 
-void OscilPluginEditor::updateTimingSidebarHostSyncEnabled(bool enabled)
+void MultiScoperPluginEditor::updateTimingSidebarHostSyncEnabled(bool enabled)
 {
     if (sidebar_ == nullptr)
         return;
@@ -271,7 +300,7 @@ void OscilPluginEditor::updateTimingSidebarHostSyncEnabled(bool enabled)
         timingSection->setHostSyncEnabled(enabled);
 }
 
-void OscilPluginEditor::updateTimingSidebarHostBpm(float bpm)
+void MultiScoperPluginEditor::updateTimingSidebarHostBpm(float bpm)
 {
     if (sidebar_ == nullptr)
         return;
@@ -280,13 +309,13 @@ void OscilPluginEditor::updateTimingSidebarHostBpm(float bpm)
         timingSection->setHostBPM(bpm);
 }
 
-void OscilPluginEditor::setShowGridForAllPanes(bool enabled)
+void MultiScoperPluginEditor::setShowGridForAllPanes(bool enabled)
 {
     if (displaySettingsManager_ != nullptr)
         displaySettingsManager_->setShowGridForAll(enabled);
 }
 
-void OscilPluginEditor::setGridConfigForAllPanes(const GridConfiguration& config)
+void MultiScoperPluginEditor::setGridConfigForAllPanes(const GridConfiguration& config)
 {
     if (displaySettingsManager_ != nullptr)
         displaySettingsManager_->setGridConfigForAll(config);
@@ -297,19 +326,19 @@ void OscilPluginEditor::setGridConfigForAllPanes(const GridConfiguration& config
         renderCoordinator_->forceRepaint();
 }
 
-void OscilPluginEditor::setAutoScaleForAllPanes(bool enabled)
+void MultiScoperPluginEditor::setAutoScaleForAllPanes(bool enabled)
 {
     if (displaySettingsManager_ != nullptr)
         displaySettingsManager_->setAutoScaleForAll(enabled);
 }
 
-void OscilPluginEditor::setGainDbForAllPanes(float dB)
+void MultiScoperPluginEditor::setGainDbForAllPanes(float dB)
 {
     if (displaySettingsManager_ != nullptr)
         displaySettingsManager_->setGainDbForAll(dB);
 }
 
-void OscilPluginEditor::setDisplaySamplesForAllPanes(int samples)
+void MultiScoperPluginEditor::setDisplaySamplesForAllPanes(int samples)
 {
     if (displaySettingsManager_ != nullptr)
         displaySettingsManager_->setDisplaySamplesForAll(samples);
@@ -319,13 +348,13 @@ void OscilPluginEditor::setDisplaySamplesForAllPanes(int samples)
         renderCoordinator_->forceRepaint();
 }
 
-void OscilPluginEditor::setSampleRateForAllPanes(int sampleRate)
+void MultiScoperPluginEditor::setSampleRateForAllPanes(int sampleRate)
 {
     if (displaySettingsManager_ != nullptr)
         displaySettingsManager_->setSampleRateForAll(sampleRate);
 }
 
-void OscilPluginEditor::setGpuRenderingEnabled(bool enabled)
+void MultiScoperPluginEditor::setGpuRenderingEnabled(bool enabled)
 {
     if (renderCoordinator_ != nullptr)
         renderCoordinator_->setGpuRenderingEnabled(enabled);
@@ -339,7 +368,7 @@ void OscilPluginEditor::setGpuRenderingEnabled(bool enabled)
         oscillatorPanelController_->refreshPanels();
 }
 
-const std::vector<std::unique_ptr<PaneComponent>>& OscilPluginEditor::getPaneComponents() const
+const std::vector<std::unique_ptr<PaneComponent>>& MultiScoperPluginEditor::getPaneComponents() const
 {
     static const std::vector<std::unique_ptr<PaneComponent>> empty;
     if (oscillatorPanelController_ == nullptr)
@@ -347,7 +376,7 @@ const std::vector<std::unique_ptr<PaneComponent>>& OscilPluginEditor::getPaneCom
     return oscillatorPanelController_->getPaneComponents();
 }
 
-void OscilPluginEditor::refreshPanels()
+void MultiScoperPluginEditor::refreshPanels()
 {
     // OscillatorPanelController::refreshPanels() is the authoritative path
     // and already forces a GL repaint at its tail — no need to duplicate
@@ -356,4 +385,4 @@ void OscilPluginEditor::refreshPanels()
         oscillatorPanelController_->refreshPanels();
 }
 
-} // namespace oscil
+} // namespace multiscoper

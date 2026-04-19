@@ -1,5 +1,5 @@
 /*
-    Oscil - Capture Quality Configuration Tests (Edge Cases)
+    MultiScoper - Capture Quality Configuration Tests (Edge Cases)
     Memory budget, buffer duration, effective quality, serialization, quality override
 */
 
@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 //==============================================================================
 // Memory Budget Tests

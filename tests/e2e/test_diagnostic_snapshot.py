@@ -16,13 +16,13 @@ What bugs these tests catch:
 """
 
 import pytest
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 
 
 class TestSnapshotStructure:
     """Verify the diagnostic snapshot has all required sections."""
 
-    def test_snapshot_returns_data(self, editor: OscilTestClient):
+    def test_snapshot_returns_data(self, editor: MultiScoperTestClient):
         """
         Bug caught: /diagnostic/snapshot endpoint not implemented or returning error.
         """
@@ -30,7 +30,7 @@ class TestSnapshotStructure:
         assert snap is not None, "Diagnostic snapshot should return data"
         assert isinstance(snap, dict), "Snapshot should be a dict"
 
-    def test_snapshot_has_transport_section(self, editor: OscilTestClient):
+    def test_snapshot_has_transport_section(self, editor: MultiScoperTestClient):
         """
         Bug caught: transport data missing from snapshot.
         """
@@ -45,7 +45,7 @@ class TestSnapshotStructure:
         assert "playing" in transport, "Transport should have 'playing' field"
         assert "bpm" in transport, "Transport should have 'bpm' field"
 
-    def test_snapshot_has_timing_section(self, editor: OscilTestClient):
+    def test_snapshot_has_timing_section(self, editor: MultiScoperTestClient):
         """
         Bug caught: timing data missing from snapshot.
         """
@@ -60,7 +60,7 @@ class TestSnapshotStructure:
         assert "mode" in timing, "Timing should have 'mode' field"
         assert "displaySamples" in timing, "Timing should have 'displaySamples' field"
 
-    def test_snapshot_has_oscillators_section(self, editor: OscilTestClient):
+    def test_snapshot_has_oscillators_section(self, editor: MultiScoperTestClient):
         """
         Bug caught: oscillators not included in snapshot.
         """
@@ -73,7 +73,7 @@ class TestSnapshotStructure:
         )
         assert isinstance(snap["oscillators"], list)
 
-    def test_snapshot_has_sources_section(self, editor: OscilTestClient):
+    def test_snapshot_has_sources_section(self, editor: MultiScoperTestClient):
         """
         Bug caught: sources not included in snapshot.
         """
@@ -90,7 +90,7 @@ class TestSnapshotConsistency:
     """Verify snapshot data matches individual API responses."""
 
     def test_oscillator_count_matches_state_api(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: snapshot oscillator list out of sync with /state/oscillators.
@@ -111,7 +111,7 @@ class TestSnapshotConsistency:
             f"state API ({len(state_oscs)})"
         )
 
-    def test_transport_state_matches_api(self, editor: OscilTestClient):
+    def test_transport_state_matches_api(self, editor: MultiScoperTestClient):
         """
         Bug caught: snapshot transport data cached/stale, not reflecting
         current transport state.
@@ -141,7 +141,7 @@ class TestSnapshotConsistency:
         )
 
     def test_snapshot_updates_after_oscillator_add(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: snapshot returning cached data that doesn't reflect
@@ -164,7 +164,7 @@ class TestSnapshotConsistency:
             f"before={count_before}, after={count_after}"
         )
 
-    def test_snapshot_reflects_bpm_change(self, editor: OscilTestClient):
+    def test_snapshot_reflects_bpm_change(self, editor: MultiScoperTestClient):
         """
         Bug caught: BPM in snapshot not updated after set_bpm call.
         """
@@ -189,7 +189,7 @@ class TestSnapshotConsistency:
 class TestElementRegistry:
     """Verify the element registry reports registered elements correctly."""
 
-    def test_editor_has_core_elements_registered(self, editor: OscilTestClient):
+    def test_editor_has_core_elements_registered(self, editor: MultiScoperTestClient):
         """
         Bug caught: element registry not populated after editor open,
         making all UI interaction tests silently skip instead of fail.
@@ -209,7 +209,7 @@ class TestElementRegistry:
             )
 
     def test_oscillator_elements_registered_after_add(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: oscillator list items not registering their child
@@ -234,7 +234,7 @@ class TestElementRegistry:
             )
 
     def test_elements_deregistered_after_delete(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: deleting an oscillator does not remove its elements
@@ -263,7 +263,7 @@ class TestElementBoundsCompleteness:
     """Verify every visible registered element has non-zero bounds."""
 
     def test_all_visible_elements_have_bounds(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: elements registered in the test harness but with
@@ -286,7 +286,7 @@ class TestElementBoundsCompleteness:
             f"Visible elements with zero bounds (invisible to user): {zero_bounds}"
         )
 
-    def test_core_elements_are_interactive(self, editor: OscilTestClient):
+    def test_core_elements_are_interactive(self, editor: MultiScoperTestClient):
         """
         Bug caught: core elements registered but not visible+showing+enabled,
         making them non-interactive even though they appear in the registry.
@@ -305,7 +305,7 @@ class TestPaneBodyElement:
     """Verify the pane body element is registered and interactive."""
 
     def test_pane_body_exists_with_oscillator(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: pane_body not registered in element registry even
@@ -322,7 +322,7 @@ class TestPaneBodyElement:
             assert el.height > 0, "pane_body should have height"
 
     def test_pane_body_survives_oscillator_delete(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: deleting all oscillators causes pane_body to crash
@@ -346,7 +346,7 @@ class TestStatsOverlayElement:
     """Verify the stats overlay element."""
 
     def test_stats_overlay_registered(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: statsOverlay element never registered, making performance
@@ -364,7 +364,7 @@ class TestOscillatorNameLabel:
     """Verify oscillator name labels in the sidebar list."""
 
     def test_name_label_has_text(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: name label registered but has empty text, showing
@@ -374,16 +374,24 @@ class TestOscillatorNameLabel:
         editor.wait_for_element("sidebar_oscillators_item_0", timeout_s=5.0)
 
         name_label = "sidebar_oscillators_item_0_name"
-        if editor.element_exists(name_label):
-            el = editor.get_element(name_label)
-            assert el is not None
-            text = el.extra.get("text", "")
-            assert "Label Check" in text or text != "", (
-                f"Name label should show oscillator name, got '{text}'"
-            )
+        assert editor.element_exists(name_label), (
+            f"Name label '{name_label}' must be registered in the sidebar; "
+            "if the layout was reworked, update this test's testId constant"
+        )
+
+        el = editor.get_element(name_label)
+        assert el is not None
+        text = el.extra.get("text", "")
+        # Previous assertion was `"Label Check" in text or text != ""` —
+        # a tautology for any non-empty text. A rendering regression
+        # showing the wrong name (e.g. a default "Oscillator") would pass.
+        # Require the specific oscillator name.
+        assert "Label Check" in text, (
+            f"Name label should contain oscillator name 'Label Check', got '{text}'"
+        )
 
     def test_name_label_updates_after_rename(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: renaming oscillator via state API updates the state

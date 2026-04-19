@@ -1,12 +1,12 @@
 /*
-    Oscil - Color Grade Effect Implementation
+    MultiScoper - Color Grade Effect Implementation
 */
 
 #include "rendering/effects/ColorGradeEffect.h"
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
-namespace oscil
+namespace multiscoper
 {
 
 // Color grading fragment shader
@@ -116,6 +116,6 @@ void ColorGradeEffect::setUniforms(const Framebuffer& source, float deltaTime)
                                                 settings_.highlights.getFloatBlue());
 }
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

@@ -1,5 +1,5 @@
 /*
-    Benchmarks for oscil::TimingEngine per-block update paths.
+    Benchmarks for multiscoper::TimingEngine per-block update paths.
 
     Two hot paths exercised together in processBlock:
       1. updateHostInfo(PositionInfo) — SeqLock-published host state
@@ -57,13 +57,13 @@ static void BM_TimingEngine_Update(benchmark::State& state)
 {
     const int numSamples = static_cast<int>(state.range(0));
 
-    oscil::TimingEngine engine;
+    multiscoper::TimingEngine engine;
     engine.setSampleRate(48000.0);
-    engine.setTimingMode(oscil::TimingMode::TIME);
+    engine.setTimingMode(multiscoper::TimingMode::TIME);
     engine.setTimeIntervalMs(500.0f);
     // Exercise the trigger path so processBlock does useful work rather than
     // short-circuiting in WaveformTriggerMode::None.
-    engine.setWaveformTriggerMode(oscil::WaveformTriggerMode::RisingEdge);
+    engine.setWaveformTriggerMode(multiscoper::WaveformTriggerMode::RisingEdge);
     engine.setTriggerThreshold(0.05f);
     engine.setTriggerChannel(0);
     engine.setTriggerHysteresis(0.01f);

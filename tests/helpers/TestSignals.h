@@ -1,5 +1,5 @@
 /*
-    Oscil - Test Signal Generators
+    MultiScoper - Test Signal Generators
     Common signal generation utilities for unit tests
 */
 
@@ -12,7 +12,7 @@
 #include <random>
 #include <vector>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 /**
@@ -270,4 +270,4 @@ inline std::vector<float> generateRandomVector(int numSamples, float min, float 
     return samples;
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

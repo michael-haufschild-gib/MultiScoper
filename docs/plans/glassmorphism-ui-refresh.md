@@ -3,7 +3,7 @@
 **Status**: Historical. Superseded by the 2026-Q2 flat-surface uplift.
 **Date**: 2026-04-04 (original), superseded 2026-Q2
 **Reference**: See internal demo-ui project for web reference implementation
-**Scope**: Full visual + interaction refresh of all Oscil UI components, no backward compatibility required
+**Scope**: Full visual + interaction refresh of all MultiScoper UI components, no backward compatibility required
 
 > **Note (2026-Q2 update)**: The glassmorphism aesthetic was short-lived.
 > The current UI system is a **flat surface** design; `GlassStyle` /
@@ -20,7 +20,7 @@
 
 ## Motivation
 
-The current Oscil UI uses flat opaque backgrounds, single-layer borders, and ease-out animations. It looks dated compared to modern 2026 design language. The web reference project implements a glassmorphism design system with translucent panels, multi-layer shadows, accent glows, spring animations, and ripple feedback. This plan ports that visual language to JUCE.
+The current MultiScoper UI uses flat opaque backgrounds, single-layer borders, and ease-out animations. It looks dated compared to modern 2026 design language. The web reference project implements a glassmorphism design system with translucent panels, multi-layer shadows, accent glows, spring animations, and ripple feedback. This plan ports that visual language to JUCE.
 
 ## Design Decisions
 
@@ -39,7 +39,7 @@ The current Oscil UI uses flat opaque backgrounds, single-layer borders, and eas
 - **Real backdrop blur** — JUCE has no `backdrop-filter`. Faux glass (translucent bg + borders + shadows) delivers 95% of the visual impact with zero runtime cost. The web reference's blur is barely visible on dark backgrounds.
 - **OKLCH color space** — JUCE only supports RGB/HSV/HSL. We use RGB. The perceptual difference in alpha/lightness operations on dark themes is negligible.
 - **Audio feedback (SoundManager)** — The web project stubs it as no-ops. Audio feedback in an audio plugin interferes with monitoring. Skip.
-- **New component types** — Banner, LoadingSpinner, NumberInput (expression parser), Popover, ColorGradientPicker exist in the web project but have no Oscil consumers. Out of scope.
+- **New component types** — Banner, LoadingSpinner, NumberInput (expression parser), Popover, ColorGradientPicker exist in the web project but have no MultiScoper consumers. Out of scope.
 - **Full token system rebuild** — The web project's token → semantic → component CSS architecture solves CSS-specific problems (scoping, Tailwind, data attributes). JUCE doesn't have these problems. We extend the existing `ColorTheme` struct instead of replacing it.
 
 ### Key architectural choice: extend, don't replace
@@ -379,9 +379,9 @@ namespace SpringPresets {
 
 This is the largest work package. Each component is an independent unit of work that can be done in parallel (different files, no shared mutable state).
 
-#### OscilButton
+#### MultiScoperButton
 
-**Files**: `OscilButton.h`, `OscilButton.cpp`, `OscilButtonPainting.cpp`
+**Files**: `MultiScoperButton.h`, `MultiScoperButton.cpp`, `MultiScoperButtonPainting.cpp`
 
 Visual changes:
 - **Primary**: `accentSubtle` background + `accent` border + accent text. Hover: brighter accent bg + accent glow (`paintAccentGlow`). Active: darker accent bg.
@@ -403,9 +403,9 @@ Color resolution rewrite (`getBackgroundColour`, `getTextColour`, `getBorderColo
 - Instead derive from `GlassStyle`: accent, accentSubtle, bgHover, bgActive, borderDefault, textPrimary, textSecondary
 - Much simpler logic — the web reference uses ~4 semantic colors, not 24 explicit per-state colors
 
-#### OscilSlider
+#### MultiScoperSlider
 
-**Files**: `OscilSlider.h`, `OscilSliderPainting.cpp`
+**Files**: `MultiScoperSlider.h`, `MultiScoperSliderPainting.cpp`
 
 Visual changes:
 - Track: Glass background (`bgSurface` fill + `borderSubtle` border), `RADIUS_FULL` corners
@@ -416,9 +416,9 @@ Visual changes:
 
 No API changes. APVTS integration unaffected (internal `juce::Slider` unchanged).
 
-#### OscilToggle
+#### MultiScoperToggle
 
-**Files**: `OscilToggle.h`, `OscilToggle.cpp`
+**Files**: `MultiScoperToggle.h`, `MultiScoperToggle.cpp`
 
 Visual changes:
 - Track OFF: `bgSurface` fill + `borderDefault` border
@@ -427,9 +427,9 @@ Visual changes:
 - Thumb ON: White circle with subtle shadow
 - Use `SpringPresets::springSwitch()` for thumb position animation
 
-#### OscilTextField
+#### MultiScoperTextField
 
-**Files**: `OscilTextField.h`, `OscilTextFieldPainting.cpp`
+**Files**: `MultiScoperTextField.h`, `MultiScoperTextFieldPainting.cpp`
 
 Visual changes:
 - Background: `paintGlassInput()` — glass bg, subtle border
@@ -440,9 +440,9 @@ Visual changes:
 
 Add error shake: on validation error, set a horizontal offset spring with target 0 and initial position ±2px, let it oscillate.
 
-#### OscilDropdown
+#### MultiScoperDropdown
 
-**Files**: `OscilDropdown.h`, `OscilDropdown.cpp`, `OscilDropdownPopup.cpp`
+**Files**: `MultiScoperDropdown.h`, `MultiScoperDropdown.cpp`, `MultiScoperDropdownPopup.cpp`
 
 Visual changes:
 - Trigger: `paintGlassInput()` styling (matches text field)
@@ -451,9 +451,9 @@ Visual changes:
 - Items: Hover = `bgHover`, active = `bgActive`
 - Selected item: `accent` text + `accentSubtle` bg
 
-#### OscilCheckbox
+#### MultiScoperCheckbox
 
-**Files**: `OscilCheckbox.h`, `OscilCheckbox.cpp`
+**Files**: `MultiScoperCheckbox.h`, `MultiScoperCheckbox.cpp`
 
 Visual changes:
 - Unchecked: `bgSurface` fill + `borderDefault` border, `RADIUS_MD` corners
@@ -461,27 +461,27 @@ Visual changes:
 - Hover: Border brightens
 - Spring scale on check state change
 
-#### OscilRadioButton
+#### MultiScoperRadioButton
 
-**Files**: `OscilRadioButton.h`, `OscilRadioButtonPainting.cpp`
+**Files**: `MultiScoperRadioButton.h`, `MultiScoperRadioButtonPainting.cpp`
 
 Visual changes:
 - Outer ring: `borderDefault`, hover: `borderStrong`
 - Selected: `accent` fill dot in center
 - Spring scale on selection change
 
-#### OscilTabs
+#### MultiScoperTabs
 
-**Files**: `OscilTabs.h`, `OscilTabsPainting.cpp`
+**Files**: `MultiScoperTabs.h`, `MultiScoperTabsPainting.cpp`
 
 Visual changes:
 - Default variant: Bottom border on tab list. Active tab has animated accent underline (slides between tabs using `springIndicator()`).
 - Pills variant: `bgHover` background on tab list. Active tab has `accentSubtle` bg pill with `accentMuted` border.
 - Tab text: `textSecondary` default, `accent` when active (default), `textPrimary` when active (pills)
 
-#### OscilAccordion / OscilAccordionSection
+#### MultiScoperAccordion / MultiScoperAccordionSection
 
-**Files**: `OscilAccordionSection.cpp`
+**Files**: `MultiScoperAccordionSection.cpp`
 
 Visual changes:
 - Section borders: `borderSubtle`
@@ -489,9 +489,9 @@ Visual changes:
 - Chevron: Animated rotation (already exists, verify it uses spring)
 - Content: Animated height on expand/collapse
 
-#### OscilModal
+#### MultiScoperModal
 
-**Files**: `OscilModal.h`, `OscilModalPainting.cpp`
+**Files**: `MultiScoperModal.h`, `MultiScoperModalPainting.cpp`
 
 Visual changes:
 - Overlay: `backgroundPrimary` at 50% alpha (dark scrim)
@@ -509,17 +509,17 @@ Visual changes — **significant rework**:
 - Button text: `textSecondary` default, `accent` when selected
 - Remove per-button background painting, replace with single sliding indicator
 
-#### OscilBadge
+#### MultiScoperBadge
 
-**Files**: `OscilBadge.h`, `OscilBadge.cpp`
+**Files**: `MultiScoperBadge.h`, `MultiScoperBadge.cpp`
 
 Visual changes:
 - Default: Glass bg + subtle border
 - Status variants: Use semantic status colors from theme (danger/success/warning bg + text)
 
-#### OscilColorPicker, OscilColorSwatches
+#### MultiScoperColorPicker, MultiScoperColorSwatches
 
-**Files**: `OscilColorPicker.h/cpp`, `OscilColorSwatches.cpp`
+**Files**: `MultiScoperColorPicker.h/cpp`, `MultiScoperColorSwatches.cpp`
 
 Visual changes:
 - Use glass panel styling for container
@@ -575,7 +575,7 @@ This gives the plugin a subtle accent-tinted ambiance that ties the whole UI tog
 **Goal**: All tests pass after the visual refresh.
 
 **Files to modify**:
-- `tests/OscilTestFixtures.h` — add new glass fields to test theme construction
+- `tests/MultiScoperTestFixtures.h` — add new glass fields to test theme construction
 - `tests/test_theme_manager_persistence.cpp` — add serialization round-trip tests for new fields
 - `tests/test_theme_manager_apply.cpp` — verify GlassStyle recomputes on theme change
 - `tests/test_theme_accessibility.cpp` — add glass-contrast validation tests
@@ -599,19 +599,19 @@ This gives the plugin a subtle accent-tinted ambiance that ties the whole UI tog
 ```text
 WP1 (Theme Extension) ──────────┐
                                  ├── WP4 (Component Visual Refresh)
-WP2 (Glass Painting Utilities) ──┤     ├── OscilButton
-                                 │     ├── OscilSlider
-WP3 (Spring Enhancement) ────────┘     ├── OscilToggle
-                                       ├── OscilTextField
-                                       ├── OscilDropdown + Popup
-                                       ├── OscilCheckbox
-                                       ├── OscilRadioButton
-                                       ├── OscilTabs
-                                       ├── OscilAccordion
-                                       ├── OscilModal
+WP2 (Glass Painting Utilities) ──┤     ├── MultiScoperButton
+                                 │     ├── MultiScoperSlider
+WP3 (Spring Enhancement) ────────┘     ├── MultiScoperToggle
+                                       ├── MultiScoperTextField
+                                       ├── MultiScoperDropdown + Popup
+                                       ├── MultiScoperCheckbox
+                                       ├── MultiScoperRadioButton
+                                       ├── MultiScoperTabs
+                                       ├── MultiScoperAccordion
+                                       ├── MultiScoperModal
                                        ├── SegmentedButtonBar
-                                       ├── OscilBadge
-                                       ├── OscilColorPicker/Swatches
+                                       ├── MultiScoperBadge
+                                       ├── MultiScoperColorPicker/Swatches
                                        └── InlineEditLabel
                                             │
                                             ├── WP5 (Consumer Updates)

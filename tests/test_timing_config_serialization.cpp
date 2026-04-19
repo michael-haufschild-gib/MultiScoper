@@ -1,5 +1,5 @@
 /*
-    Oscil - TimingConfig Serialization Tests
+    MultiScoper - TimingConfig Serialization Tests
     Tests for serialization, string conversion, and edge cases
 */
 
@@ -11,8 +11,8 @@
 #include <gtest/gtest.h>
 #include <limits>
 
-using namespace oscil;
-using namespace oscil::test;
+using namespace multiscoper;
+using namespace multiscoper::test;
 
 class TimingConfigSerializationTest : public ::testing::Test
 {

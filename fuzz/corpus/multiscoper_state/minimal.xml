@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MultiScoperState version="2">
+  <Oscillators>
+    <Oscillator id="osc-1" sourceId="src-a" name="Only" paneId="pane-1" order="0"
+                processingMode="0" colour="ffff0000" opacity="1.0" visible="1"
+                schemaVersion="2" oscillatorState="1" lineWidth="1.5"
+                timeWindow="100.0" persistence="0.0" shaderId="basic"/>
+  </Oscillators>
+  <Panes>
+    <Pane id="pane-1" orderIndex="0" collapsed="0" name="Pane 1"
+          heightRatio="1.0" columnIndex="0"/>
+  </Panes>
+  <Layout columns="1"/>
+  <Theme themeName="Dark Professional"/>
+  <Timing/>
+</MultiScoperState>

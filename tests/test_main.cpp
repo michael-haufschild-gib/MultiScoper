@@ -1,5 +1,5 @@
 /*
-    Oscil - Test Main Entry Point
+    MultiScoper - Test Main Entry Point
 
     NOTE: JUCE initialization is deferred to SetUp() rather than using a static
     initializer to avoid crashes during gtest_discover_tests, which runs the

@@ -1,5 +1,5 @@
 /*
-    Oscil - Waveform Pass
+    MultiScoper - Waveform Pass
     Handles rendering of individual waveforms (geometry, grid).
 */
 
@@ -16,7 +16,7 @@
 #include <memory>
 #include <unordered_map>
 
-namespace oscil
+namespace multiscoper
 {
 
 class WaveformPass
@@ -58,4 +58,4 @@ private:
     bool initialized_ = false;
 };
 
-} // namespace oscil
+} // namespace multiscoper

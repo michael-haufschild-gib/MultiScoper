@@ -1,9 +1,9 @@
 /*
-    Oscil - Schema Migration Framework
-    Fail-closed migration of persisted OscilState ValueTree across schema versions.
+    MultiScoper - Schema Migration Framework
+    Fail-closed migration of persisted MultiScoperState ValueTree across schema versions.
 
     Contract:
-    - migrateOscilState(state, fromVersion, toVersion) returns MigrationResult::Success
+    - migrateMultiScoperState(state, fromVersion, toVersion) returns MigrationResult::Success
       on successful in-place migration. Any other result indicates the caller MUST
       reject the state and not commit it to live memory.
     - Chain migration is attempted when no direct (from, to) pair is registered:
@@ -15,7 +15,7 @@
 
 #include <juce_data_structures/juce_data_structures.h>
 
-namespace oscil::migration
+namespace multiscoper::migration
 {
 
 /**
@@ -39,12 +39,12 @@ enum class MigrationResult : int
 [[nodiscard]] const char* migrationResultToString(MigrationResult result) noexcept;
 
 /**
- * Migrate an OscilState ValueTree from fromVersion to toVersion.
+ * Migrate a MultiScoperState ValueTree from fromVersion to toVersion.
  *
  * On Success, state is mutated in place and the caller may commit it.
  * On any other result, state may be partially mutated and MUST be discarded.
  */
-[[nodiscard]] MigrationResult migrateOscilState(juce::ValueTree& state, int fromVersion, int toVersion);
+[[nodiscard]] MigrationResult migrateMultiScoperState(juce::ValueTree& state, int fromVersion, int toVersion);
 
 /// Lowest schema version the migrator knows how to read.
 [[nodiscard]] int lowestSupportedFromVersion() noexcept;
@@ -52,4 +52,4 @@ enum class MigrationResult : int
 /// Highest schema version the migrator knows how to produce.
 [[nodiscard]] int highestSupportedToVersion() noexcept;
 
-} // namespace oscil::migration
+} // namespace multiscoper::migration

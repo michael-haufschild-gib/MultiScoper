@@ -1,5 +1,5 @@
 /*
-    Oscil - Select Pane Dialog
+    MultiScoper - Select Pane Dialog
     Modal dialog for selecting a pane to assign to an oscillator
     Used when trying to make an unassigned oscillator visible
 */
@@ -7,7 +7,7 @@
 #pragma once
 
 #include "core/Pane.h"
-#include "ui/components/OscilButton.h"
+#include "ui/components/MultiScoperButton.h"
 #include "ui/components/PaneSelectorComponent.h"
 #include "ui/components/TestId.h"
 #include "ui/components/ThemedComponent.h"
@@ -17,12 +17,12 @@
 #include <functional>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
  * Content component for the "Select Pane" dialog
- * Designed to be hosted inside an OscilModal with title "Select Pane"
+ * Designed to be hosted inside an MultiScoperModal with title "Select Pane"
  *
  * Shows a dropdown to select an existing pane or create a new one,
  * with OK/Cancel buttons and error display.
@@ -83,7 +83,7 @@ public:
      */
     void reset();
 
-    // Preferred dimensions for OscilModal
+    // Preferred dimensions for MultiScoperModal
     int getPreferredWidth() const { return CONTENT_WIDTH; }
     int getPreferredHeight() const { return CONTENT_HEIGHT; }
 
@@ -107,8 +107,8 @@ private:
     std::unique_ptr<juce::Label> errorLabel_;
 
     // Footer buttons
-    std::unique_ptr<OscilButton> okButton_;
-    std::unique_ptr<OscilButton> cancelButton_;
+    std::unique_ptr<MultiScoperButton> okButton_;
+    std::unique_ptr<MultiScoperButton> cancelButton_;
 
     // Layout constants
     static constexpr int CONTENT_WIDTH = 300;
@@ -120,9 +120,9 @@ private:
 
     // TestIdSupport
     void registerTestId() override;
-    OSCIL_TESTABLE();
+    MULTISCOPER_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SelectPaneDialog)
 };
 
-} // namespace oscil
+} // namespace multiscoper

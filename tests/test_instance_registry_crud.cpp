@@ -1,5 +1,5 @@
 /*
-    Oscil - Instance Registry CRUD Tests
+    MultiScoper - Instance Registry CRUD Tests
     Tests for register, unregister, lookup, and update operations
 */
 
@@ -10,7 +10,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class InstanceRegistryCrudTest : public ::testing::Test
 {

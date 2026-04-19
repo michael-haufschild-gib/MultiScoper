@@ -1,5 +1,5 @@
 /*
-    Oscil - Memory Budget Manager Tests (Edge Cases)
+    MultiScoper - Memory Budget Manager Tests (Edge Cases)
     Quality overrides, auto-quality, listeners, global config, pruning
 */
 
@@ -8,7 +8,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 //==============================================================================
 // Test Listener (duplicated for standalone compilation)

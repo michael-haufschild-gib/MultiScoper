@@ -1,11 +1,11 @@
 /*
-    Oscil - Waveform GL Renderer - Rendering Methods
+    MultiScoper - Waveform GL Renderer - Rendering Methods
     OpenGL render loop and debug visualization
 */
 
 #include "rendering/WaveformGLRenderer.h"
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
     #include "rendering/RenderEngine.h"
     #include "rendering/ShaderRegistry.h"
@@ -17,7 +17,7 @@
     // NOLINTNEXTLINE(bugprone-macro-parentheses)
     #define GL_LOG(msg) DBG("[GL] " << msg)
 
-namespace oscil
+namespace multiscoper
 {
 
 using namespace juce::gl;
@@ -212,6 +212,6 @@ void WaveformGLRenderer::renderDebugRect(const juce::Rectangle<float>& bounds, j
     glDisable(GL_BLEND);
 }
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

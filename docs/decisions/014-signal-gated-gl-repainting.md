@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-Oscil is designed to run as many simultaneous plugin instances as a DAW
+MultiScoper is designed to run as many simultaneous plugin instances as a DAW
 project contains tracks. Real sessions routinely carry 8–16 open editors.
 Each editor owns a `juce::OpenGLContext`; left in the JUCE default of
 `setContinuousRepainting(true)`, every context wakes on each VSync tick
@@ -17,7 +17,7 @@ Measured cost: with 16 editors open and silent, continuous repainting
 saturates roughly one full CPU core on an M1-class machine and keeps the
 GPU in its active state, preventing it from entering the low-power sleep
 states that dominate battery life. This is a quality-of-life regression
-users notice when they leave Oscil on a bus track and walk away.
+users notice when they leave MultiScoper on a bus track and walk away.
 
 ## Decision
 
@@ -38,13 +38,13 @@ explicitly in two situations:
 
    | Change | Caller |
    |---|---|
-   | Theme palette change | `OscilPluginEditor::onThemeChanged` |
+   | Theme palette change | `MultiScoperPluginEditor::onThemeChanged` |
    | Oscillator property change (color, mode, visibility) | `OscillatorPanelController::applyOscillatorPropertyChange` |
    | Panel refresh (add/remove oscillator, reorder, pane layout) | `OscillatorPanelController::runRefreshIteration` |
-   | Grid visibility toggle | `OscilPluginEditor::showGridChanged` |
-   | Auto-scale toggle | `OscilPluginEditor::autoScaleChanged` |
-   | Time interval / sync mode / timing grid change | `OscilPluginEditor::setDisplaySamplesForAllPanes` and `setGridConfigForAllPanes` (called from `TimingEngineListenerAdapter::updateDisplayAndGrid`) |
-   | Editor resize | `OscilPluginEditor::resized` |
+   | Grid visibility toggle | `MultiScoperPluginEditor::showGridChanged` |
+   | Auto-scale toggle | `MultiScoperPluginEditor::autoScaleChanged` |
+   | Time interval / sync mode / timing grid change | `MultiScoperPluginEditor::setDisplaySamplesForAllPanes` and `setGridConfigForAllPanes` (called from `TimingEngineListenerAdapter::updateDisplayAndGrid`) |
+   | Editor resize | `MultiScoperPluginEditor::resized` |
    | GPU rendering mode toggled on | `GpuRenderCoordinator::setGpuRenderingEnabled` (disabled→enabled transition) |
 
 ## Rules
@@ -84,7 +84,7 @@ explicitly in two situations:
 
 ## Verification
 
-- `tests/test_oscil_look_and_feel.cpp` — theme-token propagation into
+- `tests/test_multiscoper_look_and_feel.cpp` — theme-token propagation into
   JUCE widget colour IDs, exercised on theme change.
 - `tests/test_oscillator_panel_controller.cpp` — property-change dispatch
   path (uses a real `GpuRenderCoordinator` wired to a `TestEditor`).

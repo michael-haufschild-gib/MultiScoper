@@ -1,5 +1,5 @@
 /*
-    Oscil - Section Header Implementation
+    MultiScoper - Section Header Implementation
 
     Small-caps titled row with optional prev/next chevrons and a hairline
     divider beneath. Accent colour, when set, tints chevrons and softens the
@@ -10,7 +10,7 @@
 
 #include "ui/components/ComponentConstants.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 namespace
@@ -193,4 +193,4 @@ bool SectionHeader::keyPressed(const juce::KeyPress& key)
     return false;
 }
 
-} // namespace oscil
+} // namespace multiscoper

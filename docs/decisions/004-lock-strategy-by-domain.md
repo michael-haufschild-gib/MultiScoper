@@ -4,7 +4,7 @@
 Accepted
 
 ## Context
-Oscil has three thread domains with different latency requirements:
+MultiScoper has three thread domains with different latency requirements:
 1. **Audio thread** -- must never block. Deadline: ~10.7ms per block at 48kHz/512 samples (512/48000); ~2.9ms at 48kHz/128 samples; ~1.3ms at 48kHz/64 samples. Safe processing limit is ~50-80% of the period; exceeding ~80% risks dropouts.
 2. **Message (UI) thread** -- can block briefly. Budget: ~16ms per frame at 60fps.
 3. **OpenGL thread** -- can block briefly but contention causes frame drops.
@@ -27,5 +27,5 @@ Oscil has three thread domains with different latency requirements:
 3. std::mutex: only for message-thread-only operations or infrequent cross-thread access.
 
 ## Verification
-- RTSan CI job (`OSCIL_ENABLE_RTSAN=ON`) detects any blocking/allocation in `processBlock()`.
+- RTSan CI job (`MULTISCOPER_ENABLE_RTSAN=ON`) detects any blocking/allocation in `processBlock()`.
 - `tests/test_seqlock.cpp`, `tests/test_capture_buffer_threading.cpp`: concurrent correctness tests.

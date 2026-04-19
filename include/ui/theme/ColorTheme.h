@@ -1,5 +1,5 @@
 /*
-    Oscil - Color Theme Data Type
+    MultiScoper - Color Theme Data Type
     ColorTheme struct holds palette, typography/glass params, and accessibility
     helpers used by the theme system.
 */
@@ -13,7 +13,7 @@
 #include <cmath>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -235,7 +235,7 @@ struct ColorTheme
     }
 
     /**
-     * Pick contrast-safe text colour (literal white or near-black) by WCAG
+     * Pick contrast-safe text colour (literal white or pure black) by WCAG
      * ratio against the given surface. Use this for text painted on a
      * computed colour fill (button accent, status pill bg, etc.) where the
      * surface is not a theme token and `textPrimary`/`textHighlight` may be
@@ -248,7 +248,7 @@ struct ColorTheme
     static juce::Colour pickContrastingText(juce::Colour surface)
     {
         juce::Colour const white{0xFFFFFFFF};
-        juce::Colour const dark{0xFF1A1A1A};
+        juce::Colour const dark{0xFF000000};
         return calculateContrastRatio(white, surface) >= calculateContrastRatio(dark, surface) ? white : dark;
     }
 
@@ -305,4 +305,4 @@ struct ColorTheme
     }
 };
 
-} // namespace oscil
+} // namespace multiscoper

@@ -1,6 +1,6 @@
 # Development Guide
 
-**Purpose**: Building, running, and developing the Oscil plugin.
+**Purpose**: Building, running, and developing the MultiScoper plugin.
 **Build System**: CMake 3.31+ with CMakePresets.json
 **Compiler Requirements**: C++20 compatible (Clang 14+, GCC 11+, MSVC 2019+)
 
@@ -54,7 +54,7 @@ If you prefer manual configuration:
 
 ```bash
 # Configure (Debug with Ninja + ccache)
-cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DOSCIL_BUILD_TESTS=ON
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DMULTISCOPER_BUILD_TESTS=ON
 
 # Build
 cmake --build build --parallel
@@ -67,10 +67,10 @@ ctest --test-dir build --output-on-failure
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `OSCIL_BUILD_TESTS` | ON | Build unit tests |
-| `OSCIL_BUILD_TEST_HARNESS` | OFF | Build E2E test harness |
-| `OSCIL_ENABLE_OPENGL` | ON | Enable OpenGL for GPU compositing |
-| `OSCIL_ENABLE_RTSAN` | OFF | Enable RealtimeSanitizer (Clang 20+) |
+| `MULTISCOPER_BUILD_TESTS` | ON | Build unit tests |
+| `MULTISCOPER_BUILD_TEST_HARNESS` | OFF | Build E2E test harness |
+| `MULTISCOPER_ENABLE_OPENGL` | ON | Enable OpenGL for GPU compositing |
+| `MULTISCOPER_ENABLE_RTSAN` | OFF | Enable RealtimeSanitizer (Clang 20+) |
 | `CMAKE_BUILD_TYPE` | (none) | Debug, Release, RelWithDebInfo |
 
 ## Build Acceleration
@@ -115,7 +115,7 @@ cmake --preset dev  # Uses Ninja automatically
 ## Project Structure
 
 ```
-oscil4/
+MultiScoper/
 ├── CMakeLists.txt          # Main build configuration
 ├── CMakePresets.json       # Build presets (Ninja + ccache)
 ├── include/                # Header files
@@ -124,7 +124,7 @@ oscil4/
 │   ├── ui/                 # UI headers
 │   │   ├── sections/       # Sidebar section headers
 │   │   └── coordinators/   # Coordinator headers
-│   └── Oscil.h             # Main header
+│   └── MultiScoper.h             # Main header
 ├── src/                    # Implementation files
 │   ├── core/               # Core implementations
 │   ├── dsp/                # DSP implementations
@@ -147,10 +147,10 @@ After building, find outputs at:
 
 | Output | Location |
 |--------|----------|
-| VST3 Plugin | `build/<preset>/Oscil_artefacts/Release/VST3/oscil4.vst3` |
-| AU Plugin | `build/<preset>/Oscil_artefacts/Release/AU/oscil4.component` |
-| Standalone | `build/<preset>/Oscil_artefacts/Release/Standalone/oscil4.app` |
-| Test Binary | `build/<preset>/OscilTests` |
+| VST3 Plugin | `build/<preset>/MultiScoper_artefacts/Release/VST3/MultiScoper.vst3` |
+| AU Plugin | `build/<preset>/MultiScoper_artefacts/Release/AU/MultiScoper.component` |
+| Standalone | `build/<preset>/MultiScoper_artefacts/Release/Standalone/MultiScoper.app` |
+| Test Binary | `build/<preset>/MultiScoperTests` |
 
 Plugins are also copied to system locations when `COPY_PLUGIN_AFTER_BUILD` is enabled:
 - VST3: `~/Library/Audio/Plug-Ins/VST3/`
@@ -183,7 +183,7 @@ ctest --preset dev
 3. Add to `CMakeLists.txt`:
 
 ```cmake
-# In target_sources(Oscil PRIVATE ...)
+# In target_sources(MultiScoper PRIVATE ...)
 src/[domain]/ClassName.cpp
 ```
 
@@ -192,8 +192,8 @@ src/[domain]/ClassName.cpp
 ### Adding New Tests
 
 1. Create test file: `tests/test_class_name.cpp`
-2. Add to `CMakeLists.txt` under `add_executable(OscilTests ...)`
-3. If testing new code, also add the source file to OscilTests
+2. Add to `CMakeLists.txt` under `add_executable(MultiScoperTests ...)`
+3. If testing new code, also add the source file to MultiScoperTests
 4. Rebuild and run: `cmake --build --preset dev && ctest --preset dev`
 
 ## Dependencies
@@ -225,7 +225,7 @@ First build will download dependencies (requires internet).
 ### Xcode
 ```bash
 cmake -G Xcode -B build-xcode
-open build-xcode/Oscil.xcodeproj
+open build-xcode/MultiScoper.xcodeproj
 ```
 
 ## Debugging
@@ -242,13 +242,14 @@ Run the Standalone target directly or attach debugger.
 ### Test Debugging
 ```bash
 # Run specific test with verbose output
-./build/dev/OscilTests --gtest_filter="SignalProcessorTest.*" --gtest_break_on_failure
+./build/dev/MultiScoperTests --gtest_filter="SignalProcessorTest.*" --gtest_break_on_failure
 ```
 
 ### E2E Test Harness
+
 ```bash
 # Start test harness (HTTP server on port 8765)
-./build/dev/OscilTestHarness_artefacts/OscilTestHarness.app/Contents/MacOS/OscilTestHarness
+"./build/dev/test_harness/MultiScoperTestHarness_artefacts/Debug/MultiScoper Test Harness.app/Contents/MacOS/MultiScoper Test Harness"
 
 # Health check
 curl http://localhost:8765/health
@@ -289,7 +290,7 @@ g++ --version      # Need 11+
 ```
 
 ### Issue: Tests crash on JUCE initialization
-**Solution**: Tests link only required JUCE modules. If test needs more JUCE functionality, add the module to `target_link_libraries(OscilTests ...)` in CMakeLists.txt.
+**Solution**: Tests link only required JUCE modules. If test needs more JUCE functionality, add the module to `target_link_libraries(MultiScoperTests ...)` in CMakeLists.txt.
 
 ## Troubleshooting
 
@@ -328,5 +329,5 @@ Enable internal timing in `StatusBarComponent` to monitor render performance.
 cmake --preset release
 cmake --build --preset release
 
-# Outputs ready for distribution in build/release/Oscil_artefacts/
+# Outputs ready for distribution in build/release/MultiScoper_artefacts/
 ```

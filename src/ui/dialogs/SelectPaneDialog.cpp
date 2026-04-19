@@ -1,5 +1,5 @@
 /*
-    Oscil - Select Pane Dialog Implementation
+    MultiScoper - Select Pane Dialog Implementation
     Modal dialog for selecting a pane to assign to an oscillator
 */
 
@@ -7,18 +7,18 @@
 
 #include "ui/theme/Typography.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 SelectPaneDialog::SelectPaneDialog(IThemeService& themeService) : ThemedComponent(themeService)
 {
-    OSCIL_REGISTER_TEST_ID("selectPaneDialog");
+    MULTISCOPER_REGISTER_TEST_ID("selectPaneDialog");
     setupComponents();
 }
 
 SelectPaneDialog::~SelectPaneDialog() = default;
 
-void SelectPaneDialog::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
+void SelectPaneDialog::registerTestId() { MULTISCOPER_REGISTER_TEST_ID(testId_); }
 
 void SelectPaneDialog::setupComponents()
 {
@@ -39,13 +39,13 @@ void SelectPaneDialog::setupComponents()
     addAndMakeVisible(*errorLabel_);
 
     // OK button (Primary)
-    okButton_ = std::make_unique<OscilButton>(getThemeService(), "OK", "selectPaneDialog_okBtn");
+    okButton_ = std::make_unique<MultiScoperButton>(getThemeService(), "OK", "selectPaneDialog_okBtn");
     okButton_->setVariant(ButtonVariant::Primary);
     okButton_->onClick = [this]() { handleOkClick(); };
     addAndMakeVisible(*okButton_);
 
     // Cancel button (Secondary)
-    cancelButton_ = std::make_unique<OscilButton>(getThemeService(), "Cancel", "selectPaneDialog_cancelBtn");
+    cancelButton_ = std::make_unique<MultiScoperButton>(getThemeService(), "Cancel", "selectPaneDialog_cancelBtn");
     cancelButton_->setVariant(ButtonVariant::Secondary);
     cancelButton_->onClick = [this]() { handleCancelClick(); };
     addAndMakeVisible(*cancelButton_);
@@ -53,13 +53,13 @@ void SelectPaneDialog::setupComponents()
     // Apply initial theme
     themeChanged(getThemeService().getCurrentTheme());
 
-    // Set size for OscilModal
+    // Set size for MultiScoperModal
     setSize(getPreferredWidth(), getPreferredHeight());
 }
 
 void SelectPaneDialog::paint(juce::Graphics& /*g*/)
 {
-    // No custom painting - OscilModal handles backdrop/frame
+    // No custom painting - MultiScoperModal handles backdrop/frame
     // Child components handle their own painting
 }
 
@@ -168,4 +168,4 @@ bool SelectPaneDialog::validateSelection()
     return true;
 }
 
-} // namespace oscil
+} // namespace multiscoper

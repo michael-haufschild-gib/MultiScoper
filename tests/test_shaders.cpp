@@ -1,5 +1,5 @@
 /*
-    Oscil - Shader Registry Tests
+    MultiScoper - Shader Registry Tests
     Verifies shader registration, lookup, factory creation, and invariants
     that all built-in shaders must satisfy.
 */
@@ -10,7 +10,7 @@
 #include <gtest/gtest.h>
 #include <set>
 
-namespace oscil
+namespace multiscoper
 {
 
 class ShaderRegistryTest : public ::testing::Test
@@ -137,4 +137,4 @@ TEST_F(ShaderRegistryTest, AllShadersHaveNonEmptyDescriptions)
     }
 }
 
-} // namespace oscil
+} // namespace multiscoper

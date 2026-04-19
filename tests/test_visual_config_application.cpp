@@ -1,5 +1,5 @@
 /*
-    Oscil - Visual Configuration Application Tests
+    MultiScoper - Visual Configuration Application Tests
     Tests for applying configurations and checking requirements
 */
 
@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class VisualConfigApplicationTest : public ::testing::Test
 {

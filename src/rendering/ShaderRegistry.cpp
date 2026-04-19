@@ -1,5 +1,5 @@
 /*
-    Oscil - Shader Registry Implementation
+    MultiScoper - Shader Registry Implementation
 */
 
 #include "rendering/ShaderRegistry.h"
@@ -9,7 +9,7 @@
 #include "rendering/shaders/GradientFillShader.h"
 #include "rendering/shaders/NeonGlowShader.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 ShaderRegistry::ShaderRegistry() { registerBuiltInShaders(); }
@@ -61,4 +61,4 @@ std::vector<ShaderInfo> ShaderRegistry::getAvailableShaders() const
 
 bool ShaderRegistry::hasShader(const juce::String& shaderId) const { return shaders_.contains(shaderId); }
 
-} // namespace oscil
+} // namespace multiscoper

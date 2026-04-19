@@ -1,12 +1,12 @@
 /*
-    Oscil - Trails Effect Implementation
+    MultiScoper - Trails Effect Implementation
 */
 
 #include "rendering/effects/TrailsEffect.h"
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
-namespace oscil
+namespace multiscoper
 {
 
 using namespace juce::gl;
@@ -159,6 +159,6 @@ void TrailsEffect::applyWithHistory(juce::OpenGLContext& context, Framebuffer* s
     // This is done by the RenderEngine after all processing
 }
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

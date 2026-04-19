@@ -1,12 +1,12 @@
 /*
-    Oscil - Tilt Shift Effect Implementation
+    MultiScoper - Tilt Shift Effect Implementation
 */
 
 #include "rendering/effects/TiltShiftEffect.h"
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
-namespace oscil
+namespace multiscoper
 {
 
 // Simple single-pass tilt shift blur
@@ -76,6 +76,6 @@ void TiltShiftEffect::setUniforms(const Framebuffer& source, float deltaTime)
     juce::OpenGLExtensionFunctions::glUniform1f(rangeLoc_, settings_.range);
 }
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

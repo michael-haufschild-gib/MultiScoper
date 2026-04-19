@@ -1,5 +1,5 @@
 /*
-    Oscil - Signal Processor Tests
+    MultiScoper - Signal Processor Tests
 */
 
 #include "core/dsp/SignalProcessor.h"
@@ -10,9 +10,9 @@
 #include <limits>
 #include <span>
 
-using namespace oscil;
-using oscil::test::generateDCVector;
-using oscil::test::generateSineVector;
+using namespace multiscoper;
+using multiscoper::test::generateDCVector;
+using multiscoper::test::generateSineVector;
 
 class SignalProcessorTest : public ::testing::Test
 {
@@ -408,16 +408,33 @@ TEST_F(SignalProcessorTest, PeakWithInfinity)
     EXPECT_EQ(peak, std::numeric_limits<float>::infinity());
 }
 
-// Test: RMS with NaN — result non-negative or NaN
+// Test: RMS with NaN — NaN samples are replaced with 0.0 so result is
+// always finite and non-negative. Matches the NaN-rejection contract of
+// calculatePeak. Protects the UI RMS label / auto-scale logic from
+// leaking "nan" when a single sample in the capture buffer is NaN.
 TEST_F(SignalProcessorTest, RMSWithNaN)
 {
     std::vector<float> samples = {0.5f, 0.5f, std::nanf(""), 0.5f};
 
     float rms = SignalProcessor::calculateRMS(samples);
 
-    // RMS with NaN input may propagate NaN or skip it.
-    // If finite, must be non-negative.
-    EXPECT_TRUE(std::isnan(rms) || rms >= 0.0f);
+    EXPECT_TRUE(std::isfinite(rms)) << "RMS must never return NaN (got " << rms << ")";
+    EXPECT_GE(rms, 0.0f);
+    // Expected: sqrt((0.25 + 0.25 + 0 + 0.25) / 4) ≈ 0.433
+    EXPECT_NEAR(rms, std::sqrt(0.75f / 4.0f), 1e-5f);
+}
+
+// Test: RMS with Inf — Inf samples are replaced with 0.0 for the same
+// reason as NaN. Inf * Inf = Inf; sqrt(Inf) = Inf leaks into the UI.
+TEST_F(SignalProcessorTest, RMSWithInf)
+{
+    std::vector<float> samples = {0.5f, 0.5f, std::numeric_limits<float>::infinity(), 0.5f};
+
+    float rms = SignalProcessor::calculateRMS(samples);
+
+    EXPECT_TRUE(std::isfinite(rms)) << "RMS must never return Inf (got " << rms << ")";
+    EXPECT_GE(rms, 0.0f);
+    EXPECT_NEAR(rms, std::sqrt(0.75f / 4.0f), 1e-5f);
 }
 
 // Test: Correlation with NaN — result in valid range or NaN

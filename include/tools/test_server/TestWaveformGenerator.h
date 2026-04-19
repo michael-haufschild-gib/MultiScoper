@@ -1,5 +1,5 @@
 /*
-    Oscil - Test Waveform Generator
+    MultiScoper - Test Waveform Generator
     Shared waveform generation utilities for test server handlers
 */
 
@@ -11,14 +11,16 @@
 
 #include <string>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
  * Generate a test waveform into the given audio buffer.
  *
  * Supported waveform types: "sine", "square", "triangle", "sawtooth",
- * "noise", "dc", "silence" (or any unknown type).
+ * "noise", "dc", "silence". Unknown types fall back to silence, which
+ * is fine for generate-as-best-effort usage. Callers that need to
+ * reject typos should check isValidWaveformType() before calling.
  *
  * @param buffer      Output buffer (must be pre-allocated with desired channel/sample count)
  * @param waveformType One of the supported type strings
@@ -30,6 +32,17 @@ void generateTestWaveform(juce::AudioBuffer<float>& buffer, const std::string& w
                           float amplitude, float sampleRate);
 
 /**
+ * Check whether a string names a supported waveform type.
+ *
+ * Use this before generateTestWaveform when a typo'd type should be
+ * rejected with an error rather than silently degraded to silence —
+ * the HTTP handlers that echo waveformType back in their success
+ * response can mislead callers into thinking their data was injected
+ * when in fact it was zero-filled.
+ */
+bool isValidWaveformType(const std::string& waveformType);
+
+/**
  * Create standard test metadata for audio injection.
  *
  * @param sampleRate  Sample rate in Hz
@@ -37,4 +50,4 @@ void generateTestWaveform(juce::AudioBuffer<float>& buffer, const std::string& w
  */
 CaptureFrameMetadata makeTestMetadata(float sampleRate, int numSamples);
 
-} // namespace oscil
+} // namespace multiscoper

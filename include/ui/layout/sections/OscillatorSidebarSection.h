@@ -1,5 +1,5 @@
 /*
-    Oscil - Oscillator Sidebar Section
+    MultiScoper - Oscillator Sidebar Section
     Collapsible section containing the Add Oscillator button and oscillator list
 */
 
@@ -7,7 +7,7 @@
 
 #include "core/Oscillator.h"
 #include "core/ServiceContext.h"
-#include "ui/components/OscilButton.h"
+#include "ui/components/MultiScoperButton.h"
 #include "ui/components/TestId.h"
 #include "ui/components/ThemedComponent.h"
 #include "ui/layout/sections/DynamicHeightContent.h"
@@ -19,13 +19,13 @@
 
 #include <functional>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
  * Oscillator section component for the sidebar
  * Contains the Add Oscillator button and the oscillator list with filter tabs
- * Designed to be used inside an OscilAccordion for collapsibility
+ * Designed to be used inside an MultiScoperAccordion for collapsibility
  */
 class OscillatorSidebarSection
     : public ThemedComponent
@@ -87,14 +87,14 @@ public:
 private:
     void setupComponents();
 
-    std::unique_ptr<OscilButton> addOscillatorButton_;
+    std::unique_ptr<MultiScoperButton> addOscillatorButton_;
     std::unique_ptr<OscillatorListComponent> oscillatorList_;
 
     juce::ListenerList<Listener> listeners_;
 
-    OSCIL_TESTABLE();
+    MULTISCOPER_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscillatorSidebarSection)
 };
 
-} // namespace oscil
+} // namespace multiscoper

@@ -1,5 +1,5 @@
 /*
-    Oscil Test Harness - Performance Metrics Collection
+    MultiScoper Test Harness - Performance Metrics Collection
     Monitors FPS, CPU usage, and memory for performance testing.
 */
 
@@ -12,7 +12,7 @@
 #include <deque>
 #include <mutex>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 /**
@@ -149,4 +149,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TestMetrics)
 };
 
-} // namespace oscil::test
+} // namespace multiscoper::test

@@ -1,5 +1,5 @@
 /*
-    Oscil - Waveform Stack
+    MultiScoper - Waveform Stack
     Manages multiple waveform components within a pane body
 */
 
@@ -18,7 +18,7 @@
 #include <memory>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 // Forward declarations
@@ -121,9 +121,9 @@ private:
     static constexpr int MIN_WAVEFORM_HEIGHT = 100;
 
     // TestIdSupport
-    OSCIL_TESTABLE();
+    MULTISCOPER_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WaveformStack)
 };
 
-} // namespace oscil
+} // namespace multiscoper

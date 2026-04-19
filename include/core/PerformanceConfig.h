@@ -1,5 +1,5 @@
 /*
-    Oscil - Rendering Mode and Performance Metrics
+    MultiScoper - Rendering Mode and Performance Metrics
     Types used by the rendering pipeline and status bar
 */
 
@@ -9,7 +9,7 @@
 
 #include <cstdint>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -49,4 +49,4 @@ struct PerformanceMetrics
     int activeSources = 0;        // Number of active sources
 };
 
-} // namespace oscil
+} // namespace multiscoper

@@ -1,5 +1,5 @@
 /*
-    Oscil - Coordinator State Tests
+    MultiScoper - Coordinator State Tests
     Tests for coordinator state retrieval and refresh operations
 */
 
@@ -7,13 +7,13 @@
 #include "ui/layout/SourceCoordinator.h"
 #include "ui/theme/ThemeCoordinator.h"
 
-#include "OscilTestFixtures.h"
+#include "MultiScoperTestFixtures.h"
 
 #include <atomic>
 #include <gtest/gtest.h>
 
-using namespace oscil;
-using namespace oscil::test;
+using namespace multiscoper;
+using namespace multiscoper::test;
 
 // =============================================================================
 // SourceCoordinator State Tests

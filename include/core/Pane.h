@@ -1,5 +1,5 @@
 /*
-    Oscil - Pane Model
+    MultiScoper - Pane Model
     Container for grouping oscillators in the visualization layout
 */
 
@@ -13,7 +13,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -309,4 +309,4 @@ inline const juce::Identifier ColumnIndex{"columnIndex"};
 inline const juce::Identifier ColumnLayout{"columnLayout"};
 } // namespace PaneIds
 
-} // namespace oscil
+} // namespace multiscoper

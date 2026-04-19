@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class WindowLayoutTest : public ::testing::Test
 {

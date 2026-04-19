@@ -1,19 +1,17 @@
 /*
-    Oscil - Oscillator List Component Tests
+    MultiScoper - Oscillator List Component Tests
     Tests for OscillatorListComponent logic
 */
 
 #include "core/Oscillator.h"
 #include "core/interfaces/IInstanceRegistry.h"
 #include "ui/components/InlineEditLabel.h"
-#include "ui/components/SegmentedButtonBar.h"
 #include "ui/panels/OscillatorListComponent.h"
 #include "ui/panels/OscillatorListItem.h"
-#include "ui/panels/OscillatorListToolbar.h"
 #include "ui/theme/ThemeManager.h"
 
-#include "OscilTestFixtures.h"
-#include "OscilTestUtils.h"
+#include "MultiScoperTestFixtures.h"
+#include "MultiScoperTestUtils.h"
 #include "TestElementRegistry.h"
 #include "rendering/ShaderRegistry.h"
 
@@ -21,25 +19,13 @@
 
 #include <gtest/gtest.h>
 
-namespace oscil
+namespace multiscoper
 {
 
-using namespace oscil::test;
+using namespace multiscoper::test;
 
 namespace
 {
-
-// Find the first child component of the given type in parent. Returns nullptr if none.
-template <typename T>
-T* findChildOfType(juce::Component& parent)
-{
-    for (int i = 0; i < parent.getNumChildComponents(); ++i)
-    {
-        if (auto* typed = dynamic_cast<T*>(parent.getChildComponent(i)))
-            return typed;
-    }
-    return nullptr;
-}
 
 // Locate the scrolling container inside an OscillatorListComponent by its stable componentID.
 juce::Component* findListContainer(OscillatorListComponent& list)
@@ -147,16 +133,10 @@ protected:
     std::unique_ptr<MockInstanceRegistry> mockRegistry_;
 };
 
-TEST_F(OscillatorListComponentTest, ToolbarConstruction)
-{
-    OscillatorListToolbar toolbar(getThemeService());
-    EXPECT_EQ(oscil::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_toolbar"), &toolbar);
-}
-
 TEST_F(OscillatorListComponentTest, Construction)
 {
     OscillatorListComponent list(getThemeService(), getRegistry());
-    EXPECT_EQ(oscil::test::TestElementRegistry::getInstance().findElement("oscillatorList"), &list);
+    EXPECT_EQ(multiscoper::test::TestElementRegistry::getInstance().findElement("oscillatorList"), &list);
     EXPECT_EQ(list.getDisplayedItemCount(), 0u);
 }
 
@@ -179,8 +159,8 @@ TEST_F(OscillatorListComponentTest, RefreshListPopulatesItems)
     list.refreshList(oscillators);
 
     // Verify items are created by checking TestElementRegistry
-    auto* item0 = oscil::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_item_0");
-    auto* item1 = oscil::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_item_1");
+    auto* item0 = multiscoper::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_item_0");
+    auto* item1 = multiscoper::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_item_1");
     EXPECT_NE(item0, nullptr);
     EXPECT_NE(item1, nullptr);
 
@@ -189,42 +169,6 @@ TEST_F(OscillatorListComponentTest, RefreshListPopulatesItems)
     auto* container = findListContainer(list);
     ASSERT_NE(container, nullptr);
     EXPECT_EQ(container->getNumChildComponents(), 2);
-}
-
-TEST_F(OscillatorListComponentTest, FilteringVisibility)
-{
-    OscillatorListComponent list(getThemeService(), getRegistry());
-
-    Oscillator visibleOsc;
-    visibleOsc.setName("Visible");
-    visibleOsc.setVisible(true);
-    visibleOsc.setOrderIndex(0);
-
-    Oscillator hiddenOsc;
-    hiddenOsc.setName("Hidden");
-    hiddenOsc.setVisible(false);
-    hiddenOsc.setOrderIndex(1);
-
-    std::vector<Oscillator> oscillators = {visibleOsc, hiddenOsc};
-
-    // 1. All mode — both items displayed.
-    list.filterModeChanged(OscillatorFilterMode::All);
-    list.refreshList(oscillators);
-    EXPECT_EQ(list.getDisplayedItemCount(), 2u);
-    EXPECT_NE(oscil::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_item_0"), nullptr);
-    EXPECT_NE(oscil::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_item_1"), nullptr);
-
-    // 2. Visible mode — hidden osc is removed.
-    list.filterModeChanged(OscillatorFilterMode::Visible);
-    EXPECT_EQ(list.getDisplayedItemCount(), 1u);
-    EXPECT_NE(oscil::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_item_0"), nullptr);
-    EXPECT_EQ(oscil::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_item_1"), nullptr);
-
-    // 3. Hidden mode — only the hidden osc is shown, re-indexed to position 0.
-    list.filterModeChanged(OscillatorFilterMode::Hidden);
-    EXPECT_EQ(list.getDisplayedItemCount(), 1u);
-    EXPECT_NE(oscil::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_item_0"), nullptr);
-    EXPECT_EQ(oscil::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_item_1"), nullptr);
 }
 
 TEST_F(OscillatorListComponentTest, SelectionPropagatesToListener)
@@ -375,47 +319,7 @@ TEST_F(OscillatorListComponentTest, MoveRequestEmitsReorderWithinBounds)
     list.oscillatorMoveRequested(osc0.getId(), -1);
     EXPECT_EQ(listener.reorderedCount, 1);
 
-    // Reorder suppressed while a non-All filter is active.
-    list.filterModeChanged(OscillatorFilterMode::Visible);
-    list.oscillatorMoveRequested(osc1.getId(), -1);
-    EXPECT_EQ(listener.reorderedCount, 1) << "Suppressed under Visible filter";
-    list.filterModeChanged(OscillatorFilterMode::Hidden);
-    list.oscillatorMoveRequested(osc1.getId(), 1);
-    EXPECT_EQ(listener.reorderedCount, 1) << "Suppressed under Hidden filter";
-    // Re-enable All — reorder resumes.
-    list.filterModeChanged(OscillatorFilterMode::All);
-    list.oscillatorMoveRequested(osc1.getId(), -1);
-    EXPECT_EQ(listener.reorderedCount, 2) << "Resumes when filter returns to All";
-
     list.removeListener(&listener);
-}
-
-TEST_F(OscillatorListComponentTest, ToolbarCountBadgeReflectsVisibleTotals)
-{
-    OscillatorListComponent list(getThemeService(), getRegistry());
-
-    Oscillator visible0;
-    visible0.setVisible(true);
-    visible0.setOrderIndex(0);
-    Oscillator hidden1;
-    hidden1.setVisible(false);
-    hidden1.setOrderIndex(1);
-    Oscillator visible2;
-    visible2.setVisible(true);
-    visible2.setOrderIndex(2);
-
-    list.refreshList({visible0, hidden1, visible2});
-
-    // Locate toolbar as child; it's the first OscillatorListToolbar inside list.
-    auto* toolbar = findChildOfType<OscillatorListToolbar>(list);
-    ASSERT_NE(toolbar, nullptr);
-    EXPECT_EQ(toolbar->getTotalCount(), 3);
-    EXPECT_EQ(toolbar->getVisibleCount(), 2);
-
-    // Refresh with an empty set — counts collapse to 0.
-    list.refreshList({});
-    EXPECT_EQ(toolbar->getTotalCount(), 0);
-    EXPECT_EQ(toolbar->getVisibleCount(), 0);
 }
 
 TEST_F(OscillatorListComponentTest, EmptyStateHidesViewportWhenNoItems)
@@ -496,4 +400,4 @@ TEST_F(OscillatorListComponentTest, ItemExpansionUpdatesListLayout)
     EXPECT_EQ(container->getHeight(), OscillatorListItemComponent::EXPANDED_HEIGHT);
 }
 
-} // namespace oscil
+} // namespace multiscoper

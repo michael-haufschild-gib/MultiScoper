@@ -1,5 +1,5 @@
-# Oscil Test Configuration
-# Defines the OscilTests executable, test sources, lint test targets,
+# MultiScoper Test Configuration
+# Defines the MultiScoperTests executable, test sources, lint test targets,
 # and test harness build option.
 
 enable_testing()
@@ -12,7 +12,7 @@ CPMAddPackage(
 
 # rapidcheck — property-based testing, test-only dependency.
 #
-# Rapidcheck is linked only into OscilTests (see target_link_libraries below).
+# Rapidcheck is linked only into MultiScoperTests (see target_link_libraries below).
 # Plugin artifacts (VST3 / AU / CLAP / Standalone), the fuzzer subtree, RTSan
 # builds, and the release preset do NOT fetch or link rapidcheck.
 #
@@ -30,7 +30,7 @@ CPMAddPackage(
 )
 
 # Test source files
-set(OSCIL_TEST_SOURCES
+set(MULTISCOPER_TEST_SOURCES
     # Signal processor tests
     tests/test_signal_processor.cpp
     tests/test_signal_processor_edge.cpp
@@ -146,24 +146,24 @@ set(OSCIL_TEST_SOURCES
     tests/test_plugin_editor.cpp
 
     # UI component widget tests
-    tests/test_oscil_button.cpp
-    tests/test_oscil_toggle.cpp
-    tests/test_oscil_dropdown.cpp
-    tests/test_oscil_accordion.cpp
-    tests/test_oscil_badge.cpp
-    tests/test_oscil_checkbox.cpp
-    tests/test_oscil_colorpicker.cpp
-    tests/test_oscil_colorswatches.cpp
-    tests/test_oscil_meterbar.cpp
-    tests/test_oscil_modal.cpp
-    tests/test_oscil_radiobutton.cpp
-    tests/test_oscil_slider.cpp
-    tests/test_oscil_tabs.cpp
-    tests/test_oscil_textfield.cpp
+    tests/test_multiscoper_button.cpp
+    tests/test_multiscoper_toggle.cpp
+    tests/test_multiscoper_dropdown.cpp
+    tests/test_multiscoper_accordion.cpp
+    tests/test_multiscoper_badge.cpp
+    tests/test_multiscoper_checkbox.cpp
+    tests/test_multiscoper_colorpicker.cpp
+    tests/test_multiscoper_colorswatches.cpp
+    tests/test_multiscoper_meterbar.cpp
+    tests/test_multiscoper_modal.cpp
+    tests/test_multiscoper_radiobutton.cpp
+    tests/test_multiscoper_slider.cpp
+    tests/test_multiscoper_tabs.cpp
+    tests/test_multiscoper_textfield.cpp
     tests/test_oscillator_list_component.cpp
     tests/test_oscillator_list_item.cpp
     tests/test_section_header.cpp
-    tests/test_oscil_look_and_feel.cpp
+    tests/test_multiscoper_look_and_feel.cpp
     tests/test_oscillator_color_dialog.cpp
     tests/test_oscillator_config_dialog.cpp
     tests/test_pane_closing_bug.cpp
@@ -171,6 +171,7 @@ set(OSCIL_TEST_SOURCES
     tests/test_select_pane_dialog.cpp
     tests/test_dialog_manager.cpp
     tests/test_oscillator_panel_controller.cpp
+    tests/test_key_passthrough.cpp
 
     # Concurrency primitives
     tests/test_seqlock.cpp
@@ -179,16 +180,17 @@ set(OSCIL_TEST_SOURCES
     # UI logic controllers
     tests/test_magnetic_snap_controller.cpp
 
-    # OscilState unit tests
-    tests/test_oscil_state.cpp
+    # MultiScoperState unit tests
+    tests/test_multiscoper_state.cpp
 
     # Schema migration framework and fixture-driven end-to-end migrations
     tests/test_schema_migration.cpp
-    tests/test_oscil_state_migration.cpp
+    tests/test_multiscoper_state_migration.cpp
 
     # Integration tests
     tests/test_state_integration.cpp
     tests/test_processor_integration.cpp
+    tests/test_cross_session_source_binding.cpp
 
     # Global preferences
     tests/test_global_preferences.cpp
@@ -209,18 +211,18 @@ set(OSCIL_TEST_SOURCES
     tests/test_shared_capture_buffer_properties.cpp
 )
 
-add_executable(OscilTests
+add_executable(MultiScoperTests
     tests/test_main.cpp
-    ${OSCIL_TEST_SOURCES}
+    ${MULTISCOPER_TEST_SOURCES}
 
     # Test Harness Dependencies
     test_harness/src/TestElementRegistry.cpp
 
     # Source files (from Sources.cmake)
-    ${OSCIL_SOURCES}
+    ${MULTISCOPER_SOURCES}
 )
 
-target_include_directories(OscilTests
+target_include_directories(MultiScoperTests
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -229,9 +231,9 @@ target_include_directories(OscilTests
         ${httplib_SOURCE_DIR}
 )
 
-target_link_libraries(OscilTests
+target_link_libraries(MultiScoperTests
     PRIVATE
-        OscilBinaryData
+        MultiScoperBinaryData
         GTest::gtest_main  # gtest_main already includes gtest
         rapidcheck
         rapidcheck_gtest   # property-based testing adapter (ADR-011)
@@ -247,39 +249,39 @@ target_link_libraries(OscilTests
         juce::juce_audio_utils
         juce::juce_dsp
         nlohmann_json::nlohmann_json
-        $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:juce::juce_opengl>
-        OscilStrictWarnings
-        OscilWarningSuppressions
+        $<$<BOOL:${MULTISCOPER_ENABLE_OPENGL}>:juce::juce_opengl>
+        MultiScoperStrictWarnings
+        MultiScoperWarningSuppressions
 )
 
 # Apply clang-tidy to test sources
-if(OSCIL_CLANG_TIDY_CMD)
-    get_target_property(TEST_SOURCES OscilTests SOURCES)
+if(MULTISCOPER_CLANG_TIDY_CMD)
+    get_target_property(TEST_SOURCES MultiScoperTests SOURCES)
     foreach(source ${TEST_SOURCES})
         if(source MATCHES "^src/" OR source MATCHES "^tests/" OR source MATCHES "^${CMAKE_CURRENT_SOURCE_DIR}/src/" OR source MATCHES "^${CMAKE_CURRENT_SOURCE_DIR}/tests/")
-             set_source_files_properties(${source} PROPERTIES CXX_CLANG_TIDY "${OSCIL_CLANG_TIDY_CMD}")
+             set_source_files_properties(${source} PROPERTIES CXX_CLANG_TIDY "${MULTISCOPER_CLANG_TIDY_CMD}")
         endif()
     endforeach()
 endif()
 
-target_compile_definitions(OscilTests
+target_compile_definitions(MultiScoperTests
     PRIVATE
         JUCE_STANDALONE_APPLICATION=1
         JUCE_USE_CURL=0
         JUCE_WEB_BROWSER=0
-        OSCIL_ENABLE_TEST_IDS=1
-        $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:OSCIL_ENABLE_OPENGL=1>
+        MULTISCOPER_ENABLE_TEST_IDS=1
+        $<$<BOOL:${MULTISCOPER_ENABLE_OPENGL}>:MULTISCOPER_ENABLE_OPENGL=1>
 )
 
 # Apply RTSan to tests (tests are executables, not shared libraries)
-if(OSCIL_ENABLE_RTSAN AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 20)
-    target_compile_options(OscilTests PRIVATE -fsanitize=realtime)
-    target_link_options(OscilTests PRIVATE -fsanitize=realtime)
+if(MULTISCOPER_ENABLE_RTSAN AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 20)
+    target_compile_options(MultiScoperTests PRIVATE -fsanitize=realtime)
+    target_link_options(MultiScoperTests PRIVATE -fsanitize=realtime)
 endif()
 
 include(GoogleTest)
 # Per-test TIMEOUT is generous by design. CTestCostData shows every test
-# normally finishes well under 1s, but ctest re-invokes the OscilTests
+# normally finishes well under 1s, but ctest re-invokes the MultiScoperTests
 # binary 1900+ times per suite run. On macOS that occasionally produces
 # multi-second startup stalls (Spotlight re-index / Gatekeeper verify /
 # stdout pipe buffering under pressure). A tight 30s ceiling was turning
@@ -287,7 +289,7 @@ include(GoogleTest)
 # milliseconds when run individually. 60s still surfaces real hangs while
 # tolerating the macOS cold-launch tax. Do not raise this further without
 # data — the goal is flake tolerance, not hiding slow tests.
-gtest_discover_tests(OscilTests
+gtest_discover_tests(MultiScoperTests
     DISCOVERY_TIMEOUT 30
     PROPERTIES TIMEOUT 60
 )
@@ -296,56 +298,56 @@ gtest_discover_tests(OscilTests
 # Lint Test Targets
 # ============================================================================
 
-if(OSCIL_ENABLE_SIZE_LIMIT_LINT)
+if(MULTISCOPER_ENABLE_SIZE_LIMIT_LINT)
     add_test(NAME SizeLimitsLint
-        COMMAND ${Python3_EXECUTABLE} ${OSCIL_SIZE_LINT_SCRIPT}
+        COMMAND ${Python3_EXECUTABLE} ${MULTISCOPER_SIZE_LINT_SCRIPT}
             --root ${CMAKE_CURRENT_SOURCE_DIR}
             --paths include src tests test_harness
-            --max-file-lines ${OSCIL_MAX_FILE_LINES}
-            --max-function-lines ${OSCIL_MAX_FUNCTION_LINES}
+            --max-file-lines ${MULTISCOPER_MAX_FILE_LINES}
+            --max-function-lines ${MULTISCOPER_MAX_FUNCTION_LINES}
     )
     set_tests_properties(SizeLimitsLint PROPERTIES LABELS "lint")
 endif()
 
-if(OSCIL_ENABLE_TEST_QUALITY_LINT)
+if(MULTISCOPER_ENABLE_TEST_QUALITY_LINT)
     add_test(NAME TestQualityLint
-        COMMAND ${Python3_EXECUTABLE} ${OSCIL_TEST_QUALITY_LINT_SCRIPT}
+        COMMAND ${Python3_EXECUTABLE} ${MULTISCOPER_TEST_QUALITY_LINT_SCRIPT}
             --root ${CMAKE_CURRENT_SOURCE_DIR}
             --paths tests
-            --min-assertions ${OSCIL_MIN_ASSERTIONS_PER_TEST}
+            --min-assertions ${MULTISCOPER_MIN_ASSERTIONS_PER_TEST}
     )
     set_tests_properties(TestQualityLint PROPERTIES LABELS "lint")
 endif()
 
-if(OSCIL_ENABLE_SOURCE_REGISTRY_LINT)
+if(MULTISCOPER_ENABLE_SOURCE_REGISTRY_LINT)
     add_test(NAME SourceRegistryLint
-        COMMAND ${Python3_EXECUTABLE} ${OSCIL_SOURCE_REGISTRY_LINT_SCRIPT}
+        COMMAND ${Python3_EXECUTABLE} ${MULTISCOPER_SOURCE_REGISTRY_LINT_SCRIPT}
             --root ${CMAKE_CURRENT_SOURCE_DIR}
     )
     set_tests_properties(SourceRegistryLint PROPERTIES LABELS "lint")
 endif()
 
-if(OSCIL_ENABLE_TODO_LINT)
+if(MULTISCOPER_ENABLE_TODO_LINT)
     add_test(NAME TodoLint
-        COMMAND ${Python3_EXECUTABLE} ${OSCIL_TODO_LINT_SCRIPT}
+        COMMAND ${Python3_EXECUTABLE} ${MULTISCOPER_TODO_LINT_SCRIPT}
             --root ${CMAKE_CURRENT_SOURCE_DIR}
             --paths include src
     )
     set_tests_properties(TodoLint PROPERTIES LABELS "lint")
 endif()
 
-if(OSCIL_ENABLE_ARCHITECTURE_LINT)
+if(MULTISCOPER_ENABLE_ARCHITECTURE_LINT)
     add_test(NAME ArchitectureLint
-        COMMAND ${Python3_EXECUTABLE} ${OSCIL_ARCHITECTURE_LINT_SCRIPT}
+        COMMAND ${Python3_EXECUTABLE} ${MULTISCOPER_ARCHITECTURE_LINT_SCRIPT}
             --root ${CMAKE_CURRENT_SOURCE_DIR}
             --paths include src
     )
     set_tests_properties(ArchitectureLint PROPERTIES LABELS "lint")
 endif()
 
-if(OSCIL_ENABLE_COMMENT_LINT)
+if(MULTISCOPER_ENABLE_COMMENT_LINT)
     add_test(NAME CommentLint
-        COMMAND ${Python3_EXECUTABLE} ${OSCIL_COMMENT_LINT_SCRIPT}
+        COMMAND ${Python3_EXECUTABLE} ${MULTISCOPER_COMMENT_LINT_SCRIPT}
             --root ${CMAKE_CURRENT_SOURCE_DIR}
             --paths include src tests test_harness
             --doc-paths include
@@ -354,28 +356,53 @@ if(OSCIL_ENABLE_COMMENT_LINT)
     set_tests_properties(CommentLint PROPERTIES LABELS "lint")
 endif()
 
-if(OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT)
+if(MULTISCOPER_ENABLE_FORBIDDEN_PATTERNS_LINT)
     add_test(NAME ForbiddenPatternsLint
-        COMMAND ${Python3_EXECUTABLE} ${OSCIL_FORBIDDEN_PATTERNS_LINT_SCRIPT}
+        COMMAND ${Python3_EXECUTABLE} ${MULTISCOPER_FORBIDDEN_PATTERNS_LINT_SCRIPT}
             --root ${CMAKE_CURRENT_SOURCE_DIR}
             --paths include src
     )
     set_tests_properties(ForbiddenPatternsLint PROPERTIES LABELS "lint")
 endif()
 
-if(OSCIL_ENABLE_HARNESS_MT_CAPTURE_LINT)
+if(MULTISCOPER_ENABLE_HARNESS_MT_CAPTURE_LINT)
     add_test(NAME HarnessMtCaptureLint
-        COMMAND ${Python3_EXECUTABLE} ${OSCIL_HARNESS_MT_CAPTURE_LINT_SCRIPT}
+        COMMAND ${Python3_EXECUTABLE} ${MULTISCOPER_HARNESS_MT_CAPTURE_LINT_SCRIPT}
             --root ${CMAKE_CURRENT_SOURCE_DIR}
             --paths test_harness/src test_harness/include
     )
     set_tests_properties(HarnessMtCaptureLint PROPERTIES LABELS "lint")
 endif()
 
+# clang-format check — matches the CI format gate so local ctest surfaces
+# formatting drift before it reaches CI. Skips with a helpful message if
+# clang-format is not on PATH.
+if(MULTISCOPER_ENABLE_FORMAT_LINT)
+    add_test(NAME FormatLint
+        COMMAND ${Python3_EXECUTABLE} ${MULTISCOPER_FORMAT_LINT_SCRIPT}
+            --root ${CMAKE_CURRENT_SOURCE_DIR}
+            --paths include src tests test_harness
+    )
+    set_tests_properties(FormatLint PROPERTIES LABELS "lint")
+endif()
+
+# clang-tidy check — opt-in because it is slow (~1 min on a dev box).
+# Enable via `cmake --preset dev -DMULTISCOPER_ENABLE_CLANG_TIDY_LINT=ON`
+# then `ctest --preset dev -R ClangTidy`.
+if(MULTISCOPER_ENABLE_CLANG_TIDY_LINT)
+    add_test(NAME ClangTidyLint
+        COMMAND ${Python3_EXECUTABLE} ${MULTISCOPER_CLANG_TIDY_LINT_SCRIPT}
+            --root ${CMAKE_CURRENT_SOURCE_DIR}
+            --build-dir ${CMAKE_CURRENT_BINARY_DIR}
+            --paths src
+    )
+    set_tests_properties(ClangTidyLint PROPERTIES LABELS "lint;slow" TIMEOUT 600)
+endif()
+
 # Unit tests for the lint scripts themselves. These seed a synthetic source
 # tree and assert the scripts' exit codes and reports — so regressions of
 # the lint SCRIPTS are caught even if the real repo happens to stay clean.
-if(OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT OR OSCIL_ENABLE_HARNESS_MT_CAPTURE_LINT)
+if(MULTISCOPER_ENABLE_FORBIDDEN_PATTERNS_LINT OR MULTISCOPER_ENABLE_HARNESS_MT_CAPTURE_LINT)
     add_test(NAME LintScriptsUnitTests
         COMMAND ${Python3_EXECUTABLE} -m unittest discover
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/lint

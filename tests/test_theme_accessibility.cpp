@@ -1,5 +1,5 @@
 /*
-    Oscil - Theme Accessibility Tests
+    MultiScoper - Theme Accessibility Tests
     Tests for WCAG contrast validation, theme name safety, and glass-contrast checks
 */
 
@@ -8,7 +8,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class ThemeAccessibilityTest : public ::testing::Test
 {

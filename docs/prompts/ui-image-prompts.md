@@ -1,6 +1,6 @@
-# Oscil Multi-Track Oscilloscope Plugin - UI Image Prompts
+# MultiScoper Multi-Track Oscilloscope Plugin - UI Image Prompts
 
-Optimized prompts for Google Nano Banana (Gemini Image Generation) to create detailed UI mockups for the Oscil audio plugin.
+Optimized prompts for Google Nano Banana (Gemini Image Generation) to create detailed UI mockups for the MultiScoper audio plugin.
 
 ---
 
@@ -209,7 +209,7 @@ A welcoming empty state interface guides new users when no oscillators have been
 
 **Central welcome content:**
 - Large oscilloscope icon (stylized waveform graphic) in muted slate (#475569) at 64px size
-- "Welcome to Oscil" heading in white (#F8FAFC) at 24px
+- "Welcome to MultiScoper" heading in white (#F8FAFC) at 24px
 - Subtext "Multi-Track Oscilloscope for Professional Audio Analysis" in muted gray (#94A3B8)
 - Three-step quick start list:
   1. "Add this plugin to DAW tracks you want to visualize"

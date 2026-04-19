@@ -1,5 +1,5 @@
 /*
-    Oscil - Thread-safety annotation-friendly mutex wrappers.
+    MultiScoper - Thread-safety annotation-friendly mutex wrappers.
 
     Provides Clang thread-safety-analysis-capable wrappers around std::mutex
     and std::shared_mutex. Clang's thread-safety analysis (-Wthread-safety)
@@ -28,41 +28,43 @@
 // ============================================================================
 
 #if defined(__clang__) && (!defined(SWIG))
-    #define OSCIL_THREAD_ANNOTATION_ATTRIBUTE(x) __attribute__((x))
+    #define MULTISCOPER_THREAD_ANNOTATION_ATTRIBUTE(x) __attribute__((x))
 #else
-    #define OSCIL_THREAD_ANNOTATION_ATTRIBUTE(x)
+    #define MULTISCOPER_THREAD_ANNOTATION_ATTRIBUTE(x)
 #endif
 
 // Marks a type as a capability (mutex) recognized by the analysis.
-#define OSCIL_CAPABILITY(x) OSCIL_THREAD_ANNOTATION_ATTRIBUTE(capability(x))
+#define MULTISCOPER_CAPABILITY(x) MULTISCOPER_THREAD_ANNOTATION_ATTRIBUTE(capability(x))
 
 // Marks a field as guarded by the named capability (must be locked when accessed).
-#define OSCIL_GUARDED_BY(x) OSCIL_THREAD_ANNOTATION_ATTRIBUTE(guarded_by(x))
+#define MULTISCOPER_GUARDED_BY(x) MULTISCOPER_THREAD_ANNOTATION_ATTRIBUTE(guarded_by(x))
 
 // Declares that a function requires exclusive ownership of listed capabilities on entry.
-#define OSCIL_REQUIRES(...) OSCIL_THREAD_ANNOTATION_ATTRIBUTE(requires_capability(__VA_ARGS__))
+#define MULTISCOPER_REQUIRES(...) MULTISCOPER_THREAD_ANNOTATION_ATTRIBUTE(requires_capability(__VA_ARGS__))
 
 // Declares shared-ownership requirement on entry.
-#define OSCIL_REQUIRES_SHARED(...) OSCIL_THREAD_ANNOTATION_ATTRIBUTE(requires_shared_capability(__VA_ARGS__))
+#define MULTISCOPER_REQUIRES_SHARED(...) \
+    MULTISCOPER_THREAD_ANNOTATION_ATTRIBUTE(requires_shared_capability(__VA_ARGS__))
 
 // Acquire/release annotations for methods.
-#define OSCIL_ACQUIRE(...) OSCIL_THREAD_ANNOTATION_ATTRIBUTE(acquire_capability(__VA_ARGS__))
-#define OSCIL_RELEASE(...) OSCIL_THREAD_ANNOTATION_ATTRIBUTE(release_capability(__VA_ARGS__))
-#define OSCIL_ACQUIRE_SHARED(...) OSCIL_THREAD_ANNOTATION_ATTRIBUTE(acquire_shared_capability(__VA_ARGS__))
-#define OSCIL_RELEASE_SHARED(...) OSCIL_THREAD_ANNOTATION_ATTRIBUTE(release_shared_capability(__VA_ARGS__))
-#define OSCIL_TRY_ACQUIRE(...) OSCIL_THREAD_ANNOTATION_ATTRIBUTE(try_acquire_capability(__VA_ARGS__))
-#define OSCIL_TRY_ACQUIRE_SHARED(...) OSCIL_THREAD_ANNOTATION_ATTRIBUTE(try_acquire_shared_capability(__VA_ARGS__))
+#define MULTISCOPER_ACQUIRE(...) MULTISCOPER_THREAD_ANNOTATION_ATTRIBUTE(acquire_capability(__VA_ARGS__))
+#define MULTISCOPER_RELEASE(...) MULTISCOPER_THREAD_ANNOTATION_ATTRIBUTE(release_capability(__VA_ARGS__))
+#define MULTISCOPER_ACQUIRE_SHARED(...) MULTISCOPER_THREAD_ANNOTATION_ATTRIBUTE(acquire_shared_capability(__VA_ARGS__))
+#define MULTISCOPER_RELEASE_SHARED(...) MULTISCOPER_THREAD_ANNOTATION_ATTRIBUTE(release_shared_capability(__VA_ARGS__))
+#define MULTISCOPER_TRY_ACQUIRE(...) MULTISCOPER_THREAD_ANNOTATION_ATTRIBUTE(try_acquire_capability(__VA_ARGS__))
+#define MULTISCOPER_TRY_ACQUIRE_SHARED(...) \
+    MULTISCOPER_THREAD_ANNOTATION_ATTRIBUTE(try_acquire_shared_capability(__VA_ARGS__))
 
 // Function must be called without the listed capabilities held (avoids re-entry).
-#define OSCIL_EXCLUDES(...) OSCIL_THREAD_ANNOTATION_ATTRIBUTE(locks_excluded(__VA_ARGS__))
+#define MULTISCOPER_EXCLUDES(...) MULTISCOPER_THREAD_ANNOTATION_ATTRIBUTE(locks_excluded(__VA_ARGS__))
 
 // Marks RAII scoped-lock types so acquire/release on ctor/dtor is understood.
-#define OSCIL_SCOPED_CAPABILITY OSCIL_THREAD_ANNOTATION_ATTRIBUTE(scoped_lockable)
+#define MULTISCOPER_SCOPED_CAPABILITY MULTISCOPER_THREAD_ANNOTATION_ATTRIBUTE(scoped_lockable)
 
 // Disables the analysis for a given function (escape hatch — use sparingly).
-#define OSCIL_NO_THREAD_SAFETY_ANALYSIS OSCIL_THREAD_ANNOTATION_ATTRIBUTE(no_thread_safety_analysis)
+#define MULTISCOPER_NO_THREAD_SAFETY_ANALYSIS MULTISCOPER_THREAD_ANNOTATION_ATTRIBUTE(no_thread_safety_analysis)
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -71,7 +73,7 @@ namespace oscil
  * Behavior is identical to std::mutex — this wrapper only exists so that
  * -Wthread-safety can reason about exclusive ownership of guarded members.
  */
-class OSCIL_CAPABILITY("mutex") Mutex
+class MULTISCOPER_CAPABILITY("mutex") Mutex
 {
 public:
     Mutex() noexcept = default;
@@ -82,12 +84,12 @@ public:
     Mutex(Mutex&&) = delete;
     Mutex& operator=(Mutex&&) = delete;
 
-    void lock() OSCIL_ACQUIRE() { m_.lock(); }
-    void unlock() OSCIL_RELEASE() { m_.unlock(); }
-    bool try_lock() OSCIL_TRY_ACQUIRE(true) { return m_.try_lock(); }
+    void lock() MULTISCOPER_ACQUIRE() { m_.lock(); }
+    void unlock() MULTISCOPER_RELEASE() { m_.unlock(); }
+    bool try_lock() MULTISCOPER_TRY_ACQUIRE(true) { return m_.try_lock(); }
 
     /// Raw access for adapters that need std::unique_lock / std::scoped_lock directly.
-    /// Prefer the oscil::ScopedLock wrapper for annotated code.
+    /// Prefer the multiscoper::ScopedLock wrapper for annotated code.
     std::mutex& native() noexcept { return m_; }
 
 private:
@@ -101,7 +103,7 @@ private:
  * acquire/release are annotated separately so analysis can distinguish
  * writer from reader sections.
  */
-class OSCIL_CAPABILITY("mutex") SharedMutex
+class MULTISCOPER_CAPABILITY("mutex") SharedMutex
 {
 public:
     SharedMutex() noexcept = default;
@@ -113,14 +115,14 @@ public:
     SharedMutex& operator=(SharedMutex&&) = delete;
 
     // Exclusive (writer) operations.
-    void lock() OSCIL_ACQUIRE() { m_.lock(); }
-    void unlock() OSCIL_RELEASE() { m_.unlock(); }
-    bool try_lock() OSCIL_TRY_ACQUIRE(true) { return m_.try_lock(); }
+    void lock() MULTISCOPER_ACQUIRE() { m_.lock(); }
+    void unlock() MULTISCOPER_RELEASE() { m_.unlock(); }
+    bool try_lock() MULTISCOPER_TRY_ACQUIRE(true) { return m_.try_lock(); }
 
     // Shared (reader) operations.
-    void lock_shared() OSCIL_ACQUIRE_SHARED() { m_.lock_shared(); }
-    void unlock_shared() OSCIL_RELEASE_SHARED() { m_.unlock_shared(); }
-    bool try_lock_shared() OSCIL_TRY_ACQUIRE_SHARED(true) { return m_.try_lock_shared(); }
+    void lock_shared() MULTISCOPER_ACQUIRE_SHARED() { m_.lock_shared(); }
+    void unlock_shared() MULTISCOPER_RELEASE_SHARED() { m_.unlock_shared(); }
+    bool try_lock_shared() MULTISCOPER_TRY_ACQUIRE_SHARED(true) { return m_.try_lock_shared(); }
 
     std::shared_mutex& native() noexcept { return m_; }
 
@@ -131,15 +133,15 @@ private:
 /**
  * RAII exclusive scoped lock annotated for thread-safety analysis.
  *
- * Template parameter accepts either oscil::Mutex or oscil::SharedMutex (for
+ * Template parameter accepts either multiscoper::Mutex or multiscoper::SharedMutex (for
  * writer-side locking on a reader-writer mutex).
  */
 template <typename MutexT>
-class OSCIL_SCOPED_CAPABILITY ScopedLock
+class MULTISCOPER_SCOPED_CAPABILITY ScopedLock
 {
 public:
-    explicit ScopedLock(MutexT& m) OSCIL_ACQUIRE(m) : m_(m) { m_.lock(); }
-    ~ScopedLock() OSCIL_RELEASE() { m_.unlock(); }
+    explicit ScopedLock(MutexT& m) MULTISCOPER_ACQUIRE(m) : m_(m) { m_.lock(); }
+    ~ScopedLock() MULTISCOPER_RELEASE() { m_.unlock(); }
 
     ScopedLock(const ScopedLock&) = delete;
     ScopedLock& operator=(const ScopedLock&) = delete;
@@ -150,21 +152,21 @@ private:
     MutexT& m_;
 };
 
-/// Deduction guide: `oscil::ScopedLock lock(mutex_);` without angle brackets.
+/// Deduction guide: `multiscoper::ScopedLock lock(mutex_);` without angle brackets.
 template <typename MutexT>
 ScopedLock(MutexT&) -> ScopedLock<MutexT>;
 
 /**
  * RAII shared (reader) scoped lock annotated for thread-safety analysis.
  *
- * Template parameter must be a shared-capable mutex (oscil::SharedMutex).
+ * Template parameter must be a shared-capable mutex (multiscoper::SharedMutex).
  */
 template <typename SharedMutexT>
-class OSCIL_SCOPED_CAPABILITY ScopedSharedLock
+class MULTISCOPER_SCOPED_CAPABILITY ScopedSharedLock
 {
 public:
-    explicit ScopedSharedLock(SharedMutexT& m) OSCIL_ACQUIRE_SHARED(m) : m_(m) { m_.lock_shared(); }
-    ~ScopedSharedLock() OSCIL_RELEASE() { m_.unlock_shared(); }
+    explicit ScopedSharedLock(SharedMutexT& m) MULTISCOPER_ACQUIRE_SHARED(m) : m_(m) { m_.lock_shared(); }
+    ~ScopedSharedLock() MULTISCOPER_RELEASE() { m_.unlock_shared(); }
 
     ScopedSharedLock(const ScopedSharedLock&) = delete;
     ScopedSharedLock& operator=(const ScopedSharedLock&) = delete;
@@ -175,8 +177,8 @@ private:
     SharedMutexT& m_;
 };
 
-/// Deduction guide: `oscil::ScopedSharedLock lock(mutex_);` without angle brackets.
+/// Deduction guide: `multiscoper::ScopedSharedLock lock(mutex_);` without angle brackets.
 template <typename SharedMutexT>
 ScopedSharedLock(SharedMutexT&) -> ScopedSharedLock<SharedMutexT>;
 
-} // namespace oscil
+} // namespace multiscoper

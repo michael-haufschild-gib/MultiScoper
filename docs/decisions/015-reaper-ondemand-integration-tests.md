@@ -5,7 +5,7 @@ Status: Accepted
 
 ## Context
 
-Oscil ships as VST3, AU, and CLAP. The existing test surface is:
+MultiScoper ships as VST3, AU, and CLAP. The existing test surface is:
 
 1. GoogleTest unit tests (`tests/`) — fast, isolated, no host.
 2. In-process `test_harness/` — loads the plugin in a standalone host we control
@@ -73,8 +73,10 @@ tests/reaper/
   scenarios/*.lua         # one scenario per file
 ```
 
-Results land at `/tmp/oscil_reaper_results.json`; shell script exits non-zero
-on any failure.
+Results land in the host OS temp directory (`$TMPDIR/multiscoper_reaper_results.json`
+on macOS/Linux; `%TEMP%\multiscoper_reaper_results.json` on Windows). The
+entrypoint exposes `MULTISCOPER_REAPER_RESULTS` to let callers override the
+path explicitly. The shell/wrapper script exits non-zero on any failure.
 
 ## Consequences
 

@@ -1,5 +1,5 @@
 /*
-    Oscil - JuceStringHash
+    MultiScoper - JuceStringHash
     Hash functor for juce::String in std::unordered_map
 */
 
@@ -10,7 +10,7 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace oscil
+namespace multiscoper
 {
 
 struct JuceStringHash
@@ -21,4 +21,4 @@ struct JuceStringHash
     }
 };
 
-} // namespace oscil
+} // namespace multiscoper

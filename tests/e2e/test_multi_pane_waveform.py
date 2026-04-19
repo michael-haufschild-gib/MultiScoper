@@ -10,14 +10,14 @@ What bugs these tests catch:
 """
 
 import pytest
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 
 
 class TestMultiPaneRendering:
     """Verify waveforms render correctly across multiple panes."""
 
     def test_waveform_state_reports_pane_data(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: /waveform/state endpoint not including pane-level data,
@@ -33,7 +33,7 @@ class TestMultiPaneRendering:
         assert len(state["panes"]) >= 1, "Should have at least one pane"
 
     def test_two_panes_both_report_data(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: second pane not included in waveform state,
@@ -71,7 +71,7 @@ class TestMultiPaneRendering:
             )
 
     def test_waveform_data_with_audio_in_both_panes(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: audio data only flowing to the first pane, second
@@ -97,7 +97,7 @@ class TestMultiPaneRendering:
         editor.transport_stop()
 
     def test_oscillator_count_per_pane(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: pane reporting wrong oscillator count (off-by-one
@@ -121,7 +121,7 @@ class TestMultiPaneAudioFlow:
     """Verify audio data flows to oscillators in all panes simultaneously."""
 
     def test_moved_oscillator_has_waveform_data(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: oscillator moved to second pane loses its audio data
@@ -151,19 +151,24 @@ class TestMultiPaneAudioFlow:
         wfs0 = editor.wait_for_waveform_data(pane_index=0, timeout_s=5.0)
         assert wfs0[0].get("peakLevel", 0) > 0.05, "Pane 0 should have signal"
 
-        # Pane 1 should also have data (oscillator moved there)
+        # Pane 1 should also have data (oscillator moved there). Previous
+        # version of this assertion was `assert ... or True`, a tautology
+        # that turned the test into a silent-pass. The surrounding
+        # conditionals still handle the "state not exposing pane 1's
+        # waveforms" case by skipping — which is acceptable — but if the
+        # waveform IS exposed, require it to have real data.
         state = editor.get_waveform_state()
         if state and "panes" in state and len(state["panes"]) >= 2:
             pane1_wfs = state["panes"][1].get("waveforms", [])
             if pane1_wfs:
-                assert pane1_wfs[0].get("hasWaveformData") or True, (
+                assert pane1_wfs[0].get("hasWaveformData"), (
                     "Moved oscillator should have waveform data in new pane"
                 )
 
         editor.transport_stop()
 
     def test_move_during_playback_preserves_audio(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: moving oscillator between panes while audio is playing
@@ -202,7 +207,7 @@ class TestMultiPaneAudioFlow:
         editor.transport_stop()
 
     def test_pane_removal_during_playback(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: removing a pane while transport is playing causes the
@@ -231,7 +236,7 @@ class TestMultiPaneAudioFlow:
         editor.transport_stop()
 
     def test_waveform_state_pane_count_matches_api(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: waveform state reporting different pane count than
@@ -255,7 +260,7 @@ class TestMultiPaneAudioFlow:
             )
 
     def test_multiple_oscillators_per_pane_waveform_count(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: waveform state only reporting one waveform per pane

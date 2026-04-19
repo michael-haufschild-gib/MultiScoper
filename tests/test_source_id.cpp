@@ -1,5 +1,5 @@
 /*
-    Oscil - Source ID Tests
+    MultiScoper - Source ID Tests
     Tests for SourceId and InstanceId generation, validation, equality, hashing
 */
 
@@ -9,8 +9,8 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
-using namespace oscil::test;
+using namespace multiscoper;
+using namespace multiscoper::test;
 
 // === SourceId Tests ===
 

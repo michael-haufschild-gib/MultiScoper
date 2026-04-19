@@ -1,5 +1,5 @@
 /*
-    Oscil - Visual Configuration Implementation
+    MultiScoper - Visual Configuration Implementation
 */
 
 #include "rendering/VisualConfiguration.h"
@@ -7,7 +7,7 @@
 #include <cmath>
 #include <map>
 
-namespace oscil
+namespace multiscoper
 {
 
 // toValueTree() and fromValueTree() are in VisualConfigurationSerialization.cpp
@@ -158,4 +158,4 @@ ShaderType idToShaderType(const juce::String& id)
     return ShaderType::Basic2D;
 }
 
-} // namespace oscil
+} // namespace multiscoper

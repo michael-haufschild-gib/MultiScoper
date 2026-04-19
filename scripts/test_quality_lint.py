@@ -83,6 +83,78 @@ EXISTENCE_PATTERNS: List[re.Pattern] = [
     ),
 ]
 
+# Structural (existence-only) matchers inside EXPECT_THAT / ASSERT_THAT.
+# These are matched against the *second argument* of the THAT call — resolved
+# via balanced-paren walking so matchers whose first argument contains commas
+# (e.g. ``EXPECT_THAT(makeVec(1, 2), IsEmpty())``) still classify correctly.
+EXPECT_THAT_EXISTENCE_MATCHER_RE = re.compile(
+    r"^\s*(?:::)?(?:testing::)?"
+    r"(?:NotNull\s*\(\s*\)"
+    r"|Not\s*\(\s*(?:::)?(?:testing::)?IsNull\s*\(\s*\)\s*\)"
+    r"|IsEmpty\s*\(\s*\)"
+    r"|Not\s*\(\s*(?:::)?(?:testing::)?IsEmpty\s*\(\s*\)\s*\))\s*$"
+)
+
+EXPECT_THAT_CALL_RE = re.compile(r"\b(?:EXPECT|ASSERT)_THAT\s*\(")
+
+
+def _split_expect_that_args(sanitized: str, call_start: int) -> Optional[Tuple[str, list[int], int]]:
+    """Given a buffer and the index of ``EXPECT_THAT``/``ASSERT_THAT``, walk
+    balanced parens and return ``(body, depth1_commas, close_idx)`` where
+    ``body`` is the full call text, ``depth1_commas`` are the absolute offsets
+    of every comma seen at depth 1 (arg separators at the outer call level),
+    and ``close_idx`` is the offset of the matching close paren.
+
+    Multiple candidate split points are reported (not just the first depth-1
+    comma) because only parentheses are tracked here — template ``<A, B>``
+    and braced initializer ``{a, b}`` commas will also appear in the list.
+    Callers pick the correct split by trying candidates right-to-left (the
+    matcher is always the last top-level argument).
+    """
+    open_paren = sanitized.find("(", call_start)
+    if open_paren == -1:
+        return None
+    depth = 0
+    commas: list[int] = []
+    i = open_paren
+    while i < len(sanitized):
+        ch = sanitized[i]
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                return sanitized[open_paren + 1 : i], commas, i
+        elif ch == "," and depth == 1:
+            commas.append(i)
+        i += 1
+    return None
+
+
+def _expect_that_is_existence(sanitized: str, call_start: int) -> bool:
+    """True iff the EXPECT_THAT/ASSERT_THAT call at ``call_start`` uses one of
+    the structural-only matchers (NotNull / Not(IsNull) / IsEmpty / Not(IsEmpty)).
+
+    Candidate split points (all depth-1 commas reported by
+    ``_split_expect_that_args``) are tried right-to-left: the matcher is the
+    final top-level argument, so the rightmost split that yields a string
+    matching the existence-matcher regex is correct. This keeps detection
+    robust against commas inside template parameter lists, braced
+    initializers, or nested calls in the first argument (e.g.
+    ``EXPECT_THAT(std::pair<int, int>{1, 2}, IsEmpty())``).
+    """
+    parts = _split_expect_that_args(sanitized, call_start)
+    if parts is None:
+        return False
+    _, commas, close_idx = parts
+    if not commas:
+        return False
+    for comma_idx in reversed(commas):
+        matcher_arg = sanitized[comma_idx + 1 : close_idx]
+        if EXPECT_THAT_EXISTENCE_MATCHER_RE.match(matcher_arg):
+            return True
+    return False
+
 # Tautological assertion patterns — assertions that can NEVER fail.
 # These are worse than shallow tests: they give false confidence.
 TAUTOLOGY_PATTERNS: List[re.Pattern] = [
@@ -244,6 +316,12 @@ def is_existence_only(body: TestBody) -> bool:
 
     for assertion_match in assertions:
         pos = assertion_match.start()
+        # EXPECT_THAT / ASSERT_THAT need balanced-paren argument splitting so
+        # matcher-arg classification is robust to commas in the first argument.
+        if EXPECT_THAT_CALL_RE.match(sanitized, pos):
+            if _expect_that_is_existence(sanitized, pos):
+                continue
+            return False
         is_existence = any(p.match(sanitized, pos) for p in EXISTENCE_PATTERNS)
         if not is_existence:
             return False  # At least one non-existence assertion

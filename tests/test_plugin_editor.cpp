@@ -1,24 +1,24 @@
 /*
-    Oscil - Plugin Editor Tests
+    MultiScoper - Plugin Editor Tests
     Tests for the main plugin editor and its refactored components
 */
 
 #include "core/SharedCaptureBuffer.h"
-#include "ui/components/OscilToggle.h"
+#include "ui/components/MultiScoperToggle.h"
 #include "ui/controllers/OscillatorPanelController.h"
 #include "ui/layout/PaneComponent.h"
 #include "ui/layout/sections/OptionsSection.h"
 #include "ui/layout/sections/TimingSidebarSection.h"
 #include "ui/managers/PerformanceMetricsController.h"
 
-#include "OscilTestFixtures.h"
+#include "MultiScoperTestFixtures.h"
 #include "tools/PluginEditor_Adapters.h"
 
 #include <gtest/gtest.h>
 #include <limits>
 
-using namespace oscil;
-using namespace oscil::test;
+using namespace multiscoper;
+using namespace multiscoper::test;
 
 namespace
 {
@@ -114,9 +114,9 @@ juce::Label* findTimingBpmDisplayLabel(TimingSidebarSection& timingSection)
     return nullptr;
 }
 
-OscilToggle* findToggleByLabel(juce::Component& root, const juce::String& label)
+MultiScoperToggle* findToggleByLabel(juce::Component& root, const juce::String& label)
 {
-    if (auto* toggle = dynamic_cast<OscilToggle*>(&root))
+    if (auto* toggle = dynamic_cast<MultiScoperToggle*>(&root))
     {
         if (toggle->getLabel() == label)
             return toggle;
@@ -150,7 +150,7 @@ const Oscillator* findOscillatorById(const std::vector<Oscillator>& oscillators,
  * Plugin Editor tests using the standardized test fixture.
  * Uses real singletons because many UI components bypass DI.
  */
-class PluginEditorTest : public OscilPluginTestFixture
+class PluginEditorTest : public MultiScoperPluginTestFixture
 {
 };
 

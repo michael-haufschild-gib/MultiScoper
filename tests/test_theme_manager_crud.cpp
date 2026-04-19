@@ -1,5 +1,5 @@
 /*
-    Oscil - Theme Manager CRUD Tests
+    MultiScoper - Theme Manager CRUD Tests
     Tests for creating, reading, updating, and deleting themes
 */
 
@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class ThemeManagerCRUDTest : public ::testing::Test
 {

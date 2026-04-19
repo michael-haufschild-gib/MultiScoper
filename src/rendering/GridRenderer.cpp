@@ -1,5 +1,5 @@
 /*
-    Oscil - Grid Renderer Implementation
+    MultiScoper - Grid Renderer Implementation
 */
 
 #include "rendering/GridRenderer.h"
@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace oscil
+namespace multiscoper
 {
 
 using namespace juce::gl;
@@ -317,4 +317,4 @@ void GridRenderer::render(juce::OpenGLContext& context, const WaveformRenderData
     drawLines(context, zeroLines_, gridColors.gridZeroLine);
 }
 
-} // namespace oscil
+} // namespace multiscoper

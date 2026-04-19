@@ -1,5 +1,5 @@
 /*
-    Oscil - Theme Editor Widgets
+    MultiScoper - Theme Editor Widgets
     Inner helper components used by ThemeEditorComponent: a swatch button
     that launches a color picker callout, and a titled section that groups
     swatches bound to ColorTheme fields. Split from ThemeEditorComponent.cpp
@@ -13,7 +13,7 @@
 
 #include <utility>
 
-namespace oscil
+namespace multiscoper
 {
 
 //==============================================================================
@@ -155,4 +155,4 @@ int ThemeColorSection::getPreferredHeight() const
     return 28 + (static_cast<int>(swatches_.size()) * (ColorSwatchButton::PREFERRED_HEIGHT + 2));
 }
 
-} // namespace oscil
+} // namespace multiscoper

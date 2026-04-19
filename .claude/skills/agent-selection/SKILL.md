@@ -1,6 +1,6 @@
 # Agent Selection Skill
 
-Guide for delegating tasks to specialized subagents in the Oscil audio visualization plugin.
+Guide for delegating tasks to specialized subagents in the MultiScoper audio visualization plugin.
 
 ## Decision Tree
 

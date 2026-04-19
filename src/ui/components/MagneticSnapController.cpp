@@ -1,5 +1,5 @@
 /*
-    Oscil - Magnetic Snap Controller Implementation
+    MultiScoper - Magnetic Snap Controller Implementation
 */
 
 #include "ui/components/MagneticSnapController.h"
@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace oscil
+namespace multiscoper
 {
 
 void MagneticSnapController::setEnabled(bool enabled) { enabled_ = enabled; }
@@ -77,4 +77,4 @@ bool MagneticSnapController::consumeSnapFeedback()
     return false;
 }
 
-} // namespace oscil
+} // namespace multiscoper

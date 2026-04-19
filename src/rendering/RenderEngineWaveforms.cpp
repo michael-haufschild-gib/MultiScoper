@@ -1,5 +1,5 @@
 /*
-    Oscil - RenderEngine Waveform Management
+    MultiScoper - RenderEngine Waveform Management
     Waveform registration, configuration, sync, and quality control
 */
 
@@ -7,7 +7,7 @@
 #include "rendering/subsystems/EffectPipeline.h"
 #include "rendering/subsystems/WaveformPass.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 void RenderEngine::registerWaveform(int waveformId)
@@ -130,4 +130,4 @@ void RenderEngine::setGlobalPostProcessingEnabled(bool enabled)
 
 bool RenderEngine::isGlobalPostProcessingEnabled() const { return effectPipeline_->isGlobalPostProcessingEnabled(); }
 
-} // namespace oscil
+} // namespace multiscoper

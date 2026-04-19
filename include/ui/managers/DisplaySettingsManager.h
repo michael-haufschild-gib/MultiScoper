@@ -1,5 +1,5 @@
 /*
-    Oscil - Display Settings Manager
+    MultiScoper - Display Settings Manager
     Manages global display settings across all panes
 */
 
@@ -12,7 +12,7 @@
 #include <memory>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 // Forward declarations
@@ -107,4 +107,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DisplaySettingsManager)
 };
 
-} // namespace oscil
+} // namespace multiscoper

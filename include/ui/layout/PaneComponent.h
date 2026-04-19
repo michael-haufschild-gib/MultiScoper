@@ -1,5 +1,5 @@
 /*
-    Oscil - Pane Component Header
+    MultiScoper - Pane Component Header
     Container component for oscillator waveforms
 */
 
@@ -18,7 +18,7 @@
 #include <functional>
 #include <memory>
 
-namespace oscil
+namespace multiscoper
 {
 
 class IAudioDataProvider;
@@ -182,7 +182,7 @@ public:
     void highlightOscillator(const OscillatorId& oscillatorId);
 
     // Drag-and-drop identifier
-    static constexpr const char* PANE_DRAG_ID = "OscilPane";
+    static constexpr const char* PANE_DRAG_ID = "MultiScoperPane";
 
     /// Get the waveform component at the given stack index (test access only).
     WaveformComponent* getWaveformAt(size_t index) const;
@@ -224,9 +224,9 @@ private:
     static constexpr int DRAG_THRESHOLD = 5;
 
     // TestIdSupport
-    OSCIL_TESTABLE();
+    MULTISCOPER_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PaneComponent)
 };
 
-} // namespace oscil
+} // namespace multiscoper

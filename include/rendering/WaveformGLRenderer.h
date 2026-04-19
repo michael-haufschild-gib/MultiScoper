@@ -1,5 +1,5 @@
 /*
-    Oscil - Waveform OpenGL Renderer
+    MultiScoper - Waveform OpenGL Renderer
     Implements juce::OpenGLRenderer for GPU-accelerated waveform rendering
 */
 
@@ -8,7 +8,7 @@
 #include <juce_core/juce_core.h>
 #include <juce_graphics/juce_graphics.h>
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     #include "core/dsp/TimingConfig.h"
 
     #include "rendering/VisualConfiguration.h"
@@ -21,7 +21,7 @@
     #include <unordered_map>
     #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 // Forward declarations
@@ -202,6 +202,6 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WaveformGLRenderer)
 };
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

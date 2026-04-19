@@ -1,10 +1,10 @@
 /*
-    Oscil - Oscillator Handler Implementation
+    MultiScoper - Oscillator Handler Implementation
 */
 
 #include "tools/test_server/OscillatorHandler.h"
 
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "core/Oscillator.h"
 #include "core/Pane.h"
 #include "ui/controllers/OscillatorPanelController.h"
@@ -16,7 +16,7 @@
 #include <algorithm>
 #include <utility>
 
-namespace oscil
+namespace multiscoper
 {
 
 namespace
@@ -293,4 +293,4 @@ void OscillatorHandler::handleReorderOscillator(const httplib::Request& req, htt
 
 // handleTestOscillatorReorder is in OscillatorHandlerTests.cpp
 
-} // namespace oscil
+} // namespace multiscoper

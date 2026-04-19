@@ -1,5 +1,5 @@
 /*
-    Oscil - Status Bar Component Implementation
+    MultiScoper - Status Bar Component Implementation
 */
 
 #include "ui/panels/StatusBarComponent.h"
@@ -9,7 +9,7 @@
 #include "ui/theme/ThemeManager.h"
 #include "ui/theme/Typography.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 namespace
@@ -49,7 +49,7 @@ StatusBarComponent::StatusBarComponent(IThemeService& themeService)
         label->setFont(Typography::caption());
         label->setJustificationType(justification);
         addAndMakeVisible(*label);
-        OSCIL_REGISTER_CHILD_TEST_ID(*label, testId);
+        MULTISCOPER_REGISTER_CHILD_TEST_ID(*label, testId);
     };
 
     // Metrics labels are right-aligned so their text hugs the separator side;
@@ -68,14 +68,14 @@ StatusBarComponent::StatusBarComponent(IThemeService& themeService)
     updateSourceLabel();
     updateRenderModeLabel();
 
-#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
-    OSCIL_REGISTER_TEST_ID("statusBar");
+#if defined(TEST_HARNESS) || defined(MULTISCOPER_ENABLE_TEST_IDS)
+    MULTISCOPER_REGISTER_TEST_ID("statusBar");
 #endif
 }
 
 RenderingMode StatusBarComponent::detectRenderingMode()
 {
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     return RenderingMode::OpenGL;
 #else
     return RenderingMode::Software;
@@ -350,4 +350,4 @@ void StatusBarComponent::updateRenderModeLabel()
     renderModeLabel_->setColour(juce::Label::textColourId, theme.textSecondary);
 }
 
-} // namespace oscil
+} // namespace multiscoper

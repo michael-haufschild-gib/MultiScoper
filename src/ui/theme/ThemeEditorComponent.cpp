@@ -1,5 +1,5 @@
 /*
-    Oscil - Theme Editor Component Implementation
+    MultiScoper - Theme Editor Component Implementation
     UI for creating and editing themes
     (Action handlers are in ThemeEditorActions.cpp)
 */
@@ -14,7 +14,7 @@
 
 #include <utility>
 
-namespace oscil
+namespace multiscoper
 {
 
 static constexpr int kLeftPanelWidth = 170;
@@ -29,37 +29,37 @@ static constexpr int kSeparatorPadding = 10;
 
 void ThemeEditorComponent::createButtons()
 {
-    createButton_ = std::make_unique<OscilButton>(getThemeService(), "New", "themeEditor_createBtn");
+    createButton_ = std::make_unique<MultiScoperButton>(getThemeService(), "New", "themeEditor_createBtn");
     createButton_->setVariant(ButtonVariant::Primary);
     createButton_->onClick = [this]() { handleCreateTheme(); };
     addAndMakeVisible(*createButton_);
 
-    cloneButton_ = std::make_unique<OscilButton>(getThemeService(), "Clone", "themeEditor_cloneBtn");
+    cloneButton_ = std::make_unique<MultiScoperButton>(getThemeService(), "Clone", "themeEditor_cloneBtn");
     cloneButton_->setVariant(ButtonVariant::Secondary);
     cloneButton_->onClick = [this]() { handleCloneTheme(); };
     addAndMakeVisible(*cloneButton_);
 
-    deleteButton_ = std::make_unique<OscilButton>(getThemeService(), "Delete", "themeEditor_deleteBtn");
+    deleteButton_ = std::make_unique<MultiScoperButton>(getThemeService(), "Delete", "themeEditor_deleteBtn");
     deleteButton_->setVariant(ButtonVariant::Danger);
     deleteButton_->onClick = [this]() { handleDeleteTheme(); };
     addAndMakeVisible(*deleteButton_);
 
-    importButton_ = std::make_unique<OscilButton>(getThemeService(), "Import", "themeEditor_importBtn");
+    importButton_ = std::make_unique<MultiScoperButton>(getThemeService(), "Import", "themeEditor_importBtn");
     importButton_->setVariant(ButtonVariant::Secondary);
     importButton_->onClick = [this]() { handleImportTheme(); };
     addAndMakeVisible(*importButton_);
 
-    exportButton_ = std::make_unique<OscilButton>(getThemeService(), "Export", "themeEditor_exportBtn");
+    exportButton_ = std::make_unique<MultiScoperButton>(getThemeService(), "Export", "themeEditor_exportBtn");
     exportButton_->setVariant(ButtonVariant::Secondary);
     exportButton_->onClick = [this]() { handleExportTheme(); };
     addAndMakeVisible(*exportButton_);
 
-    applyButton_ = std::make_unique<OscilButton>(getThemeService(), "Apply", "themeEditor_applyBtn");
+    applyButton_ = std::make_unique<MultiScoperButton>(getThemeService(), "Apply", "themeEditor_applyBtn");
     applyButton_->setVariant(ButtonVariant::Primary);
     applyButton_->onClick = [this]() { handleApplyTheme(); };
     addAndMakeVisible(*applyButton_);
 
-    closeButton_ = std::make_unique<OscilButton>(getThemeService(), "Close", "themeEditor_closeBtn");
+    closeButton_ = std::make_unique<MultiScoperButton>(getThemeService(), "Close", "themeEditor_closeBtn");
     closeButton_->setVariant(ButtonVariant::Ghost);
     closeButton_->onClick = [this]() {
         if (closeCallback_)
@@ -70,16 +70,16 @@ void ThemeEditorComponent::createButtons()
 
 ThemeEditorComponent::ThemeEditorComponent(IThemeService& themeService) : ThemedComponent(themeService)
 {
-#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
-    OSCIL_REGISTER_TEST_ID("themeEditor");
+#if defined(TEST_HARNESS) || defined(MULTISCOPER_ENABLE_TEST_IDS)
+    MULTISCOPER_REGISTER_TEST_ID("themeEditor");
 #endif
 
     themeList_ = std::make_unique<juce::ListBox>("Themes", this);
     themeList_->setRowHeight(24);
     addAndMakeVisible(*themeList_);
 
-#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
-    OSCIL_REGISTER_CHILD_TEST_ID(*themeList_, "themeEditor_themeList");
+#if defined(TEST_HARNESS) || defined(MULTISCOPER_ENABLE_TEST_IDS)
+    MULTISCOPER_REGISTER_CHILD_TEST_ID(*themeList_, "themeEditor_themeList");
 #endif
 
     createButtons();
@@ -87,7 +87,7 @@ ThemeEditorComponent::ThemeEditorComponent(IThemeService& themeService) : Themed
     nameLabel_ = std::make_unique<juce::Label>("", "Name:");
     addAndMakeVisible(*nameLabel_);
 
-    nameEditor_ = std::make_unique<OscilTextField>(getThemeService(), "themeEditor_nameField");
+    nameEditor_ = std::make_unique<MultiScoperTextField>(getThemeService(), "themeEditor_nameField");
     nameEditor_->setPlaceholder("Theme Name");
     addAndMakeVisible(*nameEditor_);
 
@@ -117,8 +117,8 @@ ThemeEditorComponent::ThemeEditorComponent(IThemeService& themeService) : Themed
 
 ThemeEditorComponent::~ThemeEditorComponent()
 {
-#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
-    OSCIL_UNREGISTER_CHILD_TEST_ID(*themeList_, "themeEditor_themeList");
+#if defined(TEST_HARNESS) || defined(MULTISCOPER_ENABLE_TEST_IDS)
+    MULTISCOPER_UNREGISTER_CHILD_TEST_ID(*themeList_, "themeEditor_themeList");
 #endif
 }
 
@@ -337,4 +337,4 @@ void ThemeEditorComponent::updateColorSections()
     resized();
 }
 
-} // namespace oscil
+} // namespace multiscoper

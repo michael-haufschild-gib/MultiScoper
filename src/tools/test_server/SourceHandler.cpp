@@ -1,12 +1,12 @@
 /*
-    Oscil - Source Handler Implementation
+    MultiScoper - Source Handler Implementation
 */
 
 #include "tools/test_server/SourceHandler.h"
 
 #include "core/DecimatingCaptureBuffer.h"
 #include "core/InstanceRegistry.h"
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "core/Oscillator.h"
 #include "core/SharedCaptureBuffer.h"
 #include "ui/controllers/OscillatorPanelController.h"
@@ -19,7 +19,7 @@
 
 #include <utility>
 
-namespace oscil
+namespace multiscoper
 {
 
 void SourceHandler::handleGetSources(const httplib::Request& /*req*/, httplib::Response& res)
@@ -273,6 +273,13 @@ void SourceHandler::handleInjectSourceData(const httplib::Request& req, httplib:
             sendJson(res, jsonError("sourceId required"), 400);
             return;
         }
+        if (!isValidWaveformType(waveformType))
+        {
+            // Same reasoning as WaveformHandler::handleInjectTestData —
+            // silent silence-fallback lies to callers.
+            sendJson(res, jsonError("unknown waveform type: " + waveformType), 400);
+            return;
+        }
 
         auto result = runOnMessageThread([this, sourceId, waveformType, frequency, amplitude, numSamples,
                                           sampleRate]() { // NOLINT(bugprone-exception-escape)
@@ -287,4 +294,4 @@ void SourceHandler::handleInjectSourceData(const httplib::Request& req, httplib:
     }
 }
 
-} // namespace oscil
+} // namespace multiscoper

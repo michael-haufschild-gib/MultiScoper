@@ -1,5 +1,5 @@
 /*
-    Oscil - Crosshair Overlay Implementation
+    MultiScoper - Crosshair Overlay Implementation
 */
 
 #include "ui/layout/pane/overlays/CrosshairOverlay.h"
@@ -8,7 +8,7 @@
 
 #include <cmath>
 
-namespace oscil
+namespace multiscoper
 {
 
 CrosshairOverlay::CrosshairOverlay(IThemeService& themeService) : ThemedComponent(themeService)
@@ -20,8 +20,8 @@ CrosshairOverlay::CrosshairOverlay(IThemeService& themeService) : ThemedComponen
 CrosshairOverlay::CrosshairOverlay(IThemeService& themeService, const juce::String& testId)
     : CrosshairOverlay(themeService)
 {
-#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
-    OSCIL_REGISTER_TEST_ID(testId.toRawUTF8());
+#if defined(TEST_HARNESS) || defined(MULTISCOPER_ENABLE_TEST_IDS)
+    MULTISCOPER_REGISTER_TEST_ID(testId.toRawUTF8());
 #else
     juce::ignoreUnused(testId);
 #endif
@@ -170,4 +170,4 @@ bool CrosshairOverlay::hitTest(int /*x*/, int /*y*/)
     return false;
 }
 
-} // namespace oscil
+} // namespace multiscoper

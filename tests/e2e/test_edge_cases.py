@@ -13,14 +13,14 @@ What bugs these tests catch:
 """
 
 import pytest
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 
 
 class TestDialogEdgeCases:
     """Edge cases in dialog interactions."""
 
     def test_close_editor_with_dialog_open(
-        self, editor: OscilTestClient
+        self, editor: MultiScoperTestClient
     ):
         """
         Bug caught: closing editor while dialog is on screen leaks the
@@ -44,7 +44,7 @@ class TestDialogEdgeCases:
         editor.close_editor()
 
     def test_double_click_ok_button(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: double-submit creating two oscillators instead of one.
@@ -83,7 +83,7 @@ class TestDialogEdgeCases:
 class TestEmptyState:
     """Operations when no oscillators or panes exist."""
 
-    def test_editor_opens_with_empty_state(self, editor: OscilTestClient):
+    def test_editor_opens_with_empty_state(self, editor: MultiScoperTestClient):
         """
         Bug caught: editor crashes or shows blank when no oscillators exist.
         """
@@ -91,7 +91,7 @@ class TestEmptyState:
         count = editor.verify_editor_ready()
         assert count > 0, "Editor should have UI elements even with no oscillators"
 
-    def test_sidebar_exists_with_no_oscillators(self, editor: OscilTestClient):
+    def test_sidebar_exists_with_no_oscillators(self, editor: MultiScoperTestClient):
         """
         Bug caught: sidebar not rendering when oscillator list is empty.
         """
@@ -101,7 +101,7 @@ class TestEmptyState:
         assert el.width > 0, "Sidebar should have non-zero width"
 
     def test_add_oscillator_from_empty_state(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: adding first oscillator when pane list is empty
@@ -124,7 +124,7 @@ class TestEmptyState:
 class TestEditorLifecycle:
     """Editor open/close edge cases."""
 
-    def test_rapid_open_close_cycle(self, client: OscilTestClient):
+    def test_rapid_open_close_cycle(self, client: MultiScoperTestClient):
         """
         Bug caught: race condition in editor create/destroy causing
         dangling pointers or leaked components.
@@ -145,7 +145,7 @@ class TestEditorLifecycle:
         assert count > 0, f"Editor should work after {5} open/close cycles"
         client.close_editor()
 
-    def test_double_open_is_idempotent(self, client: OscilTestClient):
+    def test_double_open_is_idempotent(self, client: MultiScoperTestClient):
         """
         Bug caught: opening editor twice creates two windows or crashes.
         """
@@ -168,7 +168,7 @@ class TestReorderEdgeCases:
     """Edge cases in oscillator reorder."""
 
     def test_reorder_single_oscillator(
-        self, editor: OscilTestClient, oscillator: str
+        self, editor: MultiScoperTestClient, oscillator: str
     ):
         """
         Bug caught: reorder with from==to or only 1 item causing index error.
@@ -178,7 +178,7 @@ class TestReorderEdgeCases:
         oscs = editor.get_oscillators()
         assert len(oscs) == 1, "Single oscillator should still exist after no-op reorder"
 
-    def test_reorder_invalid_indices(self, editor: OscilTestClient, two_oscillators):
+    def test_reorder_invalid_indices(self, editor: MultiScoperTestClient, two_oscillators):
         """
         Bug caught: negative or out-of-range indices causing crash.
         """
@@ -193,7 +193,7 @@ class TestStateReset:
     """State reset correctness."""
 
     def test_reset_clears_all_oscillators(
-        self, editor: OscilTestClient, three_oscillators
+        self, editor: MultiScoperTestClient, three_oscillators
     ):
         """
         Bug caught: reset not removing all oscillators (e.g., iterator
@@ -204,7 +204,7 @@ class TestStateReset:
         editor.reset_state()
         editor.wait_for_oscillator_count(0, timeout_s=3.0)
 
-    def test_reset_clears_panes(self, editor: OscilTestClient, source_id: str):
+    def test_reset_clears_panes(self, editor: MultiScoperTestClient, source_id: str):
         """
         Bug caught: reset removing oscillators but leaving orphaned panes.
         """
@@ -222,7 +222,7 @@ class TestStateReset:
             desc="panes to be cleared",
         )
 
-    def test_add_after_reset(self, editor: OscilTestClient, source_id: str):
+    def test_add_after_reset(self, editor: MultiScoperTestClient, source_id: str):
         """
         Bug caught: state manager in bad state after reset, preventing
         new oscillator creation.
@@ -241,7 +241,7 @@ class TestStateReset:
 class TestStatePersistence:
     """State save/load round-trip."""
 
-    def test_save_and_load_state(self, editor: OscilTestClient, source_id: str):
+    def test_save_and_load_state(self, editor: MultiScoperTestClient, source_id: str):
         """
         Bug caught: state serialization losing oscillator properties,
         or deserialization creating oscillators with wrong IDs.
@@ -250,7 +250,7 @@ class TestStatePersistence:
         id2 = editor.add_oscillator(source_id, name="Save Test 2")
         editor.wait_for_oscillator_count(2, timeout_s=3.0)
 
-        path = "/tmp/oscil_e2e_state.xml"
+        path = "/tmp/multiscoper_e2e_state.xml"
         saved = editor.save_state(path)
         if not saved:
             pytest.fail("State save API not available")
@@ -268,7 +268,7 @@ class TestStatePersistence:
         assert "Save Test 2" in names, "Second oscillator name should be restored"
 
     def test_save_load_preserves_source_and_pane_ids(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: source or pane IDs not serialized, so oscillators
@@ -281,7 +281,7 @@ class TestStatePersistence:
         source_before = osc_before.get("sourceId")
         pane_before = osc_before.get("paneId")
 
-        path = "/tmp/oscil_e2e_ids.xml"
+        path = "/tmp/multiscoper_e2e_ids.xml"
         saved = editor.save_state(path)
         if not saved:
             pytest.fail("State save API not available")
@@ -311,7 +311,7 @@ class TestConcurrentOperations:
     """Edge cases involving rapid sequential operations."""
 
     def test_rapid_add_delete_cycle(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: rapid add/delete causing race condition in state
@@ -329,7 +329,7 @@ class TestConcurrentOperations:
         assert len(oscs) == 0, "Should be clean after rapid add/delete cycles"
 
     def test_update_nonexistent_oscillator(
-        self, editor: OscilTestClient
+        self, editor: MultiScoperTestClient
     ):
         """
         Bug caught: updating an oscillator with a bad ID causes crash
@@ -347,7 +347,7 @@ class TestConcurrentOperations:
         )
 
     def test_operations_while_transport_playing(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: adding/removing oscillators while audio callback is
@@ -383,7 +383,7 @@ class TestConcurrentOperations:
         editor.transport_stop()
 
     def test_bpm_change_during_oscillator_add(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: BPM change listener and oscillator add listener
@@ -416,7 +416,7 @@ class TestReorderPersistence:
     """Reorder + save/load edge cases."""
 
     def test_reorder_survives_save_load(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: oscillator order indices not serialized, so order
@@ -436,7 +436,7 @@ class TestReorderPersistence:
         names_reordered = [o["name"] for o in oscs_reordered]
 
         # Save and reload
-        path = "/tmp/oscil_e2e_reorder.xml"
+        path = "/tmp/multiscoper_e2e_reorder.xml"
         saved = editor.save_state(path)
         if not saved:
             pytest.fail("State save API not available")
@@ -459,7 +459,7 @@ class TestReorderPersistence:
 class TestDeleteEdgeCases:
     """Edge cases around oscillator deletion."""
 
-    def test_delete_nonexistent_oscillator(self, editor: OscilTestClient):
+    def test_delete_nonexistent_oscillator(self, editor: MultiScoperTestClient):
         """
         Bug caught: deleting an oscillator with a fabricated ID causes crash
         instead of returning failure.
@@ -472,7 +472,7 @@ class TestDeleteEdgeCases:
         assert state is not None
 
     def test_double_delete_same_oscillator(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: deleting the same oscillator twice causes a dangling
@@ -493,7 +493,7 @@ class TestDeleteEdgeCases:
         assert isinstance(oscs, list), "State should be queryable after double delete"
 
     def test_delete_during_property_update(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: race between delete and update — update finds the
@@ -517,7 +517,7 @@ class TestDeleteEdgeCases:
 class TestStateLoadEdgeCases:
     """Edge cases in state loading."""
 
-    def test_load_state_while_editor_closed(self, client: OscilTestClient):
+    def test_load_state_while_editor_closed(self, client: MultiScoperTestClient):
         """
         Bug caught: loading state when the editor is not open causes crash
         because state listeners try to update non-existent UI components.
@@ -536,7 +536,7 @@ class TestStateLoadEdgeCases:
         assert osc_id is not None
         client.wait_for_oscillator_count(1, timeout_s=3.0)
 
-        path = "/tmp/oscil_e2e_no_editor.xml"
+        path = "/tmp/multiscoper_e2e_no_editor.xml"
         saved = client.save_state(path)
         if not saved:
             client.close_editor()
@@ -557,7 +557,7 @@ class TestStateLoadEdgeCases:
         client.close_editor()
 
     def test_load_state_during_playback(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: loading state while transport is playing causes the
@@ -567,7 +567,7 @@ class TestStateLoadEdgeCases:
         assert osc_id is not None
         editor.wait_for_oscillator_count(1, timeout_s=3.0)
 
-        path = "/tmp/oscil_e2e_play_load.xml"
+        path = "/tmp/multiscoper_e2e_play_load.xml"
         saved = editor.save_state(path)
         if not saved:
             pytest.fail("State save API not available")
@@ -594,7 +594,7 @@ class TestStateLoadEdgeCases:
 class TestSpecialCharacterNames:
     """Test oscillator names with special characters."""
 
-    def test_unicode_name(self, editor: OscilTestClient, source_id: str):
+    def test_unicode_name(self, editor: MultiScoperTestClient, source_id: str):
         """
         Bug caught: name field not handling Unicode, causing mojibake
         or truncation in state serialization.
@@ -607,7 +607,7 @@ class TestSpecialCharacterNames:
         assert osc is not None
         assert osc["name"] == name, f"Expected '{name}', got '{osc['name']}'"
 
-    def test_empty_name(self, editor: OscilTestClient, source_id: str):
+    def test_empty_name(self, editor: MultiScoperTestClient, source_id: str):
         """
         Bug caught: empty name string causes null pointer in name display
         code, or name comparison logic fails on empty string.
@@ -620,7 +620,7 @@ class TestSpecialCharacterNames:
         # Name should be empty string (or a default fallback)
         assert isinstance(osc.get("name"), str)
 
-    def test_long_name(self, editor: OscilTestClient, source_id: str):
+    def test_long_name(self, editor: MultiScoperTestClient, source_id: str):
         """
         Bug caught: very long name overflows a fixed-size buffer or
         causes layout overflow in the sidebar list item.
@@ -641,7 +641,7 @@ class TestSpecialCharacterNames:
         ("  Leading Spaces  ", "leading/trailing whitespace"),
     ])
     def test_special_characters_in_name_roundtrip(
-        self, editor: OscilTestClient, source_id: str, name: str, description: str
+        self, editor: MultiScoperTestClient, source_id: str, name: str, description: str
     ):
         """
         Bug caught: special characters not escaped in state serialization,
@@ -652,7 +652,7 @@ class TestSpecialCharacterNames:
         osc_id = editor.add_oscillator(source_id, name=name)
         assert osc_id is not None, f"Failed to add oscillator with {description}"
 
-        path = f"/tmp/oscil_e2e_special_{hash(name) & 0xFFFF:04x}.xml"
+        path = f"/tmp/multiscoper_e2e_special_{hash(name) & 0xFFFF:04x}.xml"
         saved = editor.save_state(path)
         if not saved:
             pytest.fail("State save API not available")
@@ -675,7 +675,7 @@ class TestMaximumOscillatorCount:
     """Edge cases around large numbers of oscillators."""
 
     def test_ten_oscillators_no_crash(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: UI layout calculation overflows or render pipeline
@@ -703,7 +703,7 @@ class TestMaximumOscillatorCount:
             )
 
     def test_ten_oscillators_all_deletable(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: deleting from a long list corrupts indices, making
@@ -727,7 +727,7 @@ class TestMaximumOscillatorCount:
 class TestEditorCloseWithPendingState:
     """Edge cases around closing editor while state operations are in-flight."""
 
-    def test_close_during_save(self, client: OscilTestClient):
+    def test_close_during_save(self, client: MultiScoperTestClient):
         """
         Bug caught: closing the editor while a state save is in progress
         causes the serializer to access destroyed UI component references.
@@ -746,7 +746,7 @@ class TestEditorCloseWithPendingState:
         client.wait_for_oscillator_count(1, timeout_s=3.0)
 
         # Save and immediately close
-        client.save_state("/tmp/oscil_e2e_close_save.xml")
+        client.save_state("/tmp/multiscoper_e2e_close_save.xml")
         client.close_editor()
 
         # Reopen — should work normally
@@ -755,7 +755,7 @@ class TestEditorCloseWithPendingState:
         assert count > 0, "Editor should reopen after save+close"
         client.close_editor()
 
-    def test_close_during_load(self, client: OscilTestClient):
+    def test_close_during_load(self, client: MultiScoperTestClient):
         """
         Bug caught: closing editor during state load causes the loader
         to create oscillators whose UI components are already destroyed.
@@ -774,7 +774,7 @@ class TestEditorCloseWithPendingState:
         assert osc_id
         client.wait_for_oscillator_count(1, timeout_s=3.0)
 
-        path = "/tmp/oscil_e2e_close_load.xml"
+        path = "/tmp/multiscoper_e2e_close_load.xml"
         saved = client.save_state(path)
         if not saved:
             client.close_editor()
@@ -802,7 +802,7 @@ class TestMoveAndDeleteRace:
     """Edge cases combining move and delete operations."""
 
     def test_move_then_immediate_delete(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: moving an oscillator to a new pane and immediately
@@ -830,7 +830,7 @@ class TestMoveAndDeleteRace:
         assert isinstance(panes, list), "Panes should be queryable"
 
     def test_delete_during_save(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: deleting an oscillator while a state save is in progress
@@ -842,7 +842,7 @@ class TestMoveAndDeleteRace:
         editor.wait_for_oscillator_count(1, timeout_s=3.0)
 
         # Fire save and delete in rapid succession
-        path = "/tmp/oscil_e2e_del_save_race.xml"
+        path = "/tmp/multiscoper_e2e_del_save_race.xml"
         editor.save_state(path)
         editor.delete_oscillator(osc_id)
 
@@ -863,7 +863,7 @@ class TestStressOperations:
     """High-frequency operations that stress thread safety boundaries."""
 
     def test_rapid_oscillator_property_updates_during_playback(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: rapid property updates during audio callback cause torn
@@ -901,7 +901,7 @@ class TestStressOperations:
         editor.transport_stop()
 
     def test_add_move_delete_cycle_across_panes(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: creating oscillator in pane A, moving to pane B, deleting,
@@ -946,7 +946,7 @@ class TestStressOperations:
         editor.transport_stop()
 
     def test_editor_close_reopen_during_state_save_load(
-        self, client: OscilTestClient
+        self, client: MultiScoperTestClient
     ):
         """
         Bug caught: closing editor while a state save is in progress, then
@@ -967,7 +967,7 @@ class TestStressOperations:
             client.add_oscillator(sources[0]["id"], name=f"Stress {i}")
         client.wait_for_oscillator_count(3, timeout_s=5.0)
 
-        path = "/tmp/oscil_e2e_stress_close_save.xml"
+        path = "/tmp/multiscoper_e2e_stress_close_save.xml"
 
         # Rapid save → close → open → load cycle
         for cycle in range(3):
@@ -986,7 +986,7 @@ class TestStressOperations:
         client.close_editor()
 
     def test_simultaneous_pane_and_oscillator_operations(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: adding a pane while oscillators are being added causes
@@ -1029,7 +1029,7 @@ class TestAPIRobustness:
     """Verify API endpoints handle invalid inputs without crashing."""
 
     def test_add_oscillator_with_invalid_source(
-        self, editor: OscilTestClient
+        self, editor: MultiScoperTestClient
     ):
         """
         Bug caught: add_oscillator with a nonexistent sourceId causes
@@ -1040,7 +1040,7 @@ class TestAPIRobustness:
         state = editor.get_transport_state()
         assert state is not None, "Harness should survive invalid source ID"
 
-    def test_click_nonexistent_element(self, editor: OscilTestClient):
+    def test_click_nonexistent_element(self, editor: MultiScoperTestClient):
         """
         Bug caught: /ui/click with nonexistent elementId crashes the
         TestUIController's element lookup.
@@ -1052,7 +1052,7 @@ class TestAPIRobustness:
         state = editor.get_transport_state()
         assert state is not None
 
-    def test_set_slider_on_non_slider_element(self, editor: OscilTestClient):
+    def test_set_slider_on_non_slider_element(self, editor: MultiScoperTestClient):
         """
         Bug caught: /ui/slider called on a non-slider element causes type
         cast failure or null pointer.
@@ -1062,7 +1062,7 @@ class TestAPIRobustness:
         state = editor.get_transport_state()
         assert state is not None
 
-    def test_type_text_in_non_text_element(self, editor: OscilTestClient):
+    def test_type_text_in_non_text_element(self, editor: MultiScoperTestClient):
         """
         Bug caught: /ui/typeText called on a button causes type mismatch.
         """
@@ -1071,7 +1071,7 @@ class TestAPIRobustness:
         state = editor.get_transport_state()
         assert state is not None
 
-    def test_select_dropdown_on_non_dropdown(self, editor: OscilTestClient):
+    def test_select_dropdown_on_non_dropdown(self, editor: MultiScoperTestClient):
         """
         Bug caught: /ui/select called on a non-dropdown element causes crash.
         """
@@ -1081,7 +1081,7 @@ class TestAPIRobustness:
         assert state is not None
 
     def test_rapid_state_reset_cycle(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: rapid reset cycles causing incomplete cleanup that
@@ -1095,7 +1095,7 @@ class TestAPIRobustness:
         state = editor.get_transport_state()
         assert state is not None, "Harness should survive 10 rapid reset cycles"
 
-    def test_save_to_invalid_path(self, editor: OscilTestClient, source_id: str):
+    def test_save_to_invalid_path(self, editor: MultiScoperTestClient, source_id: str):
         """
         Bug caught: saving state to an invalid/readonly path causes unhandled
         exception that crashes the plugin.
@@ -1110,14 +1110,14 @@ class TestAPIRobustness:
         oscs = editor.get_oscillators()
         assert len(oscs) == 1, "State should be unchanged after failed save"
 
-    def test_get_element_nonexistent(self, editor: OscilTestClient):
+    def test_get_element_nonexistent(self, editor: MultiScoperTestClient):
         """
         Bug caught: querying element info for nonexistent ID causes crash.
         """
         el = editor.get_element("completely_nonexistent_element_xyz")
         assert el is None, "Nonexistent element should return None"
 
-    def test_hover_nonexistent_element(self, editor: OscilTestClient):
+    def test_hover_nonexistent_element(self, editor: MultiScoperTestClient):
         """
         Bug caught: hover on nonexistent element causes null pointer.
         """
@@ -1125,7 +1125,7 @@ class TestAPIRobustness:
         state = editor.get_transport_state()
         assert state is not None, "Harness should survive hover on nonexistent element"
 
-    def test_drag_nonexistent_elements(self, editor: OscilTestClient):
+    def test_drag_nonexistent_elements(self, editor: MultiScoperTestClient):
         """
         Bug caught: drag between nonexistent elements causes crash.
         """

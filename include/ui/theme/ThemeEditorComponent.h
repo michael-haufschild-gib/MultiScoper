@@ -1,12 +1,12 @@
 /*
-    Oscil - Theme Editor Component Header
+    MultiScoper - Theme Editor Component Header
     UI for creating and editing themes
 */
 
 #pragma once
 
-#include "ui/components/OscilButton.h"
-#include "ui/components/OscilTextField.h"
+#include "ui/components/MultiScoperButton.h"
+#include "ui/components/MultiScoperTextField.h"
 #include "ui/components/TestId.h"
 #include "ui/components/ThemedComponent.h"
 #include "ui/theme/IThemeService.h"
@@ -19,7 +19,7 @@
 #include <functional>
 #include <memory>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -173,13 +173,13 @@ private:
     ColorTheme editingTheme_; // Copy of theme being edited
 
     // Action buttons
-    std::unique_ptr<OscilButton> createButton_;
-    std::unique_ptr<OscilButton> cloneButton_;
-    std::unique_ptr<OscilButton> deleteButton_;
-    std::unique_ptr<OscilButton> importButton_;
-    std::unique_ptr<OscilButton> exportButton_;
-    std::unique_ptr<OscilButton> applyButton_;
-    std::unique_ptr<OscilButton> closeButton_;
+    std::unique_ptr<MultiScoperButton> createButton_;
+    std::unique_ptr<MultiScoperButton> cloneButton_;
+    std::unique_ptr<MultiScoperButton> deleteButton_;
+    std::unique_ptr<MultiScoperButton> importButton_;
+    std::unique_ptr<MultiScoperButton> exportButton_;
+    std::unique_ptr<MultiScoperButton> applyButton_;
+    std::unique_ptr<MultiScoperButton> closeButton_;
 
     // Color sections (scrollable)
     std::unique_ptr<juce::Viewport> colorViewport_;
@@ -192,7 +192,7 @@ private:
 
     // Theme name editor
     std::unique_ptr<juce::Label> nameLabel_;
-    std::unique_ptr<OscilTextField> nameEditor_;
+    std::unique_ptr<MultiScoperTextField> nameEditor_;
 
     // System theme indicator
     std::unique_ptr<juce::Label> systemThemeLabel_;
@@ -203,9 +203,9 @@ private:
     std::function<void()> closeCallback_;
 
     // TestIdSupport
-    OSCIL_TESTABLE();
+    MULTISCOPER_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ThemeEditorComponent)
 };
 
-} // namespace oscil
+} // namespace multiscoper

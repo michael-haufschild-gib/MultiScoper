@@ -69,25 +69,25 @@ jobs:
             -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_C_COMPILER=clang-20 \
             -DCMAKE_CXX_COMPILER=clang++-20 \
-            -DOSCIL_BUILD_FUZZERS=ON \
-            -DOSCIL_BUILD_TESTS=OFF \
-            -DOSCIL_COPY_PLUGIN_AFTER_BUILD=OFF
+            -DMULTISCOPER_BUILD_FUZZERS=ON \
+            -DMULTISCOPER_BUILD_TESTS=OFF \
+            -DMULTISCOPER_COPY_PLUGIN_AFTER_BUILD=OFF
 
-      - name: Build fuzz_oscil_state_fromxml
-        run: cmake --build build/fuzz --target fuzz_oscil_state_fromxml --parallel
+      - name: Build fuzz_multiscoper_state_fromxml
+        run: cmake --build build/fuzz --target fuzz_multiscoper_state_fromxml --parallel
 
       - name: Build fuzz_plugin_test_server_state
         run: cmake --build build/fuzz --target fuzz_plugin_test_server_state --parallel
 
-      - name: Run fuzz_oscil_state_fromxml (5 min)
+      - name: Run fuzz_multiscoper_state_fromxml (5 min)
         working-directory: build/fuzz
         run: |
-          mkdir -p artifacts/oscil_state
-          ./fuzz/fuzz_oscil_state_fromxml \
-            ../../fuzz/corpus/oscil_state/ \
+          mkdir -p artifacts/multiscoper_state
+          ./fuzz/fuzz_multiscoper_state_fromxml \
+            ../../fuzz/corpus/multiscoper_state/ \
             -max_total_time=300 \
             -print_final_stats=1 \
-            -artifact_prefix=artifacts/oscil_state/fuzz-
+            -artifact_prefix=artifacts/multiscoper_state/fuzz-
 
       - name: Run fuzz_plugin_test_server_state (5 min)
         working-directory: build/fuzz

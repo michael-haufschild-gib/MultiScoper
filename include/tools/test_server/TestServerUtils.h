@@ -1,5 +1,5 @@
 /*
-    Oscil - Test Server Utilities
+    MultiScoper - Test Server Utilities
     Shared helper functions for test server endpoint handlers
 */
 
@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -28,4 +28,4 @@ inline OscillatorId resolveOscillatorId(const std::string& idStr, int index, con
     return targetId;
 }
 
-} // namespace oscil
+} // namespace multiscoper

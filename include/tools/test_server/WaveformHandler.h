@@ -1,5 +1,5 @@
 /*
-    Oscil - Waveform Handler
+    MultiScoper - Waveform Handler
     Handles waveform-related test server endpoints
 */
 
@@ -7,7 +7,7 @@
 
 #include "TestServerHandlerBase.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -24,4 +24,4 @@ public:
     void handleGetWaveformState(const httplib::Request& req, httplib::Response& res);
 };
 
-} // namespace oscil
+} // namespace multiscoper

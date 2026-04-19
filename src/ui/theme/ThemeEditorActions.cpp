@@ -1,5 +1,5 @@
 /*
-    Oscil - Theme Editor Actions
+    MultiScoper - Theme Editor Actions
     Dialog-based action handlers for ThemeEditorComponent
     Also contains AccentPresetRow implementation (split from ThemeEditorComponent.cpp)
 */
@@ -10,7 +10,7 @@
 
 #include <cmath>
 
-namespace oscil
+namespace multiscoper
 {
 
 //==============================================================================
@@ -246,7 +246,7 @@ void ThemeEditorComponent::handleImportTheme()
                                  {
                                      juce::AlertWindow::showMessageBoxAsync(
                                          juce::MessageBoxIconType::WarningIcon, "Import Failed",
-                                         "Failed to import theme. Check that the file is a valid Oscil theme.");
+                                         "Failed to import theme. Check that the file is a valid MultiScoper theme.");
                                  }
                              }
                          });
@@ -318,4 +318,4 @@ void ThemeEditorComponent::handleApplyTheme()
 
 void ThemeEditorComponent::handleColorChanged() { repaint(); }
 
-} // namespace oscil
+} // namespace multiscoper

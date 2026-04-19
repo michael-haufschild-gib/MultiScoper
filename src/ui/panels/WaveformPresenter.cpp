@@ -1,5 +1,5 @@
 /*
-    Oscil - Waveform Presenter Implementation
+    MultiScoper - Waveform Presenter Implementation
 */
 
 #include "ui/panels/WaveformPresenter.h"
@@ -10,7 +10,7 @@
 #include <cmath>
 #include <cstring>
 
-namespace oscil
+namespace multiscoper
 {
 
 WaveformPresenter::WaveformPresenter() {}
@@ -71,21 +71,27 @@ WaveformPresenter::ReadResult WaveformPresenter::readAndPadSamples(int requested
     // Use the multi-channel read to guarantee cross-channel epoch consistency.
     // The per-channel read() validates epochs independently, which can yield
     // L/R data from different write epochs under concurrent audio writes.
-    juce::AudioBuffer<float> stereoScratch(2, requestedSamples);
+    // stereoScratch_ is a member so we avoid a per-call allocation; grow it
+    // only when requestedSamples exceeds the current capacity (the buffer
+    // never shrinks).
+    if (stereoScratch_.getNumSamples() < requestedSamples)
+        stereoScratch_.setSize(2, requestedSamples, /*keepExistingContent=*/false,
+                               /*clearExtraSpace=*/false, /*avoidReallocating=*/false);
+
     // UI/message-thread path: use blocking variant for cross-channel consistency.
-    int samplesRead = captureBuffer_->readBlocking(stereoScratch, requestedSamples);
+    int samplesRead = captureBuffer_->readBlocking(stereoScratch_, requestedSamples);
 
     if (samplesRead <= 0)
         return {};
 
-    // Copy from the epoch-consistent stereoScratch into our scratch buffers
-    std::memcpy(scratchBufferLeft_.data(), stereoScratch.getReadPointer(0),
+    // Copy from the epoch-consistent stereoScratch_ into our scratch buffers
+    std::memcpy(scratchBufferLeft_.data(), stereoScratch_.getReadPointer(0),
                 static_cast<size_t>(samplesRead) * sizeof(float));
 
     int samplesReadRight = 0;
-    if (stereoScratch.getNumChannels() > 1)
+    if (stereoScratch_.getNumChannels() > 1)
     {
-        std::memcpy(scratchBufferRight_.data(), stereoScratch.getReadPointer(1),
+        std::memcpy(scratchBufferRight_.data(), stereoScratch_.getReadPointer(1),
                     static_cast<size_t>(samplesRead) * sizeof(float));
         samplesReadRight = samplesRead;
     }
@@ -200,4 +206,4 @@ void WaveformPresenter::process()
     updateAutoScale();
 }
 
-} // namespace oscil
+} // namespace multiscoper

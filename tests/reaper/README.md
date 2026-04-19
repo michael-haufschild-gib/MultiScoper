@@ -1,14 +1,14 @@
 # Reaper On-Demand Integration Tests
 
-DAW host integration tests for Oscil, driven by Reaper (ReaScript/Lua). Run manually, not in CI.
+DAW host integration tests for MultiScoper, driven by Reaper (ReaScript/Lua). Run manually, not in CI.
 
 ## Prerequisites
 
 - macOS with Reaper installed at `/Applications/REAPER.app` (override with `REAPER_PATH` env var).
-- Oscil built locally. Default plugin path: `build/dev/Oscil_artefacts/Debug/VST3/oscil4.vst3`
-  (override the parent dir with `OSCIL_PLUGIN_DIR`).
+- MultiScoper built locally. Default plugin path: `build/dev/MultiScoper_artefacts/Debug/VST3/MultiScoper.vst3`
+  (override the parent dir with `MULTISCOPER_PLUGIN_DIR`).
 - Reaper must have scanned the plugin at least once — open Reaper, re-scan plugins
-  (Preferences -> Plug-ins -> VST -> Re-scan) so `oscil4` is known to the host.
+  (Preferences -> Plug-ins -> VST -> Re-scan) so `MultiScoper` is known to the host.
 - Python-ReaScript is NOT required; these tests are Lua.
 
 ## Running
@@ -22,7 +22,7 @@ tests/reaper/run_reaper_tests.sh 01_vst3_save_reopen
 ```
 
 The script launches Reaper headlessly-ish (`-nonewinst -new`), Reaper auto-runs
-`lib/run_all.lua`, scenarios write results to `/tmp/oscil_reaper_results.json`,
+`lib/run_all.lua`, scenarios write results to `/tmp/multiscoper_reaper_results.json`,
 the script reads that file and reports pass/fail. Non-zero exit on any failure.
 
 ## Layout
@@ -45,7 +45,7 @@ Create `scenarios/<name>.lua`:
 ```lua
 local T = require("reaper_test_lib")
 local function run()
-  T.load_vst3("oscil4", 0)
+  T.load_vst3("MultiScoper", 0)
   T.play_seconds(1.0)
   T.assert_true(reaper.CountTracks(0) == 1, "expected 1 track")
 end
@@ -64,8 +64,8 @@ On-demand because Reaper GUI automation is slow and environment-sensitive.
 ## Troubleshooting
 
 - "Reaper not found": install Reaper or set `REAPER_PATH=/path/to/REAPER.app/Contents/MacOS/REAPER`.
-- "Plugin not found": build Oscil first (`cmake --build --preset dev`) or set
-  `OSCIL_PLUGIN_DIR=/abs/path/to/vst3/dir`.
+- "Plugin not found": build MultiScoper first (`cmake --build --preset dev`) or set
+  `MULTISCOPER_PLUGIN_DIR=/abs/path/to/vst3/dir`.
 - Results file missing or stale: check Reaper's stdout; ReaScript errors surface there.
-  Delete `/tmp/oscil_reaper_results.json` and re-run.
+  Delete `/tmp/multiscoper_reaper_results.json` and re-run.
 - Plugin not loading: confirm Reaper has scanned it (see Prerequisites).

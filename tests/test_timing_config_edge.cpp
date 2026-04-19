@@ -1,5 +1,5 @@
 /*
-    Oscil - TimingConfig Entity Tests (Edge Cases)
+    MultiScoper - TimingConfig Entity Tests (Edge Cases)
     NaN/infinity, sample rate, multi-bar, extreme BPM, mode switching, multipliers
 */
 
@@ -9,7 +9,7 @@
 #include <gtest/gtest.h>
 #include <limits>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class TimingConfigEdgeTest : public ::testing::Test
 {

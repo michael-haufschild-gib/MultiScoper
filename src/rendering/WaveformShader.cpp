@@ -1,12 +1,12 @@
 /*
-    Oscil - Waveform Shader Base Class Implementation
+    MultiScoper - Waveform Shader Base Class Implementation
 */
 
 #include "rendering/WaveformShader.h"
 
 #include <cmath>
 
-namespace oscil
+namespace multiscoper
 {
 
 namespace
@@ -74,7 +74,7 @@ void WaveformShader::renderSoftware(juce::Graphics& g, const std::vector<float>&
     }
 }
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 bool WaveformShader::compileShaderProgram(juce::OpenGLShaderProgram& program, const char* vertexSource,
                                           const char* fragmentSource)
 {
@@ -101,7 +101,7 @@ bool WaveformShader::compileShaderProgram(juce::OpenGLShaderProgram& program, co
 
 bool WaveformShader::compileFromBinaryData(WaveformGLResources& gl, juce::OpenGLContext& context, const char* vertData,
                                            int vertSize, const char* fragData, int fragSize,
-                                           const juce::String& shaderName)
+                                           [[maybe_unused]] const juce::String& shaderName)
 {
     if (gl.compiled)
         return true;
@@ -336,4 +336,4 @@ bool WaveformShader::checkGLError([[maybe_unused]] const char* location)
 }
 #endif
 
-} // namespace oscil
+} // namespace multiscoper

@@ -4,14 +4,14 @@ This file provides context for GitHub Copilot coding agent when working on this 
 
 ## Project Overview
 
-**Oscil** is a multi-track oscilloscope VST3/AU audio plugin built with:
+**MultiScoper** is a multi-track oscilloscope VST3/AU audio plugin built with:
 - **Framework**: JUCE 8.0.12
 - **Language**: C++20
 - **Build System**: CMake 3.31+ with CMakePresets.json
 - **Testing**: GoogleTest 1.17.0
 - **CI/CD**: GitHub Actions (macOS, Linux, Windows)
 
-All code lives in the `oscil` namespace.
+All code lives in the `multiscoper` namespace.
 
 ## Build Commands
 
@@ -35,7 +35,7 @@ ctest --preset <preset-name> -R "TestName"
 ## Project Structure
 
 ```
-oscil4/
+MultiScoper/
 ├── CMakeLists.txt          # Main build configuration
 ├── CMakePresets.json       # Build presets
 ├── include/                # Header files (.h)
@@ -70,7 +70,7 @@ For detailed guidance, refer to:
 
 ### 2. Dependency Issues
 - Dependencies are fetched via `FetchContent` in CMakeLists.txt
-- Current versions: JUCE 8.0.5, GoogleTest 1.17.0, cpp-httplib 0.27.0, nlohmann/json 3.12.0
+- Current versions: JUCE 8.0.12, GoogleTest 1.17.0, cpp-httplib 0.27.0, nlohmann/json 3.12.0
 
 ### 3. Platform-Specific Failures
 - **macOS**: Universal binary (arm64;x86_64), requires Xcode tools
@@ -79,12 +79,13 @@ For detailed guidance, refer to:
 
 ### 4. Test Failures
 - Tests are in `tests/` directory
-- Run specific test: `./build/<preset>/OscilTests --gtest_filter="TestName.*"`
+- Run specific test: `ctest --preset <preset-name> -R "TestName"`
 - Check for thread safety issues (audio code uses lock-free patterns)
 
 ### 5. pluginval Failures
+
 - Plugin validation runs after build
-- Check VST3 plugin at `build/<preset>/Oscil_artefacts/Release/VST3/oscil4.vst3`
+- Check VST3 plugin at `build/<preset>/MultiScoper_artefacts/Release/VST3/MultiScoper.vst3`
 
 ## Code Style Guidelines
 
@@ -93,7 +94,7 @@ For detailed guidance, refer to:
 - Keep DSP code lock-free and real-time safe
 - Use `jassert` for debug assertions
 - Prefer RAII for resource management
-- All code must be in the `oscil` namespace
+- All code must be in the `multiscoper` namespace
 - Classes: `PascalCase` (e.g., `WaveformComponent`)
 - Member variables: `camelCase_` with trailing underscore
 - Methods: `camelCase` (e.g., `getCaptureBuffer()`)
@@ -150,11 +151,11 @@ Do NOT modify these without explicit instruction:
 When adding new source files:
 1. Create header in `include/[domain]/ClassName.h`
 2. Create implementation in `src/[domain]/ClassName.cpp`
-3. Add `.cpp` file to `CMakeLists.txt` under `target_sources(Oscil PRIVATE ...)`
+3. Add `.cpp` file to `CMakeLists.txt` under `target_sources(MultiScoper PRIVATE ...)`
 4. Rebuild: `cmake --build --preset dev`
 
 When adding tests:
 1. Create test file: `tests/test_class_name.cpp`
-2. Add the test file to `CMakeLists.txt` under `add_executable(OscilTests ...)`
-3. If testing new source code, also add that source file (e.g., `src/core/MyClass.cpp`) to OscilTests
+2. Add the test file to `CMakeLists.txt` under `add_executable(MultiScoperTests ...)`
+3. If testing new source code, also add that source file (e.g., `src/core/MyClass.cpp`) to MultiScoperTests
 4. Run: `ctest --preset dev`

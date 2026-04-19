@@ -1,10 +1,10 @@
 /*
-    Oscil - Oscillator Panel Controller Handlers
+    MultiScoper - Oscillator Panel Controller Handlers
     Sidebar listener overrides, dialog handlers, and ValueTree listeners
 */
 
-#include "core/OscilLog.h"
-#include "core/OscilState.h"
+#include "core/MultiScoperLog.h"
+#include "core/MultiScoperState.h"
 #include "core/interfaces/IAudioDataProvider.h"
 #include "core/interfaces/IInstanceRegistry.h"
 #include "ui/controllers/GpuRenderCoordinator.h"
@@ -13,19 +13,19 @@
 
 #include "rendering/VisualConfiguration.h"
 
-namespace oscil
+namespace multiscoper
 {
 // SidebarComponent::Listener overrides
 
 void OscillatorPanelController::oscillatorSelected(const OscillatorId& oscillatorId)
 {
-    OSCIL_LOG(CONTROLLER, "oscillatorSelected: id=" << oscillatorId.id);
+    MULTISCOPER_LOG(CONTROLLER, "oscillatorSelected: id=" << oscillatorId.id);
     highlightOscillator(oscillatorId);
 }
 
 void OscillatorPanelController::oscillatorConfigRequested(const OscillatorId& oscillatorId)
 {
-    OSCIL_LOG(CONTROLLER, "oscillatorConfigRequested: id=" << oscillatorId.id);
+    MULTISCOPER_LOG(CONTROLLER, "oscillatorConfigRequested: id=" << oscillatorId.id);
     auto& state = dataProvider_.getState();
     auto oscillators = state.getOscillators();
 
@@ -51,14 +51,14 @@ void OscillatorPanelController::oscillatorConfigRequested(const OscillatorId& os
 
 void OscillatorPanelController::applyOscillatorColor(const OscillatorId& oscillatorId, juce::Colour color)
 {
-    auto& oscilState = dataProvider_.getState();
-    auto oscList = oscilState.getOscillators();
+    auto& multiscoperState = dataProvider_.getState();
+    auto oscList = multiscoperState.getOscillators();
     for (auto& o : oscList)
     {
         if (o.getId() == oscillatorId)
         {
             o.setColour(color);
-            oscilState.updateOscillator(o);
+            multiscoperState.updateOscillator(o);
             return;
         }
     }
@@ -86,14 +86,15 @@ void OscillatorPanelController::oscillatorColorConfigRequested(const OscillatorI
 
 void OscillatorPanelController::oscillatorDeleteRequested(const OscillatorId& oscillatorId)
 {
-    OSCIL_LOG(CONTROLLER, "oscillatorDeleteRequested: id=" << oscillatorId.id);
+    MULTISCOPER_LOG(CONTROLLER, "oscillatorDeleteRequested: id=" << oscillatorId.id);
     dataProvider_.getState().removeOscillator(oscillatorId);
     refreshPanels();
 }
 
 void OscillatorPanelController::oscillatorModeChanged(const OscillatorId& oscillatorId, ProcessingMode mode)
 {
-    OSCIL_LOG(CONTROLLER, "oscillatorModeChanged: id=" << oscillatorId.id << " mode=" << processingModeToString(mode));
+    MULTISCOPER_LOG(CONTROLLER,
+                    "oscillatorModeChanged: id=" << oscillatorId.id << " mode=" << processingModeToString(mode));
     auto& state = dataProvider_.getState();
     auto oscillators = state.getOscillators();
     for (auto& osc : oscillators)
@@ -109,8 +110,8 @@ void OscillatorPanelController::oscillatorModeChanged(const OscillatorId& oscill
 
 void OscillatorPanelController::oscillatorVisibilityChanged(const OscillatorId& oscillatorId, bool visible)
 {
-    OSCIL_LOG(CONTROLLER,
-              "oscillatorVisibilityChanged: id=" << oscillatorId.id << " visible=" << (visible ? "true" : "false"));
+    MULTISCOPER_LOG(CONTROLLER, "oscillatorVisibilityChanged: id=" << oscillatorId.id
+                                                                   << " visible=" << (visible ? "true" : "false"));
     auto& state = dataProvider_.getState();
     auto oscillators = state.getOscillators();
     for (auto& osc : oscillators)
@@ -126,7 +127,7 @@ void OscillatorPanelController::oscillatorVisibilityChanged(const OscillatorId& 
 
 void OscillatorPanelController::oscillatorNameChanged(const OscillatorId& oscillatorId, const juce::String& newName)
 {
-    OSCIL_LOG(CONTROLLER, "oscillatorNameChanged: id=" << oscillatorId.id << " newName=" << newName);
+    MULTISCOPER_LOG(CONTROLLER, "oscillatorNameChanged: id=" << oscillatorId.id << " newName=" << newName);
     auto const trimmedName = newName.trim();
     // Reject empty/whitespace-only names — preserves the existing name on blank input.
     if (!Oscillator::isValidName(trimmedName))
@@ -149,7 +150,7 @@ void OscillatorPanelController::oscillatorNameChanged(const OscillatorId& oscill
 
 void OscillatorPanelController::oscillatorsReordered(int fromIndex, int toIndex)
 {
-    OSCIL_LOG(CONTROLLER, "oscillatorsReordered: from=" << fromIndex << " to=" << toIndex);
+    MULTISCOPER_LOG(CONTROLLER, "oscillatorsReordered: from=" << fromIndex << " to=" << toIndex);
     if (fromIndex == toIndex || fromIndex < 0 || toIndex < 0)
         return;
 
@@ -216,7 +217,7 @@ void OscillatorPanelController::oscillatorPaneSelectionRequested(const Oscillato
 
 void OscillatorPanelController::addOscillatorDialogRequested()
 {
-    OSCIL_LOG(CONTROLLER, "addOscillatorDialogRequested");
+    MULTISCOPER_LOG(CONTROLLER, "addOscillatorDialogRequested");
     if (!dialogManager_)
         return;
     auto sources = serviceContext_.instanceRegistry.getAllSources();
@@ -229,10 +230,10 @@ void OscillatorPanelController::addOscillatorDialogRequested()
 
 void OscillatorPanelController::addOscillatorRequested(const AddOscillatorDialog::Result& result)
 {
-    OSCIL_LOG(CONTROLLER, "addOscillatorRequested: sourceId=" << result.sourceId.id << " paneId=" << result.paneId.id
-                                                              << " name=" << result.name << " createNewPane="
-                                                              << (result.createNewPane ? "true" : "false")
-                                                              << " preset=" << result.visualPresetId);
+    MULTISCOPER_LOG(CONTROLLER, "addOscillatorRequested: sourceId="
+                                    << result.sourceId.id << " paneId=" << result.paneId.id << " name=" << result.name
+                                    << " createNewPane=" << (result.createNewPane ? "true" : "false")
+                                    << " preset=" << result.visualPresetId);
     auto& state = dataProvider_.getState();
     auto& layoutManager = state.getLayoutManager();
     PaneId targetPaneId = result.paneId;
@@ -267,7 +268,8 @@ void OscillatorPanelController::addOscillatorRequested(const AddOscillatorDialog
 
 void OscillatorPanelController::updateOscillatorSource(const OscillatorId& oscillatorId, const SourceId& newSourceId)
 {
-    OSCIL_LOG(CONTROLLER, "updateOscillatorSource: oscId=" << oscillatorId.id << " newSourceId=" << newSourceId.id);
+    MULTISCOPER_LOG(CONTROLLER,
+                    "updateOscillatorSource: oscId=" << oscillatorId.id << " newSourceId=" << newSourceId.id);
     auto& state = dataProvider_.getState();
     auto oscillators = state.getOscillators();
 
@@ -325,7 +327,8 @@ bool OscillatorPanelController::dispatchOscillatorPropertyToPane(const Oscillato
 void OscillatorPanelController::applyOscillatorPropertyChange(const OscillatorId& oscId,
                                                               const juce::Identifier& property)
 {
-    OSCIL_LOG(CONTROLLER, "applyOscillatorPropertyChange: oscId=" << oscId.id << " property=" << property.toString());
+    MULTISCOPER_LOG(CONTROLLER,
+                    "applyOscillatorPropertyChange: oscId=" << oscId.id << " property=" << property.toString());
     auto oscillators = dataProvider_.getState().getOscillators();
 
     for (const auto& osc : oscillators)
@@ -355,8 +358,9 @@ void OscillatorPanelController::valueTreePropertyChanged(juce::ValueTree& tree, 
 {
     if (tree.hasType(StateIds::Oscillator))
     {
-        OSCIL_LOG(CONTROLLER, "valueTreePropertyChanged: Oscillator property="
-                                  << property.toString() << " oscId=" << tree.getProperty(StateIds::Id).toString());
+        MULTISCOPER_LOG(CONTROLLER, "valueTreePropertyChanged: Oscillator property="
+                                        << property.toString()
+                                        << " oscId=" << tree.getProperty(StateIds::Id).toString());
         OscillatorId const oscId{tree.getProperty(StateIds::Id).toString()};
 
         if (property == StateIds::Name || property == StateIds::Colour || property == StateIds::ProcessingMode ||
@@ -375,7 +379,7 @@ void OscillatorPanelController::valueTreePropertyChanged(juce::ValueTree& tree, 
     }
     else if (tree.hasType(StateIds::Pane))
     {
-        OSCIL_LOG(CONTROLLER, "valueTreePropertyChanged: Pane property=" << property.toString());
+        MULTISCOPER_LOG(CONTROLLER, "valueTreePropertyChanged: Pane property=" << property.toString());
         triggerAsyncUpdate();
     }
 }
@@ -384,8 +388,8 @@ void OscillatorPanelController::valueTreeChildAdded(juce::ValueTree& /*parentTre
 {
     if (child.hasType(StateIds::Oscillator) || child.hasType(StateIds::Pane))
     {
-        OSCIL_LOG(CONTROLLER, "valueTreeChildAdded: type=" << child.getType().toString()
-                                                           << " id=" << child.getProperty(StateIds::Id).toString());
+        MULTISCOPER_LOG(CONTROLLER, "valueTreeChildAdded: type=" << child.getType().toString() << " id="
+                                                                 << child.getProperty(StateIds::Id).toString());
         triggerAsyncUpdate();
     }
 }
@@ -395,8 +399,8 @@ void OscillatorPanelController::valueTreeChildRemoved(juce::ValueTree& /*parentT
 {
     if (child.hasType(StateIds::Oscillator) || child.hasType(StateIds::Pane))
     {
-        OSCIL_LOG(CONTROLLER, "valueTreeChildRemoved: type=" << child.getType().toString()
-                                                             << " id=" << child.getProperty(StateIds::Id).toString());
+        MULTISCOPER_LOG(CONTROLLER, "valueTreeChildRemoved: type=" << child.getType().toString() << " id="
+                                                                   << child.getProperty(StateIds::Id).toString());
         // Close dialog if open
         if (dialogManager_ && child.hasType(StateIds::Oscillator))
         {
@@ -421,4 +425,4 @@ void OscillatorPanelController::valueTreeChildOrderChanged(juce::ValueTree& pare
 
 void OscillatorPanelController::valueTreeParentChanged(juce::ValueTree& /*treeWhoseParentHasChanged*/) {}
 
-} // namespace oscil
+} // namespace multiscoper

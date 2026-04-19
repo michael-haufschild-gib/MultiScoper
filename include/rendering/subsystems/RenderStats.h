@@ -1,5 +1,5 @@
 /*
-    Oscil - Render Stats
+    MultiScoper - Render Stats
     Handles timing and diagnostic logging for the render engine.
 */
 
@@ -7,7 +7,7 @@
 
 #include <juce_core/juce_core.h>
 
-namespace oscil
+namespace multiscoper
 {
 
 // Release-mode logging macro for render engine debugging
@@ -59,4 +59,4 @@ private:
     float accumulatedTime_ = 0.0f;
 };
 
-} // namespace oscil
+} // namespace multiscoper

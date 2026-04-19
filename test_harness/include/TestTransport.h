@@ -1,5 +1,5 @@
 /*
-    Oscil Test Harness - Transport
+    MultiScoper Test Harness - Transport
     Simulates DAW transport (play/stop/BPM/position)
 */
 
@@ -9,7 +9,7 @@
 
 #include <atomic>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 /**
@@ -88,4 +88,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TestTransport)
 };
 
-} // namespace oscil::test
+} // namespace multiscoper::test

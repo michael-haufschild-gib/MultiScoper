@@ -1,27 +1,26 @@
 /*
-    Oscil - Source Item Component Implementation
+    MultiScoper - Source Item Component Implementation
 */
 
 #include "ui/panels/SourceItemComponent.h"
 
 #include "ui/theme/Typography.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 SourceItemComponent::SourceItemComponent(IThemeService& themeService, const SourceInfo& sourceInfo)
     : themeService_(themeService)
     , sourceId_(sourceInfo.sourceId)
     , displayName_(sourceInfo.name)
-    , trackName_("") // SourceInfo doesn't have separate track name
 {
     // Register test ID with source ID
     juce::String const testId = "sidebar_sources_item_" + sourceId_.id;
-    OSCIL_REGISTER_TEST_ID(testId);
+    MULTISCOPER_REGISTER_TEST_ID(testId);
 
     // Create add-to-pane dropdown with test ID
     juce::String const dropdownTestId = "sidebar_sources_item_" + sourceId_.id + "_paneDropdown";
-    addToPaneDropdown_ = std::make_unique<OscilDropdown>(themeService_, "Add...", dropdownTestId);
+    addToPaneDropdown_ = std::make_unique<MultiScoperDropdown>(themeService_, "Add...", dropdownTestId);
     addToPaneDropdown_->onSelectionChanged = [this](int /*index*/) { handleAddToPaneSelection(); };
     addAndMakeVisible(addToPaneDropdown_.get());
 }
@@ -35,12 +34,12 @@ void SourceItemComponent::paint(juce::Graphics& g)
     if (isSelected_)
     {
         g.setColour(theme.controlActive.withAlpha(0.3f));
-        g.fillRoundedRectangle(bounds.reduced(2), 4.0f);
+        g.fillRect(bounds.reduced(2));
     }
     else if (isHovered_)
     {
         g.setColour(theme.controlHighlight.withAlpha(0.5f));
-        g.fillRoundedRectangle(bounds.reduced(2), 4.0f);
+        g.fillRect(bounds.reduced(2));
     }
 
     // Activity indicator (green dot)
@@ -66,14 +65,10 @@ void SourceItemComponent::paint(juce::Graphics& g)
     auto textArea = leftArea.reduced(4, 0);
     textArea.removeFromRight(DROPDOWN_WIDTH + 4); // Leave space for dropdown
 
-    // Display name (truncated if needed)
-    juce::String text = displayName_;
-    if (trackName_.isNotEmpty() && trackName_ != displayName_)
-    {
-        text += " (" + trackName_ + ")";
-    }
-
-    g.drawText(text, textArea, juce::Justification::centredLeft, true);
+    // Display name (truncated if needed). SourceInfo has a single
+    // human-visible name; no separate track-name field that needs
+    // appending in parentheses.
+    g.drawText(displayName_, textArea, juce::Justification::centredLeft, true);
 }
 
 void SourceItemComponent::resized()
@@ -188,4 +183,4 @@ void SourceItemComponent::handleAddToPaneSelection()
     });
 }
 
-} // namespace oscil
+} // namespace multiscoper

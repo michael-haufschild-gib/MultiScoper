@@ -1,5 +1,5 @@
 /*
-    Oscil - TimingEngine Property-Based Tests (rapidcheck)
+    MultiScoper - TimingEngine Property-Based Tests (rapidcheck)
 
     Invariants for TimingEngine::getDisplaySampleCount and related accessors.
     See docs/decisions/011-property-based-dsp-tests.md.
@@ -18,7 +18,7 @@
 #include <gtest/gtest.h>
 #include <rapidcheck/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 namespace
 {

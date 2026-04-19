@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared helpers for Oscil lint scripts.
+"""Shared helpers for MultiScoper lint scripts.
 
 The two Python linters in scripts/ (forbidden_patterns_lint.py and
 test_quality_lint.py) both need to sanitize C/C++ source by removing

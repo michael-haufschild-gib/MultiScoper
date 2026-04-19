@@ -1,5 +1,5 @@
 /*
-    Oscil - Test Server Handler Base Class
+    MultiScoper - Test Server Handler Base Class
     Base class for all test server endpoint handlers
 */
 
@@ -14,10 +14,10 @@
 #include <nlohmann/json.hpp>
 #include <utility>
 
-namespace oscil
+namespace multiscoper
 {
 
-class OscilPluginEditor;
+class MultiScoperPluginEditor;
 
 /**
  * Base class for test server handlers.
@@ -27,7 +27,7 @@ class OscilPluginEditor;
 class TestServerHandlerBase
 {
 public:
-    explicit TestServerHandlerBase(OscilPluginEditor& editor) : editor_(editor) {}
+    explicit TestServerHandlerBase(MultiScoperPluginEditor& editor) : editor_(editor) {}
 
     virtual ~TestServerHandlerBase() = default;
 
@@ -151,9 +151,9 @@ protected:
         response["allPassed"] = (std::cmp_equal(passedCount, tests.size()));
     }
 
-    OscilPluginEditor& editor_;
+    MultiScoperPluginEditor& editor_;
 
     static constexpr int MESSAGE_THREAD_TIMEOUT_MS = 10000;
 };
 
-} // namespace oscil
+} // namespace multiscoper

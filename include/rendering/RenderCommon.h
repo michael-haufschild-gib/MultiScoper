@@ -1,5 +1,5 @@
 /*
-    Oscil - Render Common
+    MultiScoper - Render Common
     Shared definitions for the rendering subsystem.
 */
 
@@ -7,7 +7,7 @@
 
 #include <cstdint>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -24,4 +24,4 @@ enum class QualityLevel : std::uint8_t
     Ultra   // Visual priority - all effects including 3D
 };
 
-} // namespace oscil
+} // namespace multiscoper

@@ -1,14 +1,14 @@
 /*
-    Oscil - Test Runner Handler - Drag/Drop Tests
+    MultiScoper - Test Runner Handler - Drag/Drop Tests
 */
 
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "core/Pane.h"
 
 #include "plugin/PluginEditor.h"
 #include "tools/test_server/TestRunnerHandler.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 namespace
@@ -35,7 +35,7 @@ PaneId findPaneInColumn(const std::vector<Pane>& panes, int column)
     return PaneId::invalid();
 }
 
-nlohmann::json testMovePaneForward(PaneLayoutManager& layoutManager, OscilPluginEditor& editor)
+nlohmann::json testMovePaneForward(PaneLayoutManager& layoutManager, MultiScoperPluginEditor& editor)
 {
     nlohmann::json test;
     test["name"] = "MovePaneForward";
@@ -50,7 +50,7 @@ nlohmann::json testMovePaneForward(PaneLayoutManager& layoutManager, OscilPlugin
     return test;
 }
 
-nlohmann::json testMovePaneBackward(PaneLayoutManager& layoutManager, OscilPluginEditor& editor)
+nlohmann::json testMovePaneBackward(PaneLayoutManager& layoutManager, MultiScoperPluginEditor& editor)
 {
     nlohmann::json test;
     test["name"] = "MovePaneBackward";
@@ -65,7 +65,7 @@ nlohmann::json testMovePaneBackward(PaneLayoutManager& layoutManager, OscilPlugi
     return test;
 }
 
-nlohmann::json testMovePaneAdjacent(PaneLayoutManager& layoutManager, OscilPluginEditor& editor)
+nlohmann::json testMovePaneAdjacent(PaneLayoutManager& layoutManager, MultiScoperPluginEditor& editor)
 {
     nlohmann::json test;
     test["name"] = "MovePaneAdjacent";
@@ -81,7 +81,8 @@ nlohmann::json testMovePaneAdjacent(PaneLayoutManager& layoutManager, OscilPlugi
     return test;
 }
 
-nlohmann::json testCrossColumnMove0to1(OscilState& state, PaneLayoutManager& layoutManager, OscilPluginEditor& editor)
+nlohmann::json testCrossColumnMove0to1(MultiScoperState& state, PaneLayoutManager& layoutManager,
+                                       MultiScoperPluginEditor& editor)
 {
     nlohmann::json test;
     test["name"] = "CrossColumnMove_0to1";
@@ -106,7 +107,7 @@ nlohmann::json testCrossColumnMove0to1(OscilState& state, PaneLayoutManager& lay
     return test;
 }
 
-nlohmann::json testCrossColumnMove1to0(PaneLayoutManager& layoutManager, OscilPluginEditor& editor)
+nlohmann::json testCrossColumnMove1to0(PaneLayoutManager& layoutManager, MultiScoperPluginEditor& editor)
 {
     nlohmann::json test;
     test["name"] = "CrossColumnMove_1to0";
@@ -141,7 +142,8 @@ nlohmann::json testCrossColumnMove1to0(PaneLayoutManager& layoutManager, OscilPl
     return test;
 }
 
-nlohmann::json testThreeColumnCrossMove(OscilState& state, PaneLayoutManager& layoutManager, OscilPluginEditor& editor)
+nlohmann::json testThreeColumnCrossMove(MultiScoperState& state, PaneLayoutManager& layoutManager,
+                                        MultiScoperPluginEditor& editor)
 {
     nlohmann::json test;
     test["name"] = "ThreeColumnCrossMove";
@@ -202,4 +204,4 @@ void TestRunnerHandler::handleRunDragDropTest(const httplib::Request& /*req*/, h
     res.set_content(result.dump(), "application/json");
 }
 
-} // namespace oscil
+} // namespace multiscoper

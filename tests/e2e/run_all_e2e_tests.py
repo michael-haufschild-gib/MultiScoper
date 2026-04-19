@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Oscil E2E Test Suite Runner
+MultiScoper E2E Test Suite Runner
 
 Wrapper that invokes pytest with the correct virtualenv and working directory.
 

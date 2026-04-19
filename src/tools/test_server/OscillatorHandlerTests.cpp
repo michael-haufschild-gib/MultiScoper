@@ -1,5 +1,5 @@
 /*
-    Oscil - Oscillator Handler Integration Tests
+    MultiScoper - Oscillator Handler Integration Tests
     handleTestOscillatorReorder for E2E test server
 */
 
@@ -13,13 +13,14 @@
 #include <algorithm>
 #include <nlohmann/json.hpp>
 
-namespace oscil
+namespace multiscoper
 {
 
 namespace
 {
 
-void setupReorderTestOscillators(OscilState& state, PaneLayoutManager& layoutManager, OscilPluginEditor& editor)
+void setupReorderTestOscillators(MultiScoperState& state, PaneLayoutManager& layoutManager,
+                                 MultiScoperPluginEditor& editor)
 {
     if (layoutManager.getPaneCount() == 0)
     {
@@ -48,7 +49,7 @@ void setupReorderTestOscillators(OscilState& state, PaneLayoutManager& layoutMan
     editor.refreshPanels();
 }
 
-std::vector<Oscillator> getOrderedOscillators(OscilState& state)
+std::vector<Oscillator> getOrderedOscillators(MultiScoperState& state)
 {
     auto oscs = state.getOscillators();
     std::ranges::sort(oscs,
@@ -56,8 +57,8 @@ std::vector<Oscillator> getOrderedOscillators(OscilState& state)
     return oscs;
 }
 
-nlohmann::json runReorderTest(OscilState& state, OscilPluginEditor& editor, const char* testName, int from, int to,
-                              int expectedIdx, const char* details)
+nlohmann::json runReorderTest(MultiScoperState& state, MultiScoperPluginEditor& editor, const char* testName, int from,
+                              int to, int expectedIdx, const char* details)
 {
     nlohmann::json test;
     test["name"] = testName;
@@ -75,7 +76,7 @@ nlohmann::json runReorderTest(OscilState& state, OscilPluginEditor& editor, cons
     return test;
 }
 
-nlohmann::json runSequentialIndexTest(OscilState& state)
+nlohmann::json runSequentialIndexTest(MultiScoperState& state)
 {
     nlohmann::json test;
     test["name"] = "OrderIndexSequential";
@@ -94,7 +95,7 @@ nlohmann::json runSequentialIndexTest(OscilState& state)
     return test;
 }
 
-nlohmann::json runSameIndexNoOpTest(OscilState& state, OscilPluginEditor& editor)
+nlohmann::json runSameIndexNoOpTest(MultiScoperState& state, MultiScoperPluginEditor& editor)
 {
     nlohmann::json test;
     test["name"] = "SameIndexNoOp";
@@ -143,4 +144,4 @@ void OscillatorHandler::handleTestOscillatorReorder(const httplib::Request& /*un
     sendJson(res, result);
 }
 
-} // namespace oscil
+} // namespace multiscoper

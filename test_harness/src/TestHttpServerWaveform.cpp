@@ -1,12 +1,12 @@
 /*
-    Oscil Test Harness - HTTP Server: Waveform State & Oscillator Delete Handlers
+    MultiScoper Test Harness - HTTP Server: Waveform State & Oscillator Delete Handlers
 
     Provides data-level waveform verification endpoints that read capture buffer
     statistics (peak, RMS, available samples) without pixel analysis. This enables
     deterministic, numeric assertions about audio data flow and rendering state.
 */
 
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "core/dsp/TimingEngine.h"
 #include "core/interfaces/IAudioBuffer.h"
 
@@ -14,7 +14,7 @@
 
 #include <algorithm>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 void TestHttpServer::handleStateDeleteOscillator(const httplib::Request& req, httplib::Response& res)
@@ -76,7 +76,7 @@ void TestHttpServer::handleStateDeleteOscillator(const httplib::Request& req, ht
 namespace
 {
 
-json buildWaveformJson(const Oscillator& osc, OscilPluginProcessor& processor, int displaySamples)
+json buildWaveformJson(const Oscillator& osc, MultiScoperPluginProcessor& processor, int displaySamples)
 {
     json wfJson;
     wfJson["oscillatorId"] = osc.getId().id.toStdString();
@@ -181,4 +181,4 @@ void TestHttpServer::handleWaveformState(const httplib::Request& req, httplib::R
     }
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

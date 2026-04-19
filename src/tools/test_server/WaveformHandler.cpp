@@ -1,5 +1,5 @@
 /*
-    Oscil - Waveform Handler Implementation
+    MultiScoper - Waveform Handler Implementation
 */
 
 #include "tools/test_server/WaveformHandler.h"
@@ -13,7 +13,7 @@
 #include "plugin/PluginProcessor.h"
 #include "tools/test_server/TestWaveformGenerator.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 namespace
@@ -51,6 +51,15 @@ void WaveformHandler::handleInjectTestData(const httplib::Request& req, httplib:
     {
         auto body = nlohmann::json::parse(req.body.empty() ? "{}" : req.body);
         std::string const waveformType = body.value("type", "sine");
+        if (!isValidWaveformType(waveformType))
+        {
+            // Reject typos explicitly — generateTestWaveform silently maps
+            // unknown types to silence, and the success response echoes the
+            // caller's string. Without this guard a test sending "squar" or
+            // "triangle_" would receive `status: ok` and zero-filled data.
+            sendJson(res, {{"error", "unknown waveform type: " + waveformType}}, 400);
+            return;
+        }
         float const frequency = body.value("frequency", 440.0f);
         float const amplitude = body.value("amplitude", 0.8f);
         int const numSamples = body.value("samples", 4096);
@@ -138,4 +147,4 @@ void WaveformHandler::handleGetWaveformState(const httplib::Request& /*req*/, ht
     sendJson(res, result);
 }
 
-} // namespace oscil
+} // namespace multiscoper

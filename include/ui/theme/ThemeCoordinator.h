@@ -1,5 +1,5 @@
 /*
-    Oscil - Theme Coordinator
+    MultiScoper - Theme Coordinator
     Handles ThemeManagerListener callbacks for theme changes
 */
 
@@ -10,7 +10,7 @@
 
 #include <functional>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -51,4 +51,4 @@ private:
     ThemeChangedCallback onThemeChanged_;
 };
 
-} // namespace oscil
+} // namespace multiscoper

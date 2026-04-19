@@ -1,5 +1,5 @@
 /*
-    Oscil - Options Sidebar Section Implementation
+    MultiScoper - Options Sidebar Section Implementation
     Combined section with gain control and display options
 */
 
@@ -7,14 +7,14 @@
 
 #include "ui/theme/Typography.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 OptionsSection::OptionsSection(ServiceContext& context) : OptionsSection(context.themeService) {}
 
 OptionsSection::OptionsSection(IThemeService& themeService) : ThemedComponent(themeService)
 {
-    OSCIL_REGISTER_TEST_ID("sidebar_options");
+    MULTISCOPER_REGISTER_TEST_ID("sidebar_options");
     setupComponents();
 }
 
@@ -37,7 +37,7 @@ void OptionsSection::setupComponents()
 
 void OptionsSection::setupGainControls()
 {
-    gainSlider_ = std::make_unique<OscilSlider>(getThemeService(), "sidebar_options_gainSlider");
+    gainSlider_ = std::make_unique<MultiScoperSlider>(getThemeService(), "sidebar_options_gainSlider");
     gainSlider_->setLabel("Gain");
     gainSlider_->setRange(MIN_GAIN_DB, MAX_GAIN_DB);
     gainSlider_->setStep(0.1);
@@ -57,7 +57,7 @@ void OptionsSection::setupDisplayToggles()
     displayLabel_->setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(*displayLabel_);
 
-    showGridToggle_ = std::make_unique<OscilToggle>(getThemeService(), "Show Grid", "sidebar_options_gridToggle");
+    showGridToggle_ = std::make_unique<MultiScoperToggle>(getThemeService(), "Show Grid", "sidebar_options_gridToggle");
     showGridToggle_->setValue(showGridEnabled_, false);
     showGridToggle_->onValueChanged = [this](bool value) {
         showGridEnabled_ = value;
@@ -66,7 +66,7 @@ void OptionsSection::setupDisplayToggles()
     addAndMakeVisible(*showGridToggle_);
 
     autoScaleToggle_ =
-        std::make_unique<OscilToggle>(getThemeService(), "Auto-Scale", "sidebar_options_autoScaleToggle");
+        std::make_unique<MultiScoperToggle>(getThemeService(), "Auto-Scale", "sidebar_options_autoScaleToggle");
     autoScaleToggle_->setValue(autoScaleEnabled_, false);
     autoScaleToggle_->onValueChanged = [this](bool value) {
         autoScaleEnabled_ = value;
@@ -84,7 +84,7 @@ void OptionsSection::setupLayoutAndTheme()
     addAndMakeVisible(*layoutLabel_);
 
     layoutDropdown_ =
-        std::make_unique<OscilDropdown>(getThemeService(), "Select layout", "sidebar_options_layoutDropdown");
+        std::make_unique<MultiScoperDropdown>(getThemeService(), "Select layout", "sidebar_options_layoutDropdown");
     layoutDropdown_->addItem("1 Column", "1");
     layoutDropdown_->addItem("2 Columns", "2");
     layoutDropdown_->addItem("3 Columns", "3");
@@ -101,7 +101,7 @@ void OptionsSection::setupLayoutAndTheme()
     addAndMakeVisible(*themeLabel_);
 
     themeDropdown_ =
-        std::make_unique<OscilDropdown>(getThemeService(), "Select theme", "sidebar_options_themeDropdown");
+        std::make_unique<MultiScoperDropdown>(getThemeService(), "Select theme", "sidebar_options_themeDropdown");
     themeDropdown_->onSelectionChangedId = [this](const juce::String& themeId) {
         currentThemeName_ = themeId;
         notifyThemeChanged();
@@ -116,8 +116,8 @@ void OptionsSection::setupRenderingControls()
     renderingLabel_->setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(*renderingLabel_);
 
-    gpuRenderingToggle_ =
-        std::make_unique<OscilToggle>(getThemeService(), "GPU Acceleration", "sidebar_options_gpuRenderingToggle");
+    gpuRenderingToggle_ = std::make_unique<MultiScoperToggle>(getThemeService(), "GPU Acceleration",
+                                                              "sidebar_options_gpuRenderingToggle");
     gpuRenderingToggle_->setValue(gpuRenderingEnabled_, false);
     gpuRenderingToggle_->onValueChanged = [this](bool value) {
         gpuRenderingEnabled_ = value;
@@ -134,7 +134,7 @@ void OptionsSection::setupCaptureQualityControls()
     addAndMakeVisible(*qualityLabel_);
 
     qualityPresetDropdown_ =
-        std::make_unique<OscilDropdown>(getThemeService(), "Quality", "sidebar_options_qualityPresetDropdown");
+        std::make_unique<MultiScoperDropdown>(getThemeService(), "Quality", "sidebar_options_qualityPresetDropdown");
     qualityPresetDropdown_->addItem("Eco (11 kHz)", "eco");
     qualityPresetDropdown_->addItem("Standard (22 kHz)", "standard");
     qualityPresetDropdown_->addItem("High (44 kHz)", "high");
@@ -147,7 +147,7 @@ void OptionsSection::setupCaptureQualityControls()
     addAndMakeVisible(*qualityPresetDropdown_);
 
     bufferDurationDropdown_ =
-        std::make_unique<OscilDropdown>(getThemeService(), "Buffer", "sidebar_options_bufferDurationDropdown");
+        std::make_unique<MultiScoperDropdown>(getThemeService(), "Buffer", "sidebar_options_bufferDurationDropdown");
     bufferDurationDropdown_->addItem("Short (1s)", "short");
     bufferDurationDropdown_->addItem("Medium (5s)", "medium");
     bufferDurationDropdown_->addItem("Long (10s)", "long");
@@ -159,7 +159,7 @@ void OptionsSection::setupCaptureQualityControls()
     addAndMakeVisible(*bufferDurationDropdown_);
 
     autoAdjustQualityToggle_ =
-        std::make_unique<OscilToggle>(getThemeService(), "Auto-Adjust", "sidebar_options_autoAdjustToggle");
+        std::make_unique<MultiScoperToggle>(getThemeService(), "Auto-Adjust", "sidebar_options_autoAdjustToggle");
     autoAdjustQualityToggle_->setValue(autoAdjustQualityEnabled_, false);
     autoAdjustQualityToggle_->onValueChanged = [this](bool value) {
         autoAdjustQualityEnabled_ = value;
@@ -186,7 +186,7 @@ void OptionsSection::resized()
     auto bounds = getLocalBounds().reduced(SECTION_PADDING);
     int y = bounds.getY();
 
-    // Gain slider (OscilSlider has integrated label)
+    // Gain slider (MultiScoperSlider has integrated label)
     gainSlider_->setBounds(bounds.getX(), y, bounds.getWidth(), 40);
     y += 40 + SPACING_LARGE;
 
@@ -409,4 +409,4 @@ void OptionsSection::notifyAutoAdjustQualityChanged()
     listeners_.call([this](Listener& l) { l.autoAdjustQualityChanged(autoAdjustQualityEnabled_); });
 }
 
-} // namespace oscil
+} // namespace multiscoper

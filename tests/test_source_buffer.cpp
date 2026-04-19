@@ -1,5 +1,5 @@
 /*
-    Oscil - Source Buffer and Data Tests
+    MultiScoper - Source Buffer and Data Tests
     Tests for Source serialization, display names, metrics, audio config, and capture buffers
 */
 
@@ -13,7 +13,7 @@
 #include <thread>
 #include <vector>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class SourceBufferTest : public ::testing::Test
 {

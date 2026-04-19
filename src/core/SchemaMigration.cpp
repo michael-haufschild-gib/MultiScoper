@@ -1,11 +1,16 @@
 /*
-    Oscil - Schema Migration Framework Implementation
+    MultiScoper - Schema Migration Framework Implementation
 
     Migration table (current):
-      v0 -> v1: no-op. v0 denotes a pre-versioned OscilState XML (no "version"
+      v0 -> v1: no-op. v0 denotes a pre-versioned MultiScoperState XML (no "version"
                 attribute). Structurally identical to v1; no field drift.
-      v1 -> v2: no-op at the OscilState level. Oscillator handles its own
+      v1 -> v2: no-op at the MultiScoperState level. Oscillator handles its own
                 v1 -> v2 migration internally (OscillatorState field synthesis).
+      v2 -> v3: additive only — introduces the optional TrackIdentifier property
+                on the root MultiScoperState node. Legacy v2 saves load with an
+                absent TrackIdentifier; the plugin treats the absence as "no
+                persistent identity" and falls back to a fresh UUID (preserving
+                pre-existing behavior for legacy saves).
 
     Both migrations stamp the "version" property to their target version so that
     chained calls correctly observe the intermediate state and downstream code
@@ -14,14 +19,14 @@
 
 #include "core/SchemaMigration.h"
 
-#include "core/OscilLog.h"
-#include "core/OscilState.h"
+#include "core/MultiScoperLog.h"
+#include "core/MultiScoperState.h"
 
 #include <array>
 #include <functional>
 #include <optional>
 
-namespace oscil::migration
+namespace multiscoper::migration
 {
 
 namespace
@@ -47,7 +52,7 @@ MigrationResult migrateV0toV1(juce::ValueTree& state)
     return MigrationResult::Success;
 }
 
-/// v1 -> v2: no OscilState-level schema change. The v2 addition
+/// v1 -> v2: no MultiScoperState-level schema change. The v2 addition
 /// (OscillatorState enum on child Oscillator nodes) is handled inside
 /// Oscillator::fromValueTree via its own migrateOscillatorState helper.
 MigrationResult migrateV1toV2(juce::ValueTree& state)
@@ -56,11 +61,22 @@ MigrationResult migrateV1toV2(juce::ValueTree& state)
     return MigrationResult::Success;
 }
 
-const std::array<MigrationEntry, 2>& migrationTable()
+/// v2 -> v3: additive only. v3 introduces the optional TrackIdentifier
+/// property on the root node. Legacy v2 saves simply lack it; callers must
+/// treat an empty TrackIdentifier as "no persistent identity" (they fall
+/// back to a freshly generated UUID, preserving pre-fix behavior).
+MigrationResult migrateV2toV3(juce::ValueTree& state)
 {
-    static const std::array<MigrationEntry, 2> table{{
+    stampVersion(state, 3);
+    return MigrationResult::Success;
+}
+
+const std::array<MigrationEntry, 3>& migrationTable()
+{
+    static const std::array<MigrationEntry, 3> table{{
         {.fromVersion = 0, .toVersion = 1, .step = &migrateV0toV1},
         {.fromVersion = 1, .toVersion = 2, .step = &migrateV1toV2},
+        {.fromVersion = 2, .toVersion = 3, .step = &migrateV2toV3},
     }};
     return table;
 }
@@ -83,17 +99,18 @@ std::optional<MigrationResult> validateRange(int fromVersion, int toVersion, int
 {
     if (fromVersion > toVersion)
     {
-        OSCIL_LOG(STATE, "SchemaMigration: reject downgrade from v" << fromVersion << " to v" << toVersion);
+        MULTISCOPER_LOG(STATE, "SchemaMigration: reject downgrade from v" << fromVersion << " to v" << toVersion);
         return MigrationResult::DowngradeUnsupported;
     }
     if (toVersion > highestTo)
     {
-        OSCIL_LOG(STATE, "SchemaMigration: toVersion v" << toVersion << " exceeds highest known v" << highestTo);
+        MULTISCOPER_LOG(STATE, "SchemaMigration: toVersion v" << toVersion << " exceeds highest known v" << highestTo);
         return MigrationResult::UnsupportedToVersion;
     }
     if (fromVersion < lowestFrom)
     {
-        OSCIL_LOG(STATE, "SchemaMigration: fromVersion v" << fromVersion << " below lowest known v" << lowestFrom);
+        MULTISCOPER_LOG(STATE,
+                        "SchemaMigration: fromVersion v" << fromVersion << " below lowest known v" << lowestFrom);
         return MigrationResult::UnsupportedFromVersion;
     }
     return std::nullopt;
@@ -133,7 +150,7 @@ int highestSupportedToVersion() noexcept
     return highest;
 }
 
-MigrationResult migrateOscilState(juce::ValueTree& state, int fromVersion, int toVersion)
+MigrationResult migrateMultiScoperState(juce::ValueTree& state, int fromVersion, int toVersion)
 {
     if (fromVersion == toVersion)
     {
@@ -151,7 +168,7 @@ MigrationResult migrateOscilState(juce::ValueTree& state, int fromVersion, int t
         const MigrationEntry* entry = findStep(current, toVersion);
         if (entry == nullptr)
         {
-            OSCIL_LOG(STATE, "SchemaMigration: no step from v" << current << " toward v" << toVersion);
+            MULTISCOPER_LOG(STATE, "SchemaMigration: no step from v" << current << " toward v" << toVersion);
             return MigrationResult::UnsupportedFromVersion;
         }
 
@@ -165,4 +182,4 @@ MigrationResult migrateOscilState(juce::ValueTree& state, int fromVersion, int t
     return MigrationResult::Success;
 }
 
-} // namespace oscil::migration
+} // namespace multiscoper::migration

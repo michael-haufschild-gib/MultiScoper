@@ -1,4 +1,4 @@
-# HTTP API Audit — Oscil Test Harness
+# HTTP API Audit — MultiScoper Test Harness
 
 Audit scope: `test_harness/src/TestHttpServer*.cpp` and
 `test_harness/src/TestUIController*.cpp`.
@@ -138,7 +138,7 @@ list. Top 3: sample-rate change, buffer-size change, editor detach/reattach
 ## Architecture guardrail
 
 ADR 016 codifies the MT-dispatch pattern. The companion lint rule lives in
-`cmake/Tests.cmake` (`oscil_harness_mt_lint` target, run as part of
+`cmake/Tests.cmake` (`multiscoper_harness_mt_lint` target, run as part of
 `ctest --preset dev`) and rejects new `[&]`, `[this, &` reference captures
 inside `runOnTrackSync` / `runOnMessageThreadBlocking` lambdas. See
 `docs/decisions/016-test-harness-mt-dispatch.md` for the shared_ptr

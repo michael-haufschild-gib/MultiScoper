@@ -1,5 +1,5 @@
 /*
-    Oscil - Source Entity
+    MultiScoper - Source Entity
     Represents an audio source from a DAW track with state management and ownership tracking
     PRD aligned: Entities -> Source
 */
@@ -16,7 +16,7 @@
 #include <optional>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 // Forward declarations
@@ -358,4 +358,4 @@ private:
     static bool isValidTransition(SourceState from, SourceState to);
 };
 
-} // namespace oscil
+} // namespace multiscoper

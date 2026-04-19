@@ -1,6 +1,6 @@
-# Oscil libFuzzer Targets
+# MultiScoper libFuzzer Targets
 
-Coverage-guided fuzzers for Oscil's two untrusted-input ingress points.
+Coverage-guided fuzzers for MultiScoper's two untrusted-input ingress points.
 Design rationale and triage workflow live in
 `docs/decisions/010-fuzz-targets.md`.
 
@@ -8,7 +8,7 @@ Design rationale and triage workflow live in
 
 | Binary | Exercises | Seed corpus |
 |--------|-----------|-------------|
-| `fuzz_oscil_state_fromxml`         | `oscil::OscilState::fromXmlString` (DAW-persisted XML loader, `src/core/OscilState.cpp:73`) | `fuzz/corpus/oscil_state/` |
+| `fuzz_multiscoper_state_fromxml`         | `multiscoper::MultiScoperState::fromXmlString` (DAW-persisted XML loader, `src/core/MultiScoperState.cpp:73`) | `fuzz/corpus/multiscoper_state/` |
 | `fuzz_plugin_test_server_state`    | `nlohmann::json::parse` path shared by every `src/tools/test_server/*Handler.cpp`          | `fuzz/corpus/test_server_state/` |
 
 ## Toolchain Requirements
@@ -18,7 +18,7 @@ LLVM on macOS.
 
 **NOT supported:** AppleClang (the system `clang++` on macOS). AppleClang
 does not ship a working libFuzzer runtime — configuring with
-`OSCIL_BUILD_FUZZERS=ON` under AppleClang triggers a CMake `fatal_error`
+`MULTISCOPER_BUILD_FUZZERS=ON` under AppleClang triggers a CMake `fatal_error`
 with this exact message.
 
 On macOS, install mainline LLVM:
@@ -30,7 +30,7 @@ brew install llvm
 This installs `clang++` at `/opt/homebrew/opt/llvm/bin/clang++` on Apple
 Silicon (or `/usr/local/opt/llvm/bin/clang++` on Intel). Do **not** add it
 to `PATH` globally — only use it via `-DCMAKE_CXX_COMPILER=...` for the
-fuzz build so your regular Oscil builds continue to use AppleClang.
+fuzz build so your regular MultiScoper builds continue to use AppleClang.
 
 ## Build and Run Locally
 
@@ -40,9 +40,9 @@ plugin-copy off:
 ```bash
 cmake -B build/fuzz \
   -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm/bin/clang++ \
-  -DOSCIL_BUILD_FUZZERS=ON \
-  -DOSCIL_BUILD_TESTS=OFF \
-  -DOSCIL_COPY_PLUGIN_AFTER_BUILD=OFF
+  -DMULTISCOPER_BUILD_FUZZERS=ON \
+  -DMULTISCOPER_BUILD_TESTS=OFF \
+  -DMULTISCOPER_COPY_PLUGIN_AFTER_BUILD=OFF
 ```
 
 (On Linux, point `CMAKE_CXX_COMPILER` at `clang++-20` or whichever LLVM
@@ -51,7 +51,7 @@ you installed. Add `-G Ninja` if you want Ninja.)
 Build one target at a time:
 
 ```bash
-cmake --build build/fuzz --target fuzz_oscil_state_fromxml
+cmake --build build/fuzz --target fuzz_multiscoper_state_fromxml
 cmake --build build/fuzz --target fuzz_plugin_test_server_state
 ```
 
@@ -59,8 +59,8 @@ Run — each binary takes the seed corpus as its first positional argument
 and libFuzzer flags after it. `-max_total_time` is in seconds.
 
 ```bash
-./build/fuzz/fuzz/fuzz_oscil_state_fromxml \
-    fuzz/corpus/oscil_state/ \
+./build/fuzz/fuzz/fuzz_multiscoper_state_fromxml \
+    fuzz/corpus/multiscoper_state/ \
     -max_total_time=60
 
 ./build/fuzz/fuzz/fuzz_plugin_test_server_state \
@@ -82,7 +82,7 @@ If the fuzzer prints a stack trace and writes `fuzz-<hash>`, replay the
 exact input by passing the file as the only positional argument:
 
 ```bash
-./build/fuzz/fuzz/fuzz_oscil_state_fromxml fuzz-<hash>
+./build/fuzz/fuzz/fuzz_multiscoper_state_fromxml fuzz-<hash>
 ```
 
 libFuzzer will minimize the input and re-print the trace. Add the

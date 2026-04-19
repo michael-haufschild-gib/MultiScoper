@@ -1,5 +1,5 @@
 /*
-    Oscil - Effect Provider Interface
+    MultiScoper - Effect Provider Interface
     Abstract interface for retrieving effects, allowing decoupling of EffectChain from RenderEngine.
 */
 
@@ -7,7 +7,7 @@
 
 #include <juce_core/juce_core.h>
 
-namespace oscil
+namespace multiscoper
 {
 
 class PostProcessEffect;
@@ -25,4 +25,4 @@ public:
     virtual PostProcessEffect* getEffect(const juce::String& effectId) = 0;
 };
 
-} // namespace oscil
+} // namespace multiscoper

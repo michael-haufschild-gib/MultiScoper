@@ -1,5 +1,5 @@
 /*
-    Oscil - Memory Budget Manager
+    MultiScoper - Memory Budget Manager
     Centralized tracking and management of waveform capture buffer memory
     Provides auto-quality adjustment and memory usage monitoring
 */
@@ -16,7 +16,7 @@
 #include <memory>
 #include <mutex>
 
-namespace oscil
+namespace multiscoper
 {
 
 // Forward declaration
@@ -304,4 +304,4 @@ private:
     JUCE_DECLARE_WEAK_REFERENCEABLE(MemoryBudgetManager)
 };
 
-} // namespace oscil
+} // namespace multiscoper

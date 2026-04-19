@@ -11,14 +11,14 @@ What bugs these tests catch:
 """
 
 import pytest
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 
 
 class TestPaneCreation:
     """Pane add and auto-creation behavior."""
 
     def test_first_oscillator_auto_creates_pane(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: adding an oscillator to empty state does not
@@ -40,7 +40,7 @@ class TestPaneCreation:
         )
 
     def test_add_second_pane_via_api(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: pane add API not implemented or crashes when a
@@ -63,7 +63,7 @@ class TestPaneCreation:
         )
 
     def test_pane_has_valid_id_and_name(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: pane serialization returning empty ID or null name.
@@ -84,7 +84,7 @@ class TestPaneOscillatorAssignment:
     """Oscillator-to-pane binding integrity."""
 
     def test_all_oscillators_assigned_to_existing_pane(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: oscillator paneId references a pane that doesn't exist
@@ -102,7 +102,7 @@ class TestPaneOscillatorAssignment:
             )
 
     def test_multiple_oscillators_default_to_same_pane(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: each oscillator getting its own pane instead of sharing
@@ -129,7 +129,7 @@ class TestPaneRemoval:
     """Pane remove operations."""
 
     def test_remove_empty_pane(
-        self, editor: OscilTestClient, two_panes
+        self, editor: MultiScoperTestClient, two_panes
     ):
         """
         Bug caught: removing an empty pane crashes because the render
@@ -154,7 +154,7 @@ class TestPaneRemoval:
         )
 
     def test_remove_pane_with_oscillator_orphans_check(
-        self, editor: OscilTestClient, source_id: str, two_panes
+        self, editor: MultiScoperTestClient, source_id: str, two_panes
     ):
         """
         Bug caught: removing a pane that contains oscillators leaves them
@@ -195,7 +195,7 @@ class TestOscillatorPaneMove:
     """Moving oscillators between panes."""
 
     def test_move_oscillator_to_different_pane(
-        self, editor: OscilTestClient, source_id: str, two_panes
+        self, editor: MultiScoperTestClient, source_id: str, two_panes
     ):
         """
         Bug caught: oscillator move API not updating paneId, or the
@@ -227,7 +227,7 @@ class TestOscillatorPaneMove:
         )
 
     def test_move_preserves_audio_binding(
-        self, editor: OscilTestClient, source_id: str, two_panes
+        self, editor: MultiScoperTestClient, source_id: str, two_panes
     ):
         """
         Bug caught: moving oscillator to a different pane disconnects
@@ -257,7 +257,7 @@ class TestOscillatorPaneMove:
         )
 
     def test_move_to_nonexistent_pane_fails_gracefully(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: moving oscillator to a nonexistent pane causes crash
@@ -282,7 +282,7 @@ class TestPaneStatePersistence:
     """Pane state survives save/load."""
 
     def test_pane_count_survives_save_load(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: pane list not serialized in state XML, so all panes
@@ -295,7 +295,7 @@ class TestPaneStatePersistence:
         panes_before = editor.get_panes()
         assert len(panes_before) >= 1
 
-        path = "/tmp/oscil_e2e_pane_persist.xml"
+        path = "/tmp/multiscoper_e2e_pane_persist.xml"
         saved = editor.save_state(path)
         if not saved:
             pytest.fail("State save API not available")
@@ -314,7 +314,7 @@ class TestPaneStatePersistence:
         )
 
     def test_oscillator_pane_binding_survives_save_load(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: pane IDs regenerated on load instead of restored,
@@ -327,7 +327,7 @@ class TestPaneStatePersistence:
         osc_before = editor.get_oscillator_by_id(osc_id)
         pane_before = osc_before.get("paneId", "")
 
-        path = "/tmp/oscil_e2e_binding_persist.xml"
+        path = "/tmp/multiscoper_e2e_binding_persist.xml"
         saved = editor.save_state(path)
         if not saved:
             pytest.fail("State save API not available")
@@ -353,7 +353,7 @@ class TestPaneStatePersistence:
         )
 
     def test_pane_names_survive_save_load(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: pane name field not serialized in state XML, so panes
@@ -375,7 +375,7 @@ class TestPaneStatePersistence:
             f"Should have 2+ panes, got {len(panes_before)}"
         )
 
-        path = "/tmp/oscil_e2e_pane_names.xml"
+        path = "/tmp/multiscoper_e2e_pane_names.xml"
         saved = editor.save_state(path)
         if not saved:
             pytest.fail("State save API not available")
@@ -401,7 +401,7 @@ class TestPaneStatePersistence:
         )
 
     def test_multiple_pane_names_survive_save_load(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: only the first pane's name is serialized, subsequent
@@ -421,7 +421,7 @@ class TestPaneStatePersistence:
         panes_before = editor.get_panes()
         assert len(panes_before) >= 4  # auto-created + 3 manual
 
-        path = "/tmp/oscil_e2e_multi_pane_names.xml"
+        path = "/tmp/multiscoper_e2e_multi_pane_names.xml"
         saved = editor.save_state(path)
         if not saved:
             pytest.fail("State save API not available")

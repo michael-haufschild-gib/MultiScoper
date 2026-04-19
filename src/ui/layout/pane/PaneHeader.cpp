@@ -1,5 +1,5 @@
 /*
-    Oscil - Pane Header Implementation
+    MultiScoper - Pane Header Implementation
 */
 
 #include "ui/layout/pane/PaneHeader.h"
@@ -9,7 +9,7 @@
 #include "ui/theme/ThemeManager.h"
 #include "ui/theme/Typography.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 namespace
@@ -20,6 +20,10 @@ namespace
 // if the two drifted apart the processing-mode badge would regress on
 // borderline themes.
 constexpr float kHeaderTintAlpha = 0.08f;
+
+// Keep in lockstep with PaneComponent's PANE_CORNER_RADIUS. Square corners
+// per design.
+constexpr float kPaneCornerRadius = 0.0f;
 } // namespace
 
 // pill text colour comes from ColorTheme::pickContrastingText.
@@ -35,6 +39,9 @@ void PaneHeader::setupComponents()
     nameLabel_->setFont(Typography::smallBold());
     nameLabel_->setTextJustification(juce::Justification::centredLeft);
     nameLabel_->onTextChanged = [this](const juce::String& newName) {
+        // Pill placement depends on rendered width of the name — re-flow.
+        resized();
+        repaint();
         if (onNameChanged)
             onNameChanged(newName);
     };
@@ -49,9 +56,10 @@ void PaneHeader::setupComponents()
     addAndMakeVisible(*actionBar_);
 
     // Close button
-    closeButton_ = std::make_unique<OscilButton>(themeService_, "", "pane_closeBtn");
+    closeButton_ = std::make_unique<MultiScoperButton>(themeService_, "", "pane_closeBtn");
     closeButton_->setVariant(ButtonVariant::Icon);
     closeButton_->setIconPath(ListItemIcons::createCloseIcon(14.0f));
+    closeButton_->setIconPadding(7.0f); // +2px icon vs SPACING_SM default
     closeButton_->setTooltip("Close pane");
     closeButton_->onClick = [this]() {
         if (onCloseRequested)
@@ -81,14 +89,10 @@ void PaneHeader::paintOscillatorBadge(juce::Graphics& g, juce::Rectangle<int>& b
     auto mode = primaryOscillator_->getProcessingMode();
     juce::Colour const modeColor = primaryOscillator_->getColour();
 
-    g.setColour(theme.textSecondary);
-    g.setFont(Typography::caption());
-    g.drawText("Processing:", bounds.removeFromLeft(70), juce::Justification::centredLeft);
-
     auto badgeBounds = bounds.removeFromLeft(BADGE_WIDTH).toFloat();
     constexpr float kBgAlpha = 0.2f;
     g.setColour(modeColor.withAlpha(kBgAlpha));
-    g.fillRoundedRectangle(badgeBounds.reduced(2, 4), 10.0f);
+    g.fillRect(badgeBounds.reduced(2, 4));
 
     // Theme-aware text: composite the badge tint over the *actual* header
     // background (tinted by textPrimary @ 0.08 in paint()), not the raw
@@ -114,20 +118,31 @@ void PaneHeader::paintOscillatorBadge(juce::Graphics& g, juce::Rectangle<int>& b
 void PaneHeader::paint(juce::Graphics& g)
 {
     const auto& theme = themeService_.getCurrentTheme();
-    auto bounds = getLocalBounds();
+    auto const boundsF = getLocalBounds().toFloat();
 
-    // Tinted header background (bgHover equivalent)
+    // Tinted header background. Top corners are rounded to match the pane's
+    // outline; bottom corners stay square because the body continues below.
+    juce::Path headerPath;
+    headerPath.addRoundedRectangle(boundsF.getX(), boundsF.getY(), boundsF.getWidth(), boundsF.getHeight(),
+                                   kPaneCornerRadius, kPaneCornerRadius,
+                                   /*curveTopLeft=*/true, /*curveTopRight=*/true,
+                                   /*curveBottomLeft=*/false, /*curveBottomRight=*/false);
     g.setColour(theme.textPrimary.withAlpha(kHeaderTintAlpha));
-    g.fillRect(bounds);
+    g.fillPath(headerPath);
 
+    auto bounds = getLocalBounds();
     auto handleBounds = bounds.removeFromLeft(DRAG_HANDLE_WIDTH);
     g.setColour(theme.textSecondary.withAlpha(0.5f));
     paintDragHandle(g, handleBounds);
 
-    bounds.removeFromLeft(NAME_LABEL_WIDTH + PADDING);
+    // Place the processing badge immediately after the name label (which is
+    // sized to its actual text width in resized()), with a small gap.
+    int const badgeX =
+        nameLabel_ != nullptr ? nameLabel_->getRight() + PADDING : DRAG_HANDLE_WIDTH + PADDING + NAME_LABEL_WIDTH;
+    bounds.removeFromLeft(badgeX - DRAG_HANDLE_WIDTH);
     paintOscillatorBadge(g, bounds, theme);
 
-    // Bottom border (borderDefault equivalent)
+    // Bottom hairline — straight line, safe because bottom corners are square.
     g.setColour(theme.textPrimary.withAlpha(0.12f));
     g.drawHorizontalLine(getHeight() - 1, 0.0f, static_cast<float>(getWidth()));
 }
@@ -142,11 +157,16 @@ void PaneHeader::resized()
     int const actionBarWidth = actionBar_->getPreferredWidth();
     actionBar_->setBounds(getWidth() - CLOSE_BUTTON_SIZE - 2 - PADDING - actionBarWidth, 0, actionBarWidth, HEIGHT);
 
-    // Name label (after drag handle)
+    // Name label sized tightly to its rendered text width so the processing
+    // pill drawn next to it snuggles up against the title rather than
+    // floating in mid-header. Capped at NAME_LABEL_WIDTH for very long names.
     int const labelX = DRAG_HANDLE_WIDTH + PADDING;
-    int labelWidth =
-        juce::jmin(NAME_LABEL_WIDTH, getWidth() - labelX - actionBarWidth - CLOSE_BUTTON_SIZE - (PADDING * 3));
-    labelWidth = juce::jmax(0, labelWidth); // Ensure non-negative
+    juce::GlyphArrangement glyphs;
+    glyphs.addLineOfText(Typography::smallBold(), nameLabel_->getText(), 0.0f, 0.0f);
+    auto const textWidth = static_cast<int>(std::ceil(glyphs.getBoundingBox(0, -1, true).getWidth())) + 2;
+    int const reservedRight = actionBarWidth + CLOSE_BUTTON_SIZE + BADGE_WIDTH + (PADDING * 4);
+    int labelWidth = juce::jmin(NAME_LABEL_WIDTH, juce::jmax(0, getWidth() - labelX - reservedRight));
+    labelWidth = juce::jmin(labelWidth, juce::jmax(0, textWidth));
     nameLabel_->setBounds(labelX, (HEIGHT - nameLabel_->getPreferredHeight()) / 2, labelWidth,
                           nameLabel_->getPreferredHeight());
 }
@@ -182,7 +202,12 @@ void PaneHeader::mouseMove(const juce::MouseEvent& event)
 void PaneHeader::setPaneName(const juce::String& name)
 {
     if (nameLabel_)
+    {
         nameLabel_->setText(name, false);
+        // Pill placement depends on the rendered width of the name — re-flow.
+        resized();
+        repaint();
+    }
 }
 
 juce::String PaneHeader::getPaneName() const { return nameLabel_ ? nameLabel_->getText() : juce::String(); }
@@ -209,4 +234,4 @@ bool PaneHeader::isInDragZone(juce::Point<int> pos) const
     return pos.x >= 0 && pos.x < DRAG_HANDLE_WIDTH;
 }
 
-} // namespace oscil
+} // namespace multiscoper

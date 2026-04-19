@@ -1,5 +1,5 @@
 /*
-    Oscil - Timing Engine Types
+    MultiScoper - Timing Engine Types
     Enums, conversion functions, and configuration structs for the TimingEngine
 */
 
@@ -11,7 +11,7 @@
 
 #include <cstdint>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -230,7 +230,7 @@ inline NoteInterval engineToEntityNoteInterval(EngineNoteInterval interval)
 
 /**
  * Engine-internal timing configuration.
- * Distinct from entity-level TimingConfig (oscil::TimingConfig).
+ * Distinct from entity-level TimingConfig (multiscoper::TimingConfig).
  */
 struct EngineTimingConfig
 {
@@ -280,4 +280,4 @@ struct HostTimingInfo
     TransportState transportState = TransportState::STOPPED;
 };
 
-} // namespace oscil
+} // namespace multiscoper

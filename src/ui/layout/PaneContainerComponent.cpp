@@ -1,12 +1,12 @@
 /*
-    Oscil - Pane Container Component Implementation
+    MultiScoper - Pane Container Component Implementation
 */
 
 #include "ui/layout/PaneContainerComponent.h"
 
 #include "ui/theme/ThemeManager.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 PaneContainerComponent::PaneContainerComponent(IThemeService& themeService) : themeService_(themeService) {}
@@ -105,9 +105,9 @@ void PaneContainerComponent::paint(juce::Graphics& g)
                 {
                     auto bounds = pane->getBounds().toFloat();
                     g.setColour(highlightColour.withAlpha(0.13f));
-                    g.fillRoundedRectangle(bounds, 4.0f);
+                    g.fillRect(bounds);
                     g.setColour(highlightColour.withAlpha(0.40f));
-                    g.drawRoundedRectangle(bounds.reduced(1.0f), 4.0f, 2.0f);
+                    g.drawRect(bounds.reduced(1.0f), 2.0f);
                     break;
                 }
             }
@@ -119,7 +119,7 @@ void PaneContainerComponent::paint(juce::Graphics& g)
         auto colBounds = juce::Rectangle<float>(static_cast<float>(highlightedColumn_ * colWidth), 0.0f,
                                                 static_cast<float>(colWidth), static_cast<float>(getHeight()));
         g.setColour(highlightColour.withAlpha(0.07f));
-        g.fillRoundedRectangle(colBounds.reduced(2.0f), 4.0f);
+        g.fillRect(colBounds.reduced(2.0f));
     }
 }
 
@@ -165,4 +165,4 @@ void PaneContainerComponent::clearDropHighlight()
     }
 }
 
-} // namespace oscil
+} // namespace multiscoper

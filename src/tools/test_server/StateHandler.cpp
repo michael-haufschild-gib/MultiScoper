@@ -1,18 +1,18 @@
 /*
-    Oscil - State Handler Implementation
+    MultiScoper - State Handler Implementation
 */
 
 #include "tools/test_server/StateHandler.h"
 
 #include "core/InstanceRegistry.h"
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "core/Pane.h"
 
 #include "plugin/PluginEditor.h"
 #include "plugin/PluginFactory.h"
 #include "plugin/PluginProcessor.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 void StateHandler::handleHealth(const httplib::Request& /*req*/, httplib::Response& res)
@@ -28,7 +28,7 @@ void StateHandler::handleStateReset(const httplib::Request& /*req*/, httplib::Re
     auto result = runOnMessageThread([this]() -> nlohmann::json {
         nlohmann::json response;
 
-        // Reset OscilState (oscillators, panes, layout)
+        // Reset MultiScoperState (oscillators, panes, layout)
         auto& state = editor_.getProcessor().getState();
 
         // Remove all oscillators
@@ -76,4 +76,4 @@ void StateHandler::clearTestSources()
     testSourceBuffers_.clear();
 }
 
-} // namespace oscil
+} // namespace multiscoper

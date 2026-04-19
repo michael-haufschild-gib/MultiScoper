@@ -1,10 +1,10 @@
 -- 02_cross_instance_discovery.lua
 -- Task 3.3 — Cross-instance source discovery (HEADLINE FEATURE).
 --
--- Validates: when two Oscil instances are loaded in the same Reaper project,
+-- Validates: when two MultiScoper instances are loaded in the same Reaper project,
 -- the InstanceRegistry inside each plugin sees the other as a known source.
 -- This is the single most important scenario in the suite — it exercises
--- Oscil's defining feature (aggregator discovery) inside a real host process,
+-- MultiScoper's defining feature (aggregator discovery) inside a real host process,
 -- which the in-process harness fakes via a shared-process singleton (see
 -- gap #7 in harness_capability_gaps.md).
 --
@@ -15,15 +15,15 @@
 --     editor on at least one instance forces the discovery code to run.
 --   * The serialized plugin state chunk includes either a `sources` or
 --     `knownSources` element listing discovered peers. This is the contract
---     of PluginProcessorState's OscilState serialization.
+--     of PluginProcessorState's MultiScoperState serialization.
 --
 -- Fallback strategy: if the primary chunk-scan check doesn't find 2 sources,
 -- the scenario degrades to a save-reopen round-trip and checks that BOTH
--- plugin chunks mention oscil4 (weaker, but still proves both loaded).
+-- plugin chunks mention MultiScoper (weaker, but still proves both loaded).
 
 local T = require("reaper_test_lib")
 
-local SAVE_PATH = "/tmp/oscil_reaper_scenario_02.rpp"
+local SAVE_PATH = "/tmp/multiscoper_reaper_scenario_02.rpp"
 
 -- Count occurrences of `needle` in `haystack` as a literal substring.
 local function count_occurrences(haystack, needle)
@@ -43,10 +43,10 @@ end
 local function run()
   T.new_project()
 
-  -- Two tracks, each with oscil4 VST3.
-  local fx0 = T.load_vst3("oscil4", 0)
-  local fx1 = T.load_vst3("oscil4", 1)
-  T.assert_true(fx0 >= 0 and fx1 >= 0, "both oscil4 instances must load")
+  -- Two tracks, each with MultiScoper VST3.
+  local fx0 = T.load_vst3("MultiScoper", 0)
+  local fx1 = T.load_vst3("MultiScoper", 1)
+  T.assert_true(fx0 >= 0 and fx1 >= 0, "both MultiScoper instances must load")
   T.assert_eq(T.count_fx(0), 1, "track 0 should have 1 FX")
   T.assert_eq(T.count_fx(1), 1, "track 1 should have 1 FX")
 
@@ -62,9 +62,9 @@ local function run()
   T.play_seconds(2.0)
 
   -- Primary check: dump track 0's plugin state and look for evidence of 2
-  -- distinct source entries. The OscilState XML contains per-source ids,
+  -- distinct source entries. The MultiScoperState XML contains per-source ids,
   -- so counting the "<SOURCE" or "sourceId" marker is the most robust
-  -- approach. We fall back to counting "oscil4" mentions if neither marker
+  -- approach. We fall back to counting "MultiScoper" mentions if neither marker
   -- is present — which would indicate the state format changed and the
   -- scenario needs updating.
   local chunk = T.dump_plugin_state(0, 0)
@@ -93,7 +93,7 @@ local function run()
     return -- happy path
   end
 
-  -- Fallback: save+close+reopen and verify both plugins' chunks carry oscil4.
+  -- Fallback: save+close+reopen and verify both plugins' chunks carry MultiScoper.
   -- This proves the two instances coexist and both persist state. It does not
   -- prove cross-instance discovery; we log this as a degraded outcome.
   T.log("[02] primary source-marker check did not find >=2 sources; running fallback")
@@ -109,13 +109,13 @@ local function run()
 
   local c0 = T.dump_plugin_state(0, 0)
   local c1 = T.dump_plugin_state(1, 0)
-  T.assert_true(T.state_mentions_plugin(c0, "oscil4"),
-    "fallback: track 0 chunk missing oscil4 marker")
-  T.assert_true(T.state_mentions_plugin(c1, "oscil4"),
-    "fallback: track 1 chunk missing oscil4 marker")
+  T.assert_true(T.state_mentions_plugin(c0, "MultiScoper"),
+    "fallback: track 0 chunk missing MultiScoper marker")
+  T.assert_true(T.state_mentions_plugin(c1, "MultiScoper"),
+    "fallback: track 1 chunk missing MultiScoper marker")
 
   -- Re-probe the source markers on the post-reopen chunks before declaring
-  -- anything a pass. Merely proving that two oscil4 instances reopened does
+  -- anything a pass. Merely proving that two MultiScoper instances reopened does
   -- NOT prove cross-instance discovery — one-way or fully broken peer-list
   -- serialization would still look healthy by that weaker check. Require at
   -- least one of the two instances to surface a peer marker, and fail the

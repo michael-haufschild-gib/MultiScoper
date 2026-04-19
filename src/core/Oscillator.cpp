@@ -1,14 +1,14 @@
 /*
-    Oscil - Oscillator Implementation
+    MultiScoper - Oscillator Implementation
     PRD aligned with extended display properties and NO_SOURCE state
 */
 
 #include "core/Oscillator.h"
 
-#include "core/OscilLog.h"
-#include "core/OscilState.h"
+#include "core/MultiScoperLog.h"
+#include "core/MultiScoperState.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 OscillatorId OscillatorId::generate() { return OscillatorId{juce::Uuid().toString()}; }
@@ -63,7 +63,7 @@ OscillatorState Oscillator::migrateOscillatorState(const juce::ValueTree& state,
         const int rawState = static_cast<int>(
             state.getProperty(StateIds::OscillatorState, static_cast<int>(OscillatorState::NO_SOURCE)));
 
-        OscillatorState result;
+        OscillatorState result = OscillatorState::NO_SOURCE;
         if (rawState == static_cast<int>(OscillatorState::ACTIVE) ||
             rawState == static_cast<int>(OscillatorState::NO_SOURCE))
             result = static_cast<OscillatorState>(rawState);
@@ -116,10 +116,11 @@ void Oscillator::fromValueTree(const juce::ValueTree& state)
 
     schemaVersion_ = CURRENT_SCHEMA_VERSION;
 
-    OSCIL_LOG(STATE, "Oscillator::fromValueTree: id="
-                         << id_.id << " name=" << name_ << " sourceId=" << sourceId_.id << " paneId=" << paneId_.id
-                         << " state=" << static_cast<int>(state_) << " mode=" << processingModeToString(processingMode_)
-                         << " visible=" << (visible_ ? "true" : "false") << " shader=" << shaderId_);
+    MULTISCOPER_LOG(STATE, "Oscillator::fromValueTree: id="
+                               << id_.id << " name=" << name_ << " sourceId=" << sourceId_.id
+                               << " paneId=" << paneId_.id << " state=" << static_cast<int>(state_)
+                               << " mode=" << processingModeToString(processingMode_)
+                               << " visible=" << (visible_ ? "true" : "false") << " shader=" << shaderId_);
 }
 
 void Oscillator::setVisualOverride(const juce::Identifier& property, const juce::var& value)
@@ -149,15 +150,15 @@ void Oscillator::setSourceId(const SourceId& sourceId)
     {
         state_ = OscillatorState::NO_SOURCE;
     }
-    OSCIL_LOG(STATE, "Oscillator::setSourceId: id=" << id_.id << " name=" << name_ << " source=" << oldSourceId.id
-                                                    << "->" << sourceId_.id << " state=" << static_cast<int>(oldState)
-                                                    << "->" << static_cast<int>(state_));
+    MULTISCOPER_LOG(STATE, "Oscillator::setSourceId: id="
+                               << id_.id << " name=" << name_ << " source=" << oldSourceId.id << "->" << sourceId_.id
+                               << " state=" << static_cast<int>(oldState) << "->" << static_cast<int>(state_));
 }
 
 void Oscillator::clearSource()
 {
-    OSCIL_LOG(STATE,
-              "Oscillator::clearSource: id=" << id_.id << " name=" << name_ << " previousSource=" << sourceId_.id);
+    MULTISCOPER_LOG(STATE, "Oscillator::clearSource: id=" << id_.id << " name=" << name_
+                                                          << " previousSource=" << sourceId_.id);
     // Preserve configuration but transition to NO_SOURCE
     sourceId_ = SourceId::noSource();
     state_ = OscillatorState::NO_SOURCE;
@@ -182,4 +183,4 @@ bool Oscillator::isValidName(const juce::String& name)
     return name.length() >= MIN_NAME_LENGTH && name.length() <= MAX_NAME_LENGTH;
 }
 
-} // namespace oscil
+} // namespace multiscoper

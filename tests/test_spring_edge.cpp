@@ -1,5 +1,5 @@
 /*
-    Oscil - Ease Animation Tests: Edge Cases
+    MultiScoper - Ease Animation Tests: Edge Cases
     Tests for numerical stability, extreme values, and SpringAnimationGroup
 */
 
@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class EaseEdgeTest : public ::testing::Test
 {

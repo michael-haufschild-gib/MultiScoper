@@ -1,5 +1,5 @@
 /*
-    Oscil - Decimating Capture Buffer Concurrent Tests
+    MultiScoper - Decimating Capture Buffer Concurrent Tests
     Thread safety of the DecimatingCaptureBuffer under concurrent write + read
     and concurrent write + reconfigure scenarios.
 
@@ -21,8 +21,8 @@
 #include <gtest/gtest.h>
 #include <thread>
 
-using namespace oscil;
-using namespace oscil::test;
+using namespace multiscoper;
+using namespace multiscoper::test;
 
 class DecimatingCaptureBufferConcurrentTest : public ::testing::Test
 {

@@ -1,15 +1,15 @@
 /*
-    Oscil - Oscillator List Component Implementation
+    MultiScoper - Oscillator List Component Implementation
 */
 
 #include "ui/panels/OscillatorListComponent.h"
 
-#include "core/OscilLog.h"
+#include "core/MultiScoperLog.h"
 #include "ui/components/ComponentConstants.h"
 
 #include <utility>
 
-namespace oscil
+namespace multiscoper
 {
 
 OscillatorListComponent::OscillatorListComponent(ServiceContext& context)
@@ -24,10 +24,6 @@ OscillatorListComponent::OscillatorListComponent(IThemeService& themeService, II
     setOpaque(true);
 
     setTestId("oscillatorList");
-
-    toolbar_ = std::make_unique<OscillatorListToolbar>(getThemeService());
-    toolbar_->addListener(this);
-    addAndMakeVisible(toolbar_.get());
 
     viewport_ = std::make_unique<juce::Viewport>();
     viewport_->setComponentID("oscillatorListViewport");
@@ -50,8 +46,6 @@ OscillatorListComponent::~OscillatorListComponent()
 {
     removeAllChildren(); // Prevent double-free/UAF in base Component destructor
 
-    toolbar_->removeListener(this);
-
     for (auto& item : items_)
     {
         if (item)
@@ -59,7 +53,7 @@ OscillatorListComponent::~OscillatorListComponent()
     }
 }
 
-void OscillatorListComponent::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
+void OscillatorListComponent::registerTestId() { MULTISCOPER_REGISTER_TEST_ID(testId_); }
 
 void OscillatorListComponent::paint(juce::Graphics& g)
 {
@@ -97,8 +91,6 @@ void OscillatorListComponent::resized()
 {
     auto bounds = getLocalBounds();
 
-    toolbar_->setBounds(bounds.removeFromTop(OSCILLATOR_TOOLBAR_HEIGHT));
-
     if (items_.empty())
     {
         emptyStateLabel_->setBounds(bounds.reduced(ComponentLayout::SPACING_MD));
@@ -126,46 +118,6 @@ void OscillatorListComponent::resized()
     }
 }
 
-void OscillatorListComponent::updateOscillatorCounts()
-{
-    if (toolbar_)
-    {
-        int const totalCount = static_cast<int>(allOscillators_.size());
-        int visibleCount = 0;
-        for (const auto& osc : allOscillators_)
-        {
-            if (osc.isVisible())
-                visibleCount++;
-        }
-        toolbar_->setOscillatorCount(totalCount, visibleCount);
-    }
-}
-
-std::vector<Oscillator> OscillatorListComponent::filterOscillators(const std::vector<Oscillator>& oscillators) const
-{
-    std::vector<Oscillator> filtered;
-    filtered.reserve(oscillators.size());
-    for (const auto& osc : oscillators)
-    {
-        bool include = false;
-        switch (currentFilterMode_)
-        {
-            case OscillatorFilterMode::All:
-                include = true;
-                break;
-            case OscillatorFilterMode::Visible:
-                include = osc.isVisible();
-                break;
-            case OscillatorFilterMode::Hidden:
-                include = !osc.isVisible();
-                break;
-        }
-        if (include)
-            filtered.push_back(osc);
-    }
-    return filtered;
-}
-
 void OscillatorListComponent::syncContainerChildren()
 {
     if (static_cast<size_t>(container_->getNumChildComponents()) != items_.size())
@@ -189,10 +141,10 @@ void OscillatorListComponent::syncContainerChildren()
 }
 
 void OscillatorListComponent::rebuildItems(
-    const std::vector<Oscillator>& filtered,
+    const std::vector<Oscillator>& oscillators,
     std::unordered_map<juce::String, std::unique_ptr<OscillatorListItemComponent>>& reusedItems)
 {
-    for (const auto& osc : filtered)
+    for (const auto& osc : oscillators)
     {
         std::unique_ptr<OscillatorListItemComponent> item;
 
@@ -202,12 +154,12 @@ void OscillatorListComponent::rebuildItems(
             item = std::move(it->second);
             reusedItems.erase(it);
             item->updateFromOscillator(osc);
-            OSCIL_LOG(UI, "OscList: reused item for " << osc.getName() << " order=" << osc.getOrderIndex());
+            MULTISCOPER_LOG(UI, "OscList: reused item for " << osc.getName() << " order=" << osc.getOrderIndex());
         }
         else
         {
             item = std::make_unique<OscillatorListItemComponent>(osc, instanceRegistry_, getThemeService());
-            OSCIL_LOG(UI, "OscList: created new item for " << osc.getName() << " order=" << osc.getOrderIndex());
+            MULTISCOPER_LOG(UI, "OscList: created new item for " << osc.getName() << " order=" << osc.getOrderIndex());
         }
 
         item->setSelected(osc.getId() == selectedOscillatorId_);
@@ -223,10 +175,9 @@ void OscillatorListComponent::rebuildItems(
 void OscillatorListComponent::refreshList(const std::vector<Oscillator>& oscillators)
 {
     allOscillators_ = oscillators;
-    auto filtered = filterOscillators(oscillators);
 
-    OSCIL_LOG(UI, "OscList: refreshList: " << oscillators.size() << " total, " << filtered.size() << " filtered, "
-                                           << items_.size() << " existing items");
+    MULTISCOPER_LOG(UI,
+                    "OscList: refreshList: " << oscillators.size() << " total, " << items_.size() << " existing items");
 
     // Map existing items by ID for reuse
     std::unordered_map<juce::String, std::unique_ptr<OscillatorListItemComponent>> reusedItems;
@@ -240,19 +191,18 @@ void OscillatorListComponent::refreshList(const std::vector<Oscillator>& oscilla
     }
     items_.clear();
 
-    rebuildItems(filtered, reusedItems);
+    rebuildItems(oscillators, reusedItems);
     reusedItems.clear();
 
-    // Assign contiguous test IDs based on position in the displayed (filtered) list
+    // Assign contiguous test IDs based on position in the displayed list
     for (size_t i = 0; i < items_.size(); ++i)
         items_[i]->setListIndex(static_cast<int>(i));
 
     syncContainerChildren();
 
-    emptyStateLabel_->setVisible(filtered.empty());
-    viewport_->setVisible(!filtered.empty());
+    emptyStateLabel_->setVisible(oscillators.empty());
+    viewport_->setVisible(!oscillators.empty());
 
-    updateOscillatorCounts();
     resized();
 }
 
@@ -272,4 +222,4 @@ void OscillatorListComponent::setSelectedOscillator(const OscillatorId& oscillat
 // Listener forwarding, filter-mode, and drag-and-drop handlers are in
 // OscillatorListComponentEvents.cpp.
 
-} // namespace oscil
+} // namespace multiscoper

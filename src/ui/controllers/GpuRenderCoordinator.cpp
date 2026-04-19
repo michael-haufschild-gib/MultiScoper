@@ -1,10 +1,10 @@
 /*
-    Oscil - GPU Render Coordinator Implementation
+    MultiScoper - GPU Render Coordinator Implementation
 */
 
 #include "ui/controllers/GpuRenderCoordinator.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 GpuRenderCoordinator::GpuRenderCoordinator(juce::AudioProcessorEditor& editor, StatusBarComponent& statusBar)
@@ -77,6 +77,12 @@ void GpuRenderCoordinator::forceRepaint()
         glManager_->triggerRepaint();
 }
 
+void GpuRenderCoordinator::setBackgroundColour(juce::Colour colour)
+{
+    if (glManager_)
+        glManager_->setBackgroundColour(colour);
+}
+
 void GpuRenderCoordinator::propagateGpuStateToPanes(const std::vector<std::unique_ptr<PaneComponent>>& panes) const
 {
     bool const enabled = isGpuRenderingEnabled();
@@ -111,4 +117,4 @@ void GpuRenderCoordinator::detach()
     }
 }
 
-} // namespace oscil
+} // namespace multiscoper

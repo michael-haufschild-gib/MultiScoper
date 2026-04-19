@@ -1,5 +1,5 @@
 /*
-    Oscil Test Harness - HTTP Server: UI Keyboard, Focus, Wait & Element Query Handlers
+    MultiScoper Test Harness - HTTP Server: UI Keyboard, Focus, Wait & Element Query Handlers
 */
 
 #include "TestElementRegistry.h"
@@ -7,7 +7,7 @@
 
 #include <optional>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 namespace
@@ -429,4 +429,4 @@ void TestHttpServer::handleUIElements(const httplib::Request&, httplib::Response
     res.set_content(successResponse(*data).dump(), "application/json");
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

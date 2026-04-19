@@ -1,5 +1,5 @@
 /*
-    Oscil - Plugin Test Server
+    MultiScoper - Plugin Test Server
     HTTP server for automated UI testing
 */
 
@@ -24,10 +24,10 @@
 #include <thread>
 #include <unordered_map>
 
-namespace oscil
+namespace multiscoper
 {
 
-class OscilPluginEditor;
+class MultiScoperPluginEditor;
 class SharedCaptureBuffer;
 
 // Forward declare handlers
@@ -49,7 +49,7 @@ class PluginTestServer
 {
 public:
     /// Create a test server attached to the given plugin editor for HTTP-driven automation.
-    explicit PluginTestServer(OscilPluginEditor& editor);
+    explicit PluginTestServer(MultiScoperPluginEditor& editor);
     ~PluginTestServer();
 
     void start(int port = 9876);
@@ -66,7 +66,7 @@ private:
     void setupWaveformEndpoints();
     void serverThread();
 
-    OscilPluginEditor& editor_;
+    MultiScoperPluginEditor& editor_;
     std::unique_ptr<httplib::Server> server_;
     std::unique_ptr<std::thread> serverThread_;
     std::atomic<bool> running_{false};
@@ -85,4 +85,4 @@ private:
     std::unique_ptr<StateHandler> stateHandler_;
 };
 
-} // namespace oscil
+} // namespace multiscoper

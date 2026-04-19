@@ -1,11 +1,11 @@
 /*
-    Oscil - Theme Manager Serialization
+    MultiScoper - Theme Manager Serialization
     ColorTheme ValueTree/JSON persistence and ThemeManager file I/O
 */
 
 #include "ui/theme/ThemeManager.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 // === ColorTheme Serialization ===
@@ -231,7 +231,7 @@ bool ColorTheme::fromXmlString(const juce::String& xmlString)
 juce::File ThemeManager::getThemesDirectory() const
 {
     auto appDataDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory);
-    return appDataDir.getChildFile("Oscil").getChildFile("themes");
+    return appDataDir.getChildFile("MultiScoper").getChildFile("themes");
 }
 
 void ThemeManager::loadThemes()
@@ -290,4 +290,4 @@ void ThemeManager::deleteThemeFile(const juce::String& themeName) const
     }
 }
 
-} // namespace oscil
+} // namespace multiscoper

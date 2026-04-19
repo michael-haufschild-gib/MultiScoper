@@ -1,5 +1,5 @@
 /*
-    Oscil - Component Constants
+    MultiScoper - Component Constants
     Shared sizing, spacing, and animation constants for the UI component library
 */
 
@@ -9,7 +9,7 @@
 
 #include <juce_graphics/juce_graphics.h>
 
-namespace oscil
+namespace multiscoper
 {
 namespace ComponentLayout
 {
@@ -33,7 +33,7 @@ static constexpr int TOOLTIP_MAX_WIDTH = 200;
 static constexpr int DROPDOWN_MAX_HEIGHT = 300;
 static constexpr int MODAL_MIN_WIDTH = 280;
 
-// Typography — legacy aliases; canonical values live in oscil::Typography.
+// Typography — legacy aliases; canonical values live in multiscoper::Typography.
 inline constexpr float FONT_SIZE_CAPTION = Typography::sizeCaption;
 inline constexpr float FONT_SIZE_SMALL = Typography::sizeSmall;
 inline constexpr float FONT_SIZE_DEFAULT = Typography::sizeHeading;
@@ -123,4 +123,4 @@ static constexpr float FRAME_DURATION_30FPS = 1.0f / 30.0f;
 static constexpr float msToSeconds(int ms) { return static_cast<float>(ms) / 1000.0f; }
 } // namespace AnimationTiming
 
-} // namespace oscil
+} // namespace multiscoper

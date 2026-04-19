@@ -1,7 +1,7 @@
 """
 16-instance end-to-end tests.
 
-Oscil's core promise is "unlimited simultaneous audio sources, cross-instance
+MultiScoper's core promise is "unlimited simultaneous audio sources, cross-instance
 discovery, and rendering." The regular multi_instance suite exercises 2 and 3
 instances; this suite pushes to 16 — a realistic upper bound for a DAW
 session where an engineer might patch a reference scope onto many mix buses.
@@ -27,7 +27,7 @@ from typing import Optional
 import pytest
 import requests
 
-from oscil_test_utils import OscilTestClient, settle
+from multiscoper_test_utils import MultiScoperTestClient, settle
 from perf_monitor import (
     ResourceMonitor,
     assert_cpu_below,
@@ -43,7 +43,7 @@ BASELINE_INSTANCES = 3
 # Fixtures
 # ---------------------------------------------------------------------------
 @pytest.fixture
-def sixteen_instances(client: OscilTestClient):
+def sixteen_instances(client: MultiScoperTestClient):
     """Ensure exactly 16 plugin instances exist, all editors open.
 
     Yields (client, track_ids, source_ids).  Teardown removes dynamic tracks
@@ -525,7 +525,7 @@ class TestInstanceScalingCost:
     """
 
     @pytest.fixture
-    def scaling_client(self, client: OscilTestClient):
+    def scaling_client(self, client: MultiScoperTestClient):
         # Close any open editors from prior tests; we control visibility.
         # Ensure 16 base tracks exist (for reuse).  We keep editors closed
         # to start and open them one-by-one in the measurement loop.
@@ -580,7 +580,7 @@ class TestInstanceScalingCost:
             client.remove_track(idx)
 
     def _measure_idle_cpu_with_n_editors(
-        self, client: OscilTestClient, n_open: int, sample_s: float = 3.0
+        self, client: MultiScoperTestClient, n_open: int, sample_s: float = 3.0
     ) -> float:
         """Open exactly n_open editors, wait for settle, measure CPU."""
         # Open first n, close the rest.
@@ -706,7 +706,7 @@ class TestInstanceScalingCost:
 # Cleanup — we must not leave dynamic tracks behind.
 # ---------------------------------------------------------------------------
 class TestSixteenInstanceTeardown:
-    def test_fixture_restores_baseline_track_count(self, client: OscilTestClient):
+    def test_fixture_restores_baseline_track_count(self, client: MultiScoperTestClient):
         """
         After all the 16-instance tests above have run, the baseline must
         be intact — the next test that assumes exactly 3 instances should

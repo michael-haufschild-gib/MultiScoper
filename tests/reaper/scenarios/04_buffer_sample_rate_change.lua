@@ -1,7 +1,7 @@
 -- 04_buffer_sample_rate_change.lua
 -- Task 3.5 — Buffer size / sample rate changes exercise prepareToPlay again.
 --
--- Validates: Oscil survives a mid-session block-size change and re-enters
+-- Validates: MultiScoper survives a mid-session block-size change and re-enters
 -- processBlock safely. Covers harness gaps #1 (sample rate mid-session) and
 -- #2 (buffer size mid-session) from harness_capability_gaps.md — the harness
 -- calls prepareToPlay exactly once per track lifetime, so the reconfigure
@@ -25,7 +25,7 @@
 local T = require("reaper_test_lib")
 
 local SAVE_PATH = (os.getenv("TMPDIR") or os.getenv("TMP") or os.getenv("TEMP") or "/tmp")
-  .. "/oscil_reaper_scenario_04.rpp"
+  .. "/multiscoper_reaper_scenario_04.rpp"
 
 -- Reaper's command id for "Options: Enable anticipative FX processing" toggle.
 -- Verified for Reaper 7.x. If this id is wrong on older/newer Reapers the
@@ -35,8 +35,8 @@ local CMD_TOGGLE_ANTICIPATIVE_FX = 41096
 local function run()
   T.new_project()
 
-  local fx = T.load_vst3("oscil4", 0)
-  T.assert_true(fx >= 0, "oscil4 VST3 must load on track 0")
+  local fx = T.load_vst3("MultiScoper", 0)
+  T.assert_true(fx >= 0, "MultiScoper VST3 must load on track 0")
 
   -- Record the current device block size if the API is available. Logging
   -- only — we don't assert on the value because dev machines vary.
@@ -95,8 +95,8 @@ local function run()
   T.assert_true(reaper.CountTracks(0) >= 1, "no tracks after reopen")
   T.assert_eq(T.count_fx(0), 1, "plugin count mismatch after reopen")
   local name = T.fx_name(0, 0)
-  T.assert_true(name:find("oscil4", 1, true) ~= nil,
-    "FX at 0/0 is not oscil4 after reopen: " .. name)
+  T.assert_true(name:find("MultiScoper", 1, true) ~= nil,
+    "FX at 0/0 is not MultiScoper after reopen: " .. name)
 
   -- Sample-rate-change sub-test: NOT IMPLEMENTED.
   -- Reaper does not expose a scriptable API to change the hardware sample rate

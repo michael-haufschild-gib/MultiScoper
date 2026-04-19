@@ -1,6 +1,6 @@
 # Multi-Process Harness Feasibility Spike
 
-Read-only investigation per Stream 2.8. Question: should we rework the Oscil test harness so each `TestTrack` runs in its own OS process to reproduce Logic AU's sandbox isolation?
+Read-only investigation per Stream 2.8. Question: should we rework the MultiScoper test harness so each `TestTrack` runs in its own OS process to reproduce Logic AU's sandbox isolation?
 
 ## TL;DR — Drop
 

@@ -38,7 +38,7 @@ class ForbiddenPatternsLintTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             write(os.path.join(tmp, "src", "evil.cpp"), """
                 #include <juce_gui_basics/juce_gui_basics.h>
-                namespace oscil {
+                namespace multiscoper {
                 void installDefault() {
                     juce::LookAndFeel::setDefaultLookAndFeel(nullptr);
                 }

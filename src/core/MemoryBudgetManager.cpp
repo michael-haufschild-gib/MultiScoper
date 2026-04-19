@@ -1,12 +1,12 @@
 /*
-    Oscil - Memory Budget Manager Implementation
+    MultiScoper - Memory Budget Manager Implementation
 */
 
 #include "core/MemoryBudgetManager.h"
 
 #include "core/DecimatingCaptureBuffer.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 MemoryBudgetManager::MemoryBudgetManager() = default;
@@ -240,4 +240,4 @@ void MemoryBudgetManager::reconfigureAllBuffers()
         });
 }
 
-} // namespace oscil
+} // namespace multiscoper

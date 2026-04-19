@@ -1,5 +1,5 @@
 /*
-    Oscil Test Harness - Performance Metrics Implementation
+    MultiScoper Test Harness - Performance Metrics Implementation
 */
 
 #include "TestMetrics.h"
@@ -18,7 +18,7 @@
     #include <unistd.h>
 #endif
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 TestMetrics::TestMetrics() {}
@@ -350,4 +350,4 @@ double TestMetrics::measureCpuUsage()
 #endif
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

@@ -1,5 +1,5 @@
 /*
-    Oscil - Inline Edit Label Component
+    MultiScoper - Inline Edit Label Component
     A label that becomes editable on double-click with save/cancel buttons
 */
 
@@ -14,10 +14,10 @@
 
 #include <functional>
 
-namespace oscil
+namespace multiscoper
 {
 
-class OscilButton;
+class MultiScoperButton;
 class IThemeService;
 
 /**
@@ -122,8 +122,8 @@ private:
 
     // Child components
     std::unique_ptr<juce::TextEditor> editor_;
-    std::unique_ptr<OscilButton> saveButton_;
-    std::unique_ptr<OscilButton> cancelButton_;
+    std::unique_ptr<MultiScoperButton> saveButton_;
+    std::unique_ptr<MultiScoperButton> cancelButton_;
 
     // Layout constants
     static constexpr int BUTTON_SIZE = 20;
@@ -132,9 +132,9 @@ private:
 
     // TestIdSupport
     void registerTestId() override;
-    OSCIL_TESTABLE();
+    MULTISCOPER_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(InlineEditLabel)
 };
 
-} // namespace oscil
+} // namespace multiscoper

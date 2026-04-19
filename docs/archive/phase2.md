@@ -1,10 +1,10 @@
-# Oscil Phase 2: Best-in-Class Oscilloscope Platform
+# MultiScoper Phase 2: Best-in-Class Oscilloscope Platform
 
 ## Executive Summary
 
-Phase 2 transforms Oscil from a powerful multi-instance oscilloscope with impressive visuals into **the ultimate audio analysis and visualization platform** that professionals rely on for precision work AND bedroom producers use to learn and improve their craft.
+Phase 2 transforms MultiScoper from a powerful multi-instance oscilloscope with impressive visuals into **the ultimate audio analysis and visualization platform** that professionals rely on for precision work AND bedroom producers use to learn and improve their craft.
 
-**Vision**: Every audio engineer and producer should have Oscil open in every session—not because they have to, but because it makes their work faster, more accurate, and more enjoyable.
+**Vision**: Every audio engineer and producer should have MultiScoper open in every session—not because they have to, but because it makes their work faster, more accurate, and more enjoyable.
 
 **Key Differentiators to Maintain**:
 - Automatic multi-instance source discovery and deduplication (unique in market)
@@ -143,7 +143,7 @@ Phase 2 transforms Oscil from a powerful multi-instance oscilloscope with impres
 ## Gap Analysis
 
 ### Critical Gaps (vs all major competitors)
-| Feature | MOscilloscope | PsyScope Pro | BlueCat Multi | Oscil |
+| Feature | MOscilloscope | PsyScope Pro | BlueCat Multi | MultiScoper |
 |---------|--------------|--------------|---------------|-------|
 | Measurement cursors | Limited | Yes | Yes | **NO** |
 | XY/Lissajous view | No | Yes | Yes | **NO** |
@@ -154,7 +154,7 @@ Phase 2 transforms Oscil from a powerful multi-instance oscilloscope with impres
 | Latency compensation | No | No | Yes | **NO** |
 
 ### Competitive Advantages to Leverage
-| Feature | Oscil | Nearest Competitor |
+| Feature | MultiScoper | Nearest Competitor |
 |---------|-------|-------------------|
 | Multi-instance auto-discovery | Yes | PsyScope (manual routing) |
 | Automatic deduplication | Yes | None |
@@ -738,7 +738,7 @@ Dual time cursors per pane showing:
 
 ## Appendix: Competitor Feature Matrix
 
-| Feature | Oscil (Current) | Oscil (Phase 2) | MOscilloscope | PsyScope Pro | BlueCat Multi |
+| Feature | MultiScoper (Current) | MultiScoper (Phase 2) | MOscilloscope | PsyScope Pro | BlueCat Multi |
 |---------|-----------------|-----------------|---------------|--------------|---------------|
 | Multi-instance | Auto-discover | Auto-discover | No | Manual 128 | Manual 16 |
 | Deduplication | Yes | Yes | No | No | No |

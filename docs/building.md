@@ -1,6 +1,6 @@
 # Building Guide
 
-**Purpose**: Instructions for building, running, and developing the Oscil plugin locally.
+**Purpose**: Instructions for building, running, and developing the MultiScoper plugin locally.
 **Tech Stack**: CMake 3.31+, C++20, JUCE 8.0.12, GoogleTest 1.17.0, Ninja
 
 ## Quick Reference (Using CMake Presets)
@@ -18,8 +18,8 @@ cmake --preset release
 cmake --build --preset release
 
 # Test harness for E2E testing
-cmake --preset dev -DOSCIL_BUILD_TEST_HARNESS=ON
-cmake --build --preset dev --target OscilTestHarness
+cmake --preset dev -DMULTISCOPER_BUILD_TEST_HARNESS=ON
+cmake --build --preset dev --target MultiScoperTestHarness
 ```
 
 **Preferred**: Always use CMake presets for consistent builds.
@@ -28,7 +28,7 @@ cmake --build --preset dev --target OscilTestHarness
 
 | Requirement | Version | Install (macOS) |
 |-------------|---------|-----------------|
-| CMake | 3.21+ | `brew install cmake` |
+| CMake | 3.31+ | `brew install cmake` |
 | Ninja | Any | `brew install ninja` |
 | Clang/GCC | C++20 support | Xcode Command Line Tools |
 | ccache (recommended) | Any | `brew install ccache` |
@@ -61,17 +61,17 @@ cmake --build --preset dev
 ctest --preset dev
 
 # Build specific target
-cmake --build --preset dev --target OscilTests
-cmake --build --preset dev --target Oscil_VST3
+cmake --build --preset dev --target MultiScoperTests
+cmake --build --preset dev --target MultiScoper_VST3
 ```
 
 ### Plugin Output Locations (dev preset)
 
-```
-build/dev/Oscil_artefacts/Debug/
-├── VST3/oscil4.vst3
-├── AU/oscil4.component
-└── Standalone/oscil4.app
+```text
+build/dev/MultiScoper_artefacts/Debug/
+├── VST3/MultiScoper.vst3
+├── AU/MultiScoper.component
+└── Standalone/MultiScoper.app
 ```
 
 ## CMake Options (Advanced)
@@ -80,11 +80,11 @@ Only use these when overriding presets:
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `OSCIL_BUILD_TESTS` | ON | Build GoogleTest unit tests |
-| `OSCIL_ENABLE_OPENGL` | ON | Enable OpenGL GPU rendering |
-| `OSCIL_ENABLE_RTSAN` | OFF | Enable RealtimeSanitizer (Clang 20+) |
-| `OSCIL_BUILD_TEST_HARNESS` | OFF | Build E2E test harness app |
-| `OSCIL_ENABLE_COVERAGE` | OFF | Enable code coverage |
+| `MULTISCOPER_BUILD_TESTS` | ON | Build GoogleTest unit tests |
+| `MULTISCOPER_ENABLE_OPENGL` | ON | Enable OpenGL GPU rendering |
+| `MULTISCOPER_ENABLE_RTSAN` | OFF | Enable RealtimeSanitizer (Clang 20+) |
+| `MULTISCOPER_BUILD_TEST_HARNESS` | OFF | Build E2E test harness app |
+| `MULTISCOPER_ENABLE_COVERAGE` | OFF | Enable code coverage |
 
 ## Build Without Presets (Legacy)
 
@@ -92,7 +92,7 @@ If CMake presets aren't available:
 
 ```bash
 # Debug build
-cmake -B build -DOSCIL_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Debug -G Ninja
+cmake -B build -DMULTISCOPER_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Debug -G Ninja
 cmake --build build -j
 
 # Release build
@@ -116,21 +116,21 @@ ctest --preset dev -V
 
 ```bash
 # Run all tests
-./build/dev/OscilTests
+./build/dev/MultiScoperTests
 
 # Run tests matching pattern
-./build/dev/OscilTests --gtest_filter="SignalProcessorTest.*"
-./build/dev/OscilTests --gtest_filter="ThemeManagerTest.*"
-./build/dev/OscilTests --gtest_filter="*Shader*"
+./build/dev/MultiScoperTests --gtest_filter="SignalProcessorTest.*"
+./build/dev/MultiScoperTests --gtest_filter="ThemeManagerTest.*"
+./build/dev/MultiScoperTests --gtest_filter="*Shader*"
 
 # Run specific test
-./build/dev/OscilTests --gtest_filter="SignalProcessorTest.MonoSumming"
+./build/dev/MultiScoperTests --gtest_filter="SignalProcessorTest.MonoSumming"
 
 # Exclude tests
-./build/dev/OscilTests --gtest_filter="-*Slow*"
+./build/dev/MultiScoperTests --gtest_filter="-*Slow*"
 
 # XML output for CI
-./build/dev/OscilTests --gtest_output=xml:test-results/results.xml
+./build/dev/MultiScoperTests --gtest_output=xml:test-results/results.xml
 ```
 
 ## Plugin Installation
@@ -139,17 +139,17 @@ ctest --preset dev -V
 
 After building, plugins are automatically copied to system plugin folders:
 
-- **VST3**: `~/Library/Audio/Plug-Ins/VST3/oscil4.vst3`
-- **AU**: `~/Library/Audio/Plug-Ins/Components/oscil4.component`
+- **VST3**: `~/Library/Audio/Plug-Ins/VST3/MultiScoper.vst3`
+- **AU**: `~/Library/Audio/Plug-Ins/Components/MultiScoper.component`
 
 To manually install:
 
 ```bash
 # VST3
-cp -r build/Oscil_artefacts/Release/VST3/oscil4.vst3 ~/Library/Audio/Plug-Ins/VST3/
+cp -r build/MultiScoper_artefacts/Release/VST3/MultiScoper.vst3 ~/Library/Audio/Plug-Ins/VST3/
 
 # AU
-cp -r build/Oscil_artefacts/Release/AU/oscil4.component ~/Library/Audio/Plug-Ins/Components/
+cp -r build/MultiScoper_artefacts/Release/AU/MultiScoper.component ~/Library/Audio/Plug-Ins/Components/
 ```
 
 ### Rescan Plugins in DAW
@@ -163,10 +163,10 @@ After installing, rescan plugins in your DAW:
 
 ```bash
 # macOS (using dev preset)
-open build/dev/Oscil_artefacts/Debug/Standalone/oscil4.app
+open build/dev/MultiScoper_artefacts/Debug/Standalone/MultiScoper.app
 
 # Or directly
-./build/dev/Oscil_artefacts/Debug/Standalone/oscil4.app/Contents/MacOS/oscil4
+./build/dev/MultiScoper_artefacts/Debug/Standalone/MultiScoper.app/Contents/MacOS/MultiScoper
 ```
 
 ## E2E Test Harness
@@ -177,15 +177,15 @@ The test harness is a standalone app that simulates a DAW for automated testing.
 
 ```bash
 # Configure with test harness enabled
-cmake --preset dev -DOSCIL_BUILD_TEST_HARNESS=ON
-cmake --build --preset dev --target OscilTestHarness
+cmake --preset dev -DMULTISCOPER_BUILD_TEST_HARNESS=ON
+cmake --build --preset dev --target MultiScoperTestHarness
 ```
 
 ### Run Test Harness
 
 ```bash
 # Start test harness (HTTP server on port 8765)
-"./build/dev/test_harness/OscilTestHarness_artefacts/Debug/Oscil Test Harness.app/Contents/MacOS/Oscil Test Harness"
+"./build/dev/test_harness/MultiScoperTestHarness_artefacts/Debug/MultiScoper Test Harness.app/Contents/MacOS/MultiScoper Test Harness"
 
 # Test that it's running
 curl http://localhost:8765/health
@@ -244,18 +244,18 @@ cmake --build --preset dev
 ### Xcode Project Generation
 
 ```bash
-cmake -B build-xcode -G Xcode -DOSCIL_BUILD_TESTS=ON
-open build-xcode/Oscil.xcodeproj
+cmake -B build-xcode -G Xcode -DMULTISCOPER_BUILD_TESTS=ON
+open build-xcode/MultiScoper.xcodeproj
 ```
 
 ### LLDB Debugging
 
 ```bash
 # Debug standalone app
-lldb ./build/dev/Oscil_artefacts/Debug/Standalone/oscil4.app/Contents/MacOS/oscil4
+lldb ./build/dev/MultiScoper_artefacts/Debug/Standalone/MultiScoper.app/Contents/MacOS/MultiScoper
 
 # Debug tests
-lldb ./build/dev/OscilTests
+lldb ./build/dev/MultiScoperTests
 ```
 
 ## Troubleshooting
@@ -285,13 +285,14 @@ cmake -B build
 # JUCE is fetched automatically via FetchContent
 # If issues, clear build and reconfigure
 rm -rf build
-cmake -B build -DOSCIL_BUILD_TESTS=ON
+cmake -B build -DMULTISCOPER_BUILD_TESTS=ON
 ```
 
 **Issue**: Linker errors with OpenGL
+
 ```bash
 # Ensure OpenGL is enabled (default)
-cmake -B build -DOSCIL_ENABLE_OPENGL=ON
+cmake -B build -DMULTISCOPER_ENABLE_OPENGL=ON
 ```
 
 ### Tests Fail
@@ -300,14 +301,15 @@ cmake -B build -DOSCIL_ENABLE_OPENGL=ON
 ```bash
 # Run from project root
 cd /path/to/MultiScoper
-./build/OscilTests
+./build/MultiScoperTests
 ```
 
 **Issue**: OpenGL tests fail in headless environment
+
 ```bash
 # Some shader tests require OpenGL context
 # Run on machine with display or skip with:
-./build/OscilTests --gtest_filter="-*GL*:-*Shader*"
+./build/MultiScoperTests --gtest_filter="-*GL*:-*Shader*"
 ```
 
 ### Plugin Not Loading in DAW
@@ -321,7 +323,7 @@ auval -v aufx Osc1 Osci
 **Issue**: Plugin crashes on load
 ```bash
 # Run standalone to debug
-./build/Oscil_artefacts/Debug/Standalone/oscil4.app/Contents/MacOS/oscil4
+./build/MultiScoper_artefacts/Debug/Standalone/MultiScoper.app/Contents/MacOS/MultiScoper
 ```
 
 ## CI/CD Commands
@@ -347,7 +349,7 @@ ctest --preset ci-macos
 ✅ **Do**: Always run from project root
 
 ❌ **Don't**: Forget to add new .cpp files to CMakeLists.txt
-✅ **Do**: Add every source file to `target_sources(Oscil PRIVATE ...)`
+✅ **Do**: Add every source file to `target_sources(MultiScoper PRIVATE ...)`
 
 ❌ **Don't**: Use Makefile generator
 ✅ **Do**: Use Ninja (configured by presets)

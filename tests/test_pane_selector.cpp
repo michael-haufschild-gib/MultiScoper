@@ -1,5 +1,5 @@
 /*
-    Oscil - PaneSelectorComponent Tests
+    MultiScoper - PaneSelectorComponent Tests
     Tests for the reusable pane selector component
 */
 
@@ -10,7 +10,7 @@
 
 #include <gtest/gtest.h>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 class PaneSelectorTest : public ::testing::Test
@@ -122,7 +122,7 @@ TEST_F(PaneSelectorTest, SetSelectedPaneIdValid)
     EXPECT_NO_THROW({ selector.setSelectedPaneId(panes[1].first, false); });
 
     // Note: Selection may not update synchronously in headless test environment
-    // The component uses OscilDropdown internally which may need message loop
+    // The component uses MultiScoperDropdown internally which may need message loop
     // isNewPaneSelected state depends on internal dropdown state
 }
 
@@ -231,4 +231,4 @@ TEST_F(PaneSelectorTest, ThemeChangeDoesNotThrow)
     });
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

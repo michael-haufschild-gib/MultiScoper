@@ -1,17 +1,17 @@
 /*
-    Oscil - Oscillator Panel Controller Tests
+    MultiScoper - Oscillator Panel Controller Tests
 */
 
 #include "ui/controllers/GpuRenderCoordinator.h"
 #include "ui/controllers/OscillatorPanelController.h"
 #include "ui/managers/DisplaySettingsManager.h"
 
-#include "OscilTestFixtures.h"
+#include "MultiScoperTestFixtures.h"
 #include "rendering/PresetManager.h"
 
 #include <gtest/gtest.h>
 
-namespace oscil
+namespace multiscoper
 {
 
 // Minimal editor for testing
@@ -67,12 +67,12 @@ protected:
     }
 
     // Mocks & Dependencies
-    oscil::test::MockInstanceRegistry instanceRegistry_;
-    oscil::test::MockThemeService themeService_;
+    multiscoper::test::MockInstanceRegistry instanceRegistry_;
+    multiscoper::test::MockThemeService themeService_;
     ShaderRegistry shaderRegistry_;
     PresetManager presetManager_;
     MemoryBudgetManager memoryBudgetManager_;
-    OscilPluginProcessor processor_;
+    MultiScoperPluginProcessor processor_;
     ServiceContext serviceContext_;
 
     // View Components
@@ -300,4 +300,4 @@ TEST_F(OscillatorPanelControllerTest, OscillatorsReorderedPersistsNewOrderToStat
     EXPECT_EQ(findOrderFor(ids[2]), 1);
 }
 
-} // namespace oscil
+} // namespace multiscoper

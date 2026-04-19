@@ -1,5 +1,5 @@
 /*
-    Oscil - Basic Shader
+    MultiScoper - Basic Shader
     Default shader
 */
 
@@ -9,7 +9,7 @@
 
 #include <memory>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -28,7 +28,7 @@ public:
     [[nodiscard]] juce::String getDisplayName() const override { return "Basic"; }
     [[nodiscard]] juce::String getDescription() const override { return "Waveform with simple glowing effect"; }
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     /// Compile the basic glow shader program.
     bool compile(juce::OpenGLContext& context) override;
     /// Release the shader program and GPU resources.
@@ -46,7 +46,7 @@ public:
     static constexpr int GLOW_PASSES = 3;
 
 private:
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     struct GLResources;
     std::unique_ptr<GLResources> gl_;
 
@@ -59,4 +59,4 @@ private:
 #endif
 };
 
-} // namespace oscil
+} // namespace multiscoper

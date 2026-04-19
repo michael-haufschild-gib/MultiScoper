@@ -1,5 +1,5 @@
 /*
-    Oscil - Timing Presenter
+    MultiScoper - Timing Presenter
     Handles logic for timing configuration and state management.
     Separates logic from View (TimingSidebarSection).
 */
@@ -12,7 +12,7 @@
 
 #include <functional>
 
-namespace oscil
+namespace multiscoper
 {
 
 class TimingPresenter
@@ -92,4 +92,4 @@ private:
     StateChangedCallback onStateChanged_;
 };
 
-} // namespace oscil
+} // namespace multiscoper

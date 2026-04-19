@@ -1,5 +1,5 @@
 /*
-    Oscil - OscillatorConfigDialog tests
+    MultiScoper - OscillatorConfigDialog tests
 
     Covers the public contract of OscillatorConfigDialog:
     - updateFromOscillator seeds all state fields from the source oscillator
@@ -16,11 +16,11 @@
 #include "core/Pane.h"
 #include "ui/dialogs/OscillatorConfigDialog.h"
 
-#include "OscilTestFixtures.h"
+#include "MultiScoperTestFixtures.h"
 
 #include <gtest/gtest.h>
 
-namespace oscil
+namespace multiscoper
 {
 
 class OscillatorConfigDialogTest : public ::testing::Test
@@ -47,8 +47,8 @@ protected:
         return osc;
     }
 
-    oscil::test::MockThemeService themeService_;
-    oscil::test::MockInstanceRegistry instanceRegistry_;
+    multiscoper::test::MockThemeService themeService_;
+    multiscoper::test::MockInstanceRegistry instanceRegistry_;
     std::unique_ptr<OscillatorConfigDialog> dialog_;
 };
 
@@ -160,16 +160,16 @@ TEST_F(OscillatorConfigDialogTest, OnExternalCloseFlushesPendingDebouncedNameEdi
     dialog_->showForOscillator(osc);
 
     // Locate the name text field among the dialog's children.
-    OscilTextField* nameField = nullptr;
+    MultiScoperTextField* nameField = nullptr;
     for (int i = 0; i < dialog_->getNumChildComponents(); ++i)
     {
-        if (auto* tf = dynamic_cast<OscilTextField*>(dialog_->getChildComponent(i)))
+        if (auto* tf = dynamic_cast<MultiScoperTextField*>(dialog_->getChildComponent(i)))
         {
             nameField = tf;
             break;
         }
     }
-    ASSERT_NE(nameField, nullptr) << "OscillatorConfigDialog must contain an OscilTextField for the name";
+    ASSERT_NE(nameField, nullptr) << "OscillatorConfigDialog must contain an MultiScoperTextField for the name";
 
     // Simulate typing — setText with notify=true triggers onTextChanged, which
     // starts the debounce timer.  We call onExternalClose before it fires.
@@ -214,4 +214,4 @@ TEST_F(OscillatorConfigDialogTest, ShowForOscillatorForDifferentIdUpdatesTracked
     EXPECT_EQ(dialog_->getOscillatorId(), second.getId());
 }
 
-} // namespace oscil
+} // namespace multiscoper

@@ -303,9 +303,9 @@ historical record of the struct shape used in older preset XMLs.
 
 | Platform | Directory |
 |----------|-----------|
-| macOS | `~/Library/Application Support/Oscil/Presets/` |
-| Windows | `%APPDATA%\Oscil\Presets\` |
-| Linux | `~/.config/Oscil/Presets/` |
+| macOS | `~/Library/Application Support/MultiScoper/Presets/` |
+| Windows | `%APPDATA%\MultiScoper\Presets\` |
+| Linux | `~/.config/MultiScoper/Presets/` |
 
 ### 4.2 File Structure
 
@@ -448,7 +448,7 @@ struct Result {
 
 | Component | Integration |
 |-----------|-------------|
-| `OscilPluginProcessor` | Owns `VisualPresetManager` instance |
+| `MultiScoperPluginProcessor` | Owns `VisualPresetManager` instance |
 | `AddOscillatorDialog` | Reads preset list for dropdown |
 | `OscillatorConfigDialog` | Reads/applies presets |
 | `VisualPresetEditor` | Creates/edits presets (new dialog) |

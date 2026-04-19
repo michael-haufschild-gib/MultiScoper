@@ -1,5 +1,5 @@
 /*
-    Oscil - Vignette Effect
+    MultiScoper - Vignette Effect
     Darkens the edges of the image for cinematic look
 */
 
@@ -8,9 +8,9 @@
 #include "SingleShaderEffect.h"
 #include "rendering/VisualConfiguration.h"
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -53,6 +53,6 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(VignetteEffect)
 };
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

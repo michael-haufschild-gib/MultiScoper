@@ -1,5 +1,5 @@
 /*
-    Oscil - Theme Manager Persistence Tests
+    MultiScoper - Theme Manager Persistence Tests
     Tests for theme import/export, JSON, and ValueTree serialization
 */
 
@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class ThemeManagerPersistenceTest : public ::testing::Test
 {

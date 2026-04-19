@@ -1,5 +1,5 @@
 /*
-    Oscil - Source Item Component
+    MultiScoper - Source Item Component
     Displays a single audio source in the sidebar with add-to-pane functionality
 */
 
@@ -7,7 +7,7 @@
 
 #include "core/InstanceRegistry.h"
 #include "core/Pane.h"
-#include "ui/components/OscilDropdown.h"
+#include "ui/components/MultiScoperDropdown.h"
 #include "ui/components/TestId.h"
 #include "ui/theme/IThemeService.h"
 
@@ -16,7 +16,7 @@
 #include <functional>
 #include <memory>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -72,21 +72,20 @@ private:
     IThemeService& themeService_;
     SourceId sourceId_;
     juce::String displayName_;
-    juce::String trackName_;
     bool isActive_ = false;
     bool isHovered_ = false;
     bool isSelected_ = false;
 
-    std::unique_ptr<OscilDropdown> addToPaneDropdown_;
+    std::unique_ptr<MultiScoperDropdown> addToPaneDropdown_;
     std::vector<PaneId> paneIds_; // Maps dropdown index to PaneId
 
     static constexpr int ITEM_HEIGHT = 36;
     static constexpr int ACTIVITY_DOT_SIZE = 8;
     static constexpr int DROPDOWN_WIDTH = 100;
 
-    OSCIL_TESTABLE();
+    MULTISCOPER_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SourceItemComponent)
 };
 
-} // namespace oscil
+} // namespace multiscoper

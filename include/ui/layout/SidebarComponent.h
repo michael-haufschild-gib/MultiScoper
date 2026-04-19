@@ -1,5 +1,5 @@
 /*
-    Oscil - Sidebar Component
+    MultiScoper - Sidebar Component
     Collapsible sidebar with oscillator list and resize handle
 */
 
@@ -11,8 +11,8 @@
 #include "core/ServiceContext.h"
 #include "core/dsp/CaptureQualityConfig.h"
 #include "ui/components/ComponentConstants.h"
-#include "ui/components/OscilAccordion.h"
-#include "ui/components/OscilButton.h"
+#include "ui/components/MultiScoperAccordion.h"
+#include "ui/components/MultiScoperButton.h"
 #include "ui/components/SpringAnimation.h"
 #include "ui/components/TestId.h"
 #include "ui/components/ThemedComponent.h"
@@ -26,11 +26,11 @@
 
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 // Forward declarations
-class OscilPluginProcessor;
+class MultiScoperPluginProcessor;
 
 /**
  * Resize handle component for sidebar edge
@@ -60,7 +60,7 @@ private:
     int dragStartX_ = 0;
 
     // TestIdSupport
-    OSCIL_TESTABLE();
+    MULTISCOPER_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SidebarResizeHandle)
 };
@@ -214,7 +214,7 @@ private:
 
     // Accordion for all sections
     std::unique_ptr<juce::Viewport> accordionViewport_;
-    std::unique_ptr<OscilAccordion> accordion_;
+    std::unique_ptr<MultiScoperAccordion> accordion_;
 
     // Section contents (owned by Sidebar, displayed by Accordion)
     std::unique_ptr<OscillatorSidebarSection> oscillatorSection_;
@@ -277,9 +277,9 @@ private:
     static constexpr int PADDING_MEDIUM = 8;
 
     // TestIdSupport
-    OSCIL_TESTABLE();
+    MULTISCOPER_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SidebarComponent)
 };
 
-} // namespace oscil
+} // namespace multiscoper

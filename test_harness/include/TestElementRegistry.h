@@ -1,5 +1,5 @@
 /*
-    Oscil Test Harness - Element Registry
+    MultiScoper Test Harness - Element Registry
     Tracks UI elements by test IDs for automated interaction
 */
 
@@ -11,7 +11,7 @@
 #include <mutex>
 #include <vector>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 // Forward declaration for track-scoped element lookup
@@ -141,4 +141,4 @@ private:
  */
 #define TEST_UNREGISTER_ELEMENT() TestElementRegistry::getInstance().unregisterElement(this)
 
-} // namespace oscil::test
+} // namespace multiscoper::test

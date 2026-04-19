@@ -1,12 +1,12 @@
 /*
-    Oscil - Post-Process Effect Base Class Implementation
+    MultiScoper - Post-Process Effect Base Class Implementation
 */
 
 #include "rendering/effects/PostProcessEffect.h"
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
-namespace oscil
+namespace multiscoper
 {
 
 // Standard fullscreen quad vertex shader
@@ -58,6 +58,6 @@ bool PostProcessEffect::compileEffectShader(juce::OpenGLShaderProgram& program, 
     return true;
 }
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

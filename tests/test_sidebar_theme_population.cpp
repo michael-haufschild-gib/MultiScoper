@@ -1,5 +1,5 @@
 /*
-    Oscil - Sidebar Theme Population Tests
+    MultiScoper - Sidebar Theme Population Tests
     Verifies that SidebarComponent correctly populates the theme dropdown in
     OptionsSection with the names supplied by ThemeManager.
 */
@@ -17,7 +17,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class SidebarThemePopulationTest : public ::testing::Test
 {
@@ -27,7 +27,7 @@ protected:
     std::unique_ptr<ShaderRegistry> shaderRegistry_;
     std::unique_ptr<PresetManager> presetManager_;
     std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
-    std::unique_ptr<OscilPluginProcessor> processor;
+    std::unique_ptr<MultiScoperPluginProcessor> processor;
     std::unique_ptr<SidebarComponent> sidebar;
 
     void SetUp() override
@@ -38,8 +38,8 @@ protected:
         presetManager_ = std::make_unique<PresetManager>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
-        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                           *presetManager_, *memoryBudgetManager_);
+        processor = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                                 *presetManager_, *memoryBudgetManager_);
 
         ServiceContext context{*registry_, *themeManager_, *shaderRegistry_, *presetManager_};
         sidebar = std::make_unique<SidebarComponent>(context);

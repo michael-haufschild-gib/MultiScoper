@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-Oscil's DSP modules (`SignalProcessor`, `TimingEngine`, `DecimatingCaptureBuffer`, `SharedCaptureBuffer`) are currently exercised by a broad suite of hand-written GoogleTest unit tests. Those tests check specific, hand-picked inputs: "process a 1024-sample sine wave through Mono mode and verify the average," "write 2048 samples then read back 1024," and so on. Hand-picked inputs catch the bugs the author thought to look for. They miss:
+MultiScoper's DSP modules (`SignalProcessor`, `TimingEngine`, `DecimatingCaptureBuffer`, `SharedCaptureBuffer`) are currently exercised by a broad suite of hand-written GoogleTest unit tests. Those tests check specific, hand-picked inputs: "process a 1024-sample sine wave through Mono mode and verify the average," "write 2048 samples then read back 1024," and so on. Hand-picked inputs catch the bugs the author thought to look for. They miss:
 
 - Interactions between unrelated configuration axes (quality preset × source rate × duration).
 - Boundary conditions around power-of-two rounding, wrap-around indices, and FP epsilon.
@@ -16,7 +16,7 @@ Property-based tests assert invariants over *generated* inputs and shrink on fai
 
 ## Decision
 
-Adopt [rapidcheck](https://github.com/emil-e/rapidcheck) (with its GoogleTest adapter) as a **test-only** dependency. Rapidcheck is fetched via `CPMAddPackage` in `cmake/Tests.cmake` and linked only into `OscilTests`. It is not a dependency of any plugin artifact (VST3 / AU / CLAP / Standalone), nor of the fuzzer targets, nor of any release binary.
+Adopt [rapidcheck](https://github.com/emil-e/rapidcheck) (with its GoogleTest adapter) as a **test-only** dependency. Rapidcheck is fetched via `CPMAddPackage` in `cmake/Tests.cmake` and linked only into `MultiScoperTests`. It is not a dependency of any plugin artifact (VST3 / AU / CLAP / Standalone), nor of the fuzzer targets, nor of any release binary.
 
 ### Scope of properties added
 
@@ -32,7 +32,7 @@ Each property is expressed via `RC_GTEST_PROP(Suite, Name, (args))` and counted 
 ### How to add a new property
 
 1. Pick the module and identify an invariant that must hold for all legal inputs.
-2. Add the property to the relevant `tests/test_*_properties.cpp` file (or create a new one and register it in `cmake/Tests.cmake::OSCIL_TEST_SOURCES`).
+2. Add the property to the relevant `tests/test_*_properties.cpp` file (or create a new one and register it in `cmake/Tests.cmake::MULTISCOPER_TEST_SOURCES`).
 3. Use rapidcheck generators (`rc::gen::inRange`, `rc::gen::container`, `rc::gen::arbitrary`) bounded to realistic audio ranges (samples in `[-1, 1]`, buffer sizes ≤ 64 for tight shrinks, sample rates in `{22050, 44100, 48000, 88200, 96000, 192000}`).
 4. Express the assertion with `RC_ASSERT` or standard `EXPECT_*`. GoogleTest failure handlers interoperate with rapidcheck's shrinker.
 5. If the property fails with a real minimal counterexample, do not weaken the property — investigate whether production code has a bug and fix it, or add a task to the task list.
@@ -44,7 +44,7 @@ Rapidcheck does not publish semver tags. Per ADR-006, dependencies without stabl
 ## Consequences
 
 - DSP regressions that only surface under specific generator-seeded inputs are caught early with a minimal counter-example rather than appearing as flaky user reports.
-- Plugin artifacts do not gain a runtime dependency — rapidcheck headers and code are compiled into `OscilTests` only. Release and fuzzer builds are unaffected.
+- Plugin artifacts do not gain a runtime dependency — rapidcheck headers and code are compiled into `MultiScoperTests` only. Release and fuzzer builds are unaffected.
 - Property tests run on the same `ctest --preset dev` invocation developers already use, with a default 100 iterations each. CI time cost is minimal (single-digit seconds).
 - A new ADR is added to the dependency-pinning bookkeeping in ADR-006; rapidcheck must be included in the quarterly pin review.
 
