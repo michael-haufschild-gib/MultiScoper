@@ -102,7 +102,7 @@ jobs:
           ./benchmarks/MultiScoperBenchmarks \
             --benchmark_format=json \
             --benchmark_out=bench.json \
-            --benchmark_repetitions=${REPS} \
+            --benchmark_repetitions="${REPS}" \
             --benchmark_min_time=1s
 
       - name: Upload benchmark JSON artifact
@@ -130,6 +130,12 @@ jobs:
       # Download the latest main-branch baseline, if one has been captured.
       # ``continue-on-error: true`` — first-ever run of this workflow on a fork
       # has no baseline; we log-and-skip instead of failing the build.
+      #
+      # upload-artifact@v4 with a single-file ``path`` uploads the file at the
+      # zip root (no directory structure preserved), so the download lands a
+      # ``bench.json`` at whatever ``path`` we specify here. We route it to a
+      # dedicated ``baseline/`` directory so it doesn't collide with the
+      # current run's ``build/bench/bench.json``.
       - name: Download baseline (latest main)
         id: baseline
         uses: dawidd6/action-download-artifact@v6
@@ -138,6 +144,7 @@ jobs:
           name: bench-baseline
           branch: main
           workflow: benchmarks.yml
+          path: baseline
           if_no_artifact_found: warn
 
       # scipy is used by scripts/bench_compare.py for the Mann-Whitney U test;
@@ -151,9 +158,9 @@ jobs:
       - name: Compare against baseline
         if: steps.baseline.outcome == 'success'
         run: |
-          ls -la bench-baseline.json build/bench/bench.json 2>/dev/null || true
+          ls -la baseline/bench.json build/bench/bench.json 2>/dev/null || true
           python3 scripts/bench_compare.py \
-            --baseline bench-baseline.json \
+            --baseline baseline/bench.json \
             --current build/bench/bench.json \
             --metric cpu_time \
             --alpha 0.05 \

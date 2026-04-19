@@ -71,17 +71,62 @@ EXISTENCE_PATTERNS: List[re.Pattern] = [
     # EXPECT_GT(x.size(), 0) — checks non-emptiness, not behavior
     re.compile(r"\b(?:EXPECT|ASSERT)_GT\s*\(\s*\w+\.(?:size|count|length)\s*\(\s*\)\s*,\s*0\s*\)"),
     re.compile(r"\b(?:EXPECT|ASSERT)_GE\s*\(\s*\w+\.(?:size|count|length)\s*\(\s*\)\s*,\s*1\s*\)"),
-    # EXPECT_THAT(x, NotNull()) / Not(IsNull()) / IsEmpty() / Not(IsEmpty())
-    # — matchers that check structural properties, not behavior.
-    re.compile(
-        r"\b(?:EXPECT|ASSERT)_THAT\s*\([^,]+,\s*(?:::)?(?:testing::)?"
-        r"(?:NotNull\s*\(\s*\)|Not\s*\(\s*(?:::)?(?:testing::)?IsNull\s*\(\s*\)\s*\))\s*\)"
-    ),
-    re.compile(
-        r"\b(?:EXPECT|ASSERT)_THAT\s*\([^,]+,\s*(?:::)?(?:testing::)?"
-        r"(?:IsEmpty\s*\(\s*\)|Not\s*\(\s*(?:::)?(?:testing::)?IsEmpty\s*\(\s*\)\s*\))\s*\)"
-    ),
 ]
+
+# Structural (existence-only) matchers inside EXPECT_THAT / ASSERT_THAT.
+# These are matched against the *second argument* of the THAT call — resolved
+# via balanced-paren walking so matchers whose first argument contains commas
+# (e.g. ``EXPECT_THAT(makeVec(1, 2), IsEmpty())``) still classify correctly.
+EXPECT_THAT_EXISTENCE_MATCHER_RE = re.compile(
+    r"^\s*(?:::)?(?:testing::)?"
+    r"(?:NotNull\s*\(\s*\)"
+    r"|Not\s*\(\s*(?:::)?(?:testing::)?IsNull\s*\(\s*\)\s*\)"
+    r"|IsEmpty\s*\(\s*\)"
+    r"|Not\s*\(\s*(?:::)?(?:testing::)?IsEmpty\s*\(\s*\)\s*\))\s*$"
+)
+
+EXPECT_THAT_CALL_RE = re.compile(r"\b(?:EXPECT|ASSERT)_THAT\s*\(")
+
+
+def _split_expect_that_args(sanitized: str, call_start: int) -> Optional[Tuple[str, str]]:
+    """Given a buffer and the index of ``EXPECT_THAT``/``ASSERT_THAT``, walk
+    balanced parens to return the (first_arg, second_arg) pair. Returns None
+    if the call is not well-formed in the sanitized view.
+    """
+    open_paren = sanitized.find("(", call_start)
+    if open_paren == -1:
+        return None
+    depth = 0
+    split_at = -1
+    i = open_paren
+    while i < len(sanitized):
+        ch = sanitized[i]
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                # i is the matching close paren for the outer call
+                if split_at == -1:
+                    return None
+                return sanitized[open_paren + 1 : split_at], sanitized[split_at + 1 : i]
+        elif ch == "," and depth == 1 and split_at == -1:
+            split_at = i
+        i += 1
+    return None
+
+
+def _expect_that_is_existence(sanitized: str, call_start: int) -> bool:
+    """True iff the EXPECT_THAT/ASSERT_THAT call at ``call_start`` uses one of
+    the structural-only matchers (NotNull / Not(IsNull) / IsEmpty / Not(IsEmpty)).
+    Uses balanced-paren parsing, so first arguments containing commas inside
+    nested calls do not defeat detection.
+    """
+    parts = _split_expect_that_args(sanitized, call_start)
+    if parts is None:
+        return False
+    _, matcher_arg = parts
+    return bool(EXPECT_THAT_EXISTENCE_MATCHER_RE.match(matcher_arg))
 
 # Tautological assertion patterns — assertions that can NEVER fail.
 # These are worse than shallow tests: they give false confidence.
@@ -244,6 +289,12 @@ def is_existence_only(body: TestBody) -> bool:
 
     for assertion_match in assertions:
         pos = assertion_match.start()
+        # EXPECT_THAT / ASSERT_THAT need balanced-paren argument splitting so
+        # matcher-arg classification is robust to commas in the first argument.
+        if EXPECT_THAT_CALL_RE.match(sanitized, pos):
+            if _expect_that_is_existence(sanitized, pos):
+                continue
+            return False
         is_existence = any(p.match(sanitized, pos) for p in EXISTENCE_PATTERNS)
         if not is_existence:
             return False  # At least one non-existence assertion

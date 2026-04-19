@@ -150,7 +150,10 @@ TEST(MultiScoperLookAndFeelTest, TextButtonUsesAccentWhenOn)
 
     EXPECT_EQ(laf.findColour(juce::TextButton::buttonColourId), theme.controlBackground);
     EXPECT_EQ(laf.findColour(juce::TextButton::buttonOnColourId), expectedAccent(theme));
-    EXPECT_EQ(laf.findColour(juce::TextButton::textColourOnId), theme.textHighlight);
+    // textColourOnId must stay contrast-safe against the accent fill — not
+    // mapped to theme.textHighlight, which is BLACK in light themes and would
+    // land black-on-dark-accent. See MultiScoperLookAndFeel.cpp:95-100.
+    EXPECT_EQ(laf.findColour(juce::TextButton::textColourOnId), ColorTheme::pickContrastingText(expectedAccent(theme)));
     EXPECT_EQ(laf.findColour(juce::TextButton::textColourOffId), theme.textPrimary);
 }
 

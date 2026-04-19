@@ -500,7 +500,8 @@ ${CMAKE_SOURCE_DIR}/src/rendering/shaders/MyShader.cpp
 ### Step 5: Build and Test
 
 ```bash
-cd build && cmake --build . --target MultiScoper
+cmake --preset dev
+cmake --build --preset dev --target MultiScoper
 ```
 
 ## ShaderRenderParams Reference

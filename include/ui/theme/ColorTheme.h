@@ -248,7 +248,7 @@ struct ColorTheme
     static juce::Colour pickContrastingText(juce::Colour surface)
     {
         juce::Colour const white{0xFFFFFFFF};
-        juce::Colour const dark{0xFF1A1A1A};
+        juce::Colour const dark{0xFF000000};
         return calculateContrastRatio(white, surface) >= calculateContrastRatio(dark, surface) ? white : dark;
     }
 

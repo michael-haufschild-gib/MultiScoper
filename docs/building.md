@@ -67,7 +67,7 @@ cmake --build --preset dev --target MultiScoper_VST3
 
 ### Plugin Output Locations (dev preset)
 
-```
+```text
 build/dev/MultiScoper_artefacts/Debug/
 ├── VST3/MultiScoper.vst3
 ├── AU/MultiScoper.component

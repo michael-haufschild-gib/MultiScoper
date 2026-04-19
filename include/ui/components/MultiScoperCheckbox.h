@@ -74,6 +74,10 @@ public:
     void mouseEnter(const juce::MouseEvent& e) override;
     void mouseExit(const juce::MouseEvent& e) override;
 
+    // NOTE: keyPressed is intentionally NOT overridden. Space/Return must
+    // bubble to the DAW host for transport control — see
+    // tests/test_key_passthrough.cpp.
+
     void focusGained(FocusChangeType cause) override;
     void focusLost(FocusChangeType cause) override;
 

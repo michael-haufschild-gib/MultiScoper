@@ -14,7 +14,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_gui_extra/juce_gui_extra.h>
 
-#ifdef MULTISCOPER_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     #include <juce_opengl/juce_opengl.h>
 #endif
 

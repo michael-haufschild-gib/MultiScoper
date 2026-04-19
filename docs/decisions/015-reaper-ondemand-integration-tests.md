@@ -73,8 +73,10 @@ tests/reaper/
   scenarios/*.lua         # one scenario per file
 ```
 
-Results land at `/tmp/multiscoper_reaper_results.json`; shell script exits non-zero
-on any failure.
+Results land in the host OS temp directory (`$TMPDIR/multiscoper_reaper_results.json`
+on macOS/Linux; `%TEMP%\multiscoper_reaper_results.json` on Windows). The
+entrypoint exposes `MULTISCOPER_REAPER_RESULTS` to let callers override the
+path explicitly. The shell/wrapper script exits non-zero on any failure.
 
 ## Consequences
 

@@ -74,6 +74,13 @@ def main() -> int:
     parser.add_argument("--jobs", type=int, default=max(os.cpu_count() or 2, 2))
     args = parser.parse_args()
 
+    if args.jobs <= 0:
+        print(
+            f"FAILED: --jobs must be a positive integer (got {args.jobs}).",
+            file=sys.stderr,
+        )
+        return 2
+
     root = args.root.resolve()
     build_dir = str((root / args.build_dir).resolve())
 

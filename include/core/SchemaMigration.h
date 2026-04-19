@@ -39,7 +39,7 @@ enum class MigrationResult : int
 [[nodiscard]] const char* migrationResultToString(MigrationResult result) noexcept;
 
 /**
- * Migrate an MultiScoperState ValueTree from fromVersion to toVersion.
+ * Migrate a MultiScoperState ValueTree from fromVersion to toVersion.
  *
  * On Success, state is mutated in place and the caller may commit it.
  * On any other result, state may be partially mutated and MUST be discarded.

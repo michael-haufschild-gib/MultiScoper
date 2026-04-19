@@ -59,14 +59,14 @@ Frame label: `MELODIC — HOST SYNCED`.
 - 16px.
 - Row: `Mode` + Dropdown `Restart on Play`.
 - 16px.
-- Note interval dropdown OPEN — render the base dropdown closed appearance at the normal position showing current value `1/4`, but show the popup floating below with 7 items visible (of the 17 full list); scroll indicators on top+bottom:
-  - Popup: `top: 184; left: 16; width: 288; height: 196; background: #161B24; border: 1px solid #242A35; border-radius: 6;` with `box-shadow: 0 8px 24px rgba(0,0,0,0.35)` (ALLOWED exception per `_README` modal rule — this popup counts as a modal surface).
-  - Items 28 tall each, padding 12, content: `1/16th`, `1/8th`, `1/4` (bg `rgba(31,212,243,0.15)` text `#1FD4F3`), `1/2`, `1 Bar`, `2 Bars`, `4 Bars`.
-- BPM row beneath the popup in the same position as variant 2 BUT:
+- BPM row rendered in the same position as variant 2:
   - `BPM` label + read-only value `120.0` with a lock icon 14 × 14 left of value (Lucide `lock`). Text color `textHighlight`.
   - Toggle `Sync` ON (track `#4AD070` thumb right white).
 - Below BPM row, 12px gap, centered pill:
   - `SYNCED` badge, 70 × 18 radius 999, bg `rgba(0,221,0,0.20)` text `#4AD070`, font 10/600 letter-spacing 0.12em.
+- Note interval dropdown OPEN — rendered LAST so the popup stacks over the BPM row and SYNCED pill (popup is a modal surface). The base dropdown stays closed-looking at its normal position showing current value `1/4`; the popup floats below the base trigger with 5 items visible (of the 17 full list) and scroll indicators on top+bottom:
+  - Popup: `top: 184; left: 16; width: 288; height: 140; background: #161B24; border: 1px solid #242A35; border-radius: 6;` with `box-shadow: 0 8px 24px rgba(0,0,0,0.35)` (ALLOWED exception per `_README` modal rule — this popup counts as a modal surface). Height 140 = 5 items × 28; bottom edge lands at y=324, leaving space within the 420-tall frame while still intentionally overlaying the BPM row and SYNCED pill to illustrate focus.
+  - Items 28 tall each, padding 12, content (top to bottom): `1/16th`, `1/8th`, `1/4` (bg `rgba(31,212,243,0.15)` text `#1FD4F3`), `1/2`, `1 Bar`. The remaining 12 items are below the visible region and reachable only via scroll — hence the bottom scroll indicator.
 
 ## Negative Constraints (this file)
 

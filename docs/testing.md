@@ -267,6 +267,7 @@ cmake --build --preset dev --target MultiScoperTestHarness
 ```
 
 ### Start Harness
+
 ```bash
 "./build/dev/test_harness/MultiScoperTestHarness_artefacts/Debug/MultiScoper Test Harness.app/Contents/MacOS/MultiScoper Test Harness" &
 ```

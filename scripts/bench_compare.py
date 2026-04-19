@@ -65,7 +65,7 @@ def _exact_mannwhitneyu_greater(x: list[float], y: list[float]) -> float:
     n = len(combined)
     n1 = len(x)
 
-    observed_rank_sum = sum(r for r, (_, label) in zip(ranks, combined) if label == "x")
+    observed_rank_sum = sum(r for r, (_, label) in zip(ranks, combined, strict=True) if label == "x")
 
     total = 0
     extreme = 0
@@ -86,7 +86,7 @@ def _normal_approx_mannwhitneyu_greater(x: list[float], y: list[float]) -> float
     combined = sorted([(v, "x") for v in x] + [(v, "y") for v in y])
     ranks = _rank_with_midranks(combined)
 
-    rank_sum_x = sum(r for r, (_, label) in zip(ranks, combined) if label == "x")
+    rank_sum_x = sum(r for r, (_, label) in zip(ranks, combined, strict=True) if label == "x")
     n1 = len(x)
     n2 = len(y)
     u1 = rank_sum_x - n1 * (n1 + 1) / 2.0

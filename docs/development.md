@@ -246,9 +246,10 @@ Run the Standalone target directly or attach debugger.
 ```
 
 ### E2E Test Harness
+
 ```bash
 # Start test harness (HTTP server on port 8765)
-./build/dev/MultiScoperTestHarness_artefacts/MultiScoperTestHarness.app/Contents/MacOS/MultiScoperTestHarness
+"./build/dev/test_harness/MultiScoperTestHarness_artefacts/Debug/MultiScoper Test Harness.app/Contents/MacOS/MultiScoper Test Harness"
 
 # Health check
 curl http://localhost:8765/health

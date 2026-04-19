@@ -376,7 +376,7 @@ Each effect section contains:
 | Color Separation | `MultiScoperSlider` | `preset_glitch_color_sep` | 0.0 - 0.05 |
 | Flicker Rate | `MultiScoperSlider` | `preset_glitch_flicker` | 1.0 - 30.0 |
 
-#### 5.2.13 Tilt Shift Parameters
+#### 5.2.13 Tilt-Shift Parameters
 
 | Parameter | Component | TestId | Range |
 |-----------|-----------|--------|-------|

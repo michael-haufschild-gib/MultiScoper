@@ -76,6 +76,7 @@ def main() -> int:
         return 0
 
     violations: list[str] = []
+    execution_errors: list[str] = []
     # Batch a few at a time to bound the command line length on every OS.
     # clang-format --dry-run --Werror exits non-zero if any file needs work.
     batch_size = 32
@@ -84,14 +85,31 @@ def main() -> int:
         cmd = [exe, "--dry-run", "--Werror", *[str(f) for f in batch]]
         proc = subprocess.run(cmd, capture_output=True, text=True)
         if proc.returncode != 0:
+            batch_had_format_violation = False
             # clang-format prints one diagnostic per file+line on stderr.
             for line in proc.stderr.splitlines():
                 # Lines of the form "path:line:col: error: code should be clang-formatted"
                 if ": error: code should be clang-formatted" in line:
                     path = line.split(":", 1)[0]
                     violations.append(path)
+                    batch_had_format_violation = True
+            # Non-zero exit without a parseable format diagnostic = real tool
+            # failure (missing file, invalid .clang-format, crash). Do not silently
+            # treat that as PASS.
+            if not batch_had_format_violation:
+                execution_errors.append(
+                    "clang-format exited {code} on batch starting at {path}\n"
+                    "  stdout: {out}\n"
+                    "  stderr: {err}".format(
+                        code=proc.returncode,
+                        path=batch[0],
+                        out=proc.stdout.strip() or "(empty)",
+                        err=proc.stderr.strip() or "(empty)",
+                    )
+                )
 
     violations = sorted(set(violations))
+    failed = False
     if violations:
         print(f"\nFormat violations ({len(violations)} file(s)):")
         for v in violations:
@@ -99,6 +117,15 @@ def main() -> int:
         print("\nFAILED. Run:")
         print("  clang-format -i <file>")
         print("or commit through scripts/pre-commit (auto-fixes + re-stages).")
+        failed = True
+
+    if execution_errors:
+        print(f"\nclang-format execution errors ({len(execution_errors)}):")
+        for err in execution_errors:
+            print(err)
+        failed = True
+
+    if failed:
         return 1
 
     print("PASSED: all files clang-format-clean.")

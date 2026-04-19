@@ -188,18 +188,21 @@ The project uses CMake Presets for configuration.
 The project includes a standalone `MultiScoperTestHarness` that hosts the plugin and exposes an HTTP API for automation.
 
 1.  **Build Harness**:
+
     ```bash
     cmake --preset dev -DMULTISCOPER_BUILD_TEST_HARNESS=ON
     cmake --build --preset dev --target MultiScoperTestHarness
     ```
 
 2.  **Start Harness**:
+
     ```bash
     "./build/dev/test_harness/MultiScoperTestHarness_artefacts/Debug/MultiScoper Test Harness.app/Contents/MacOS/MultiScoper Test Harness" &
     ```
 
 3.  **Run Python Tests**:
     Interact with `http://localhost:8765`. Ensure you **open the editor** first.
+
     ```python
     import requests, time
     URL = "http://localhost:8765"

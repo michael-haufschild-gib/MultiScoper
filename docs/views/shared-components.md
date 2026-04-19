@@ -108,7 +108,7 @@ Vertical panel 320 × 420, bg `backgroundRaised`, radius 10, padding 16:
 
 Reduced 280 × 200 mini-modal example:
 - Title bar `Configure Oscillator` with X button right.
-- Body: label `Form`, two radio options `Formation` / `Formation`, bottom row `Cancel` / `Save` buttons (70 × 28 each, right-aligned 8px gap).
+- Body: label `Form`, two radio options `Stereo` / `Mid-Side`, bottom row `Cancel` / `Save` buttons (70 × 28 each, right-aligned 8px gap).
 
 ### Column 4 — Meter Bar
 

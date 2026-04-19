@@ -41,9 +41,9 @@ Variant 1 (3 panes stacked, 1 column):
 - Pane 2: name `Track 2 - Drums`, color `#E24BA6`, processing `Compressed`.
 - Pane 3: name `Track 3 - Bass`, color `#4AD070`, processing `Sub`.
 
-Variant 2 (4 panes, 2 × 2):
-- Pane slot size: 432 × 348; positions: `(16,16)`, `(464,16)`, `(16,380)`, `(464,380)`.
-- Content viewport is narrower here because sidebar expanded = 300 wide, so content width = 900; adjust positions: slot width 434, positions `(16,16) (466,16) (16,380) (466,380)`.
+Variant 2 (4 panes, 2 × 2, sidebar expanded = 300 wide → content width = 900):
+- Pane slot size: 434 × 348; positions `(16,16) (466,16) (16,380) (466,380)`
+  (16px margins + 16px inner gap: 16 + 434 + 16 + 434 = 900).
 - Pane 1 `Track 1 - Vocals` `#1FD4F3` `Clean`.
 - Pane 2 `Track 3 - Drums` `#E24BA6` `Compressed`.
 - Pane 3 `Track 2 - Guitar` `#E87B3A` `Overdrive`.
@@ -59,16 +59,24 @@ Variants 4 and 5 clone variant 1 layout; only the status bar changes (see below)
 
 Top row 40 tall: title area blank left, chevron-left icon button right (24 × 24 centered vertically, 8px from right edge).
 
-Accordion, all three sections expanded:
+Accordion, all three sections expanded. The OSCILLATORS section count badge
+and row list mirror the content panes of the variant being rendered — 3 rows
+for variants 1/4/5, 4 rows for variant 2.
 
 ### Section 1 — OSCILLATORS
 
-- Header 40 tall: chevron-down left (8px from left), caps label `OSCILLATORS` at 16 x-offset from chevron, count badge right (`3`, 18×18 circle bg `rgba(31,212,243,0.20)` text `#1FD4F3`).
+- Header 40 tall: chevron-down left (8px from left), caps label `OSCILLATORS` at 16 x-offset from chevron, count badge right (`N`, 18×18 circle bg `rgba(31,212,243,0.20)` text `#1FD4F3`, where `N` = number of panes in the current variant).
 - Row below header: full-width primary button `+ Add Oscillator`, height 32, radius 6.
-- Oscillator rows (compact, not selected) × 3 — see oscillator-list-states for row spec. In this view, all rows are the default non-hover, non-selected form. Heights 56 each.
-  - Row 1: dot `#1FD4F3`, name `Lead Vocal`, track `Track 1`.
-  - Row 2: dot `#E24BA6`, name `Drums - Kick`, track `Track 2`.
-  - Row 3: dot `#4AD070`, name `Bass DI`, track `Track 3`.
+- Oscillator rows (compact, not selected) — one row per pane in the variant, matching the pane's dot colour, name, and track. Heights 56 each. See oscillator-list-states for row spec; all rows in this view are the default non-hover, non-selected form.
+  - Variants 1/4/5 (3 panes):
+    - Row 1: dot `#1FD4F3`, name `Lead Vocal`, track `Track 1`.
+    - Row 2: dot `#E24BA6`, name `Drums - Kick`, track `Track 2`.
+    - Row 3: dot `#4AD070`, name `Bass DI`, track `Track 3`.
+  - Variant 2 (4 panes):
+    - Row 1: dot `#1FD4F3`, name `Lead Vocal`, track `Track 1`.
+    - Row 2: dot `#E24BA6`, name `Drums - Kick`, track `Track 3`.
+    - Row 3: dot `#E87B3A`, name `Guitar`, track `Track 2`.
+    - Row 4: dot `#4AD070`, name `Bass DI`, track `Track 4`.
 - Bottom 1px divider.
 
 ### Section 2 — TIMING

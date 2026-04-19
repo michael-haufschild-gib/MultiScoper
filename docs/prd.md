@@ -3726,15 +3726,15 @@ BENCHMARK("64 Track Rendering") {
 **CMake Targets:**
 ```cmake
 # Main plugin targets
-add_library(multiscoper_plugin SHARED ${PLUGIN_SOURCES})
-add_executable(multiscoper_standalone ${STANDALONE_SOURCES})
+add_library(MultiScoperPlugin SHARED ${PLUGIN_SOURCES})
+add_executable(MultiScoperStandalone ${STANDALONE_SOURCES})
 
 # Test targets
-add_executable(multiscoper_tests ${TEST_SOURCES})
-add_executable(multiscoper_benchmarks ${BENCHMARK_SOURCES})
+add_executable(MultiScoperTests ${TEST_SOURCES})
+add_executable(MultiScoperBenchmarks ${BENCHMARK_SOURCES})
 
 # JUCE configuration
-juce_add_plugin(multiscoper_plugin
+juce_add_plugin(MultiScoperPlugin
     PRODUCT_NAME "MultiScoper"
     FORMATS VST3 AU Standalone
     VST3_CATEGORIES "Analyzer"

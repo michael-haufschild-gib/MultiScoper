@@ -79,10 +79,11 @@ For detailed guidance, refer to:
 
 ### 4. Test Failures
 - Tests are in `tests/` directory
-- Run specific test: `./build/<preset>/MultiScoperTests --gtest_filter="TestName.*"`
+- Run specific test: `ctest --preset <preset-name> -R "TestName"`
 - Check for thread safety issues (audio code uses lock-free patterns)
 
 ### 5. pluginval Failures
+
 - Plugin validation runs after build
 - Check VST3 plugin at `build/<preset>/MultiScoper_artefacts/Release/VST3/MultiScoper.vst3`
 

@@ -83,6 +83,7 @@ struct ServiceContext
 ### Phase 2: Update Tests
 
 #### Step 2.1: Update MultiScoperTestFixtures.h
+
 - Remove `getThemeManager()` and `getRegistry()` static methods
 - Make `MultiScoperPluginTestFixture` own service instances (like `MultiScoperComponentTestFixture`)
 - All fixtures use mocks or owned instances

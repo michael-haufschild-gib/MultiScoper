@@ -109,7 +109,7 @@ Border alpha overlays (over `backgroundPane`): `subtle` = `textPrimary @ 0.12`, 
 
 Where a view shows a rendered waveform inside a pane, use this exact polyline structure — a stereo scope line with a visible peak cluster. Color from the oscillator's assigned waveformColor:
 
-```
+```html
 <svg width="100%" height="100%" viewBox="0 0 1000 200" preserveAspectRatio="none">
   <polyline fill="none" stroke="COLOR" stroke-width="1.5" stroke-linejoin="round"
     points="0,100 30,98 60,102 90,95 120,108 150,88 180,112 210,80 240,120 270,70 300,130 330,60 360,140 390,50 420,145 450,55 480,135 510,65 540,125 570,75 600,115 630,85 660,105 690,95 720,100 750,98 780,102 810,99 840,100 870,100 900,101 930,99 960,100 990,100 1000,100" />
@@ -156,7 +156,7 @@ Theme names: `Dark Professional`, `Light Modern`, `High Contrast`, `Classic Gree
 
 ## File Header Template (each view HTML must start with this)
 
-```
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -183,7 +183,7 @@ Every view HTML must satisfy ALL of:
 - [ ] No external URL in `<link>`, `<img>`, `<script>`, `@import`, `url(…)`.
 - [ ] Every frame is exactly 1200 × 760.
 - [ ] Font family includes `'Inter', system-ui`.
-- [ ] All colors referenced are from the pinned palette (no one-off hex values).
+- [ ] All colors referenced are from the pinned palette, with two explicitly allowed exceptions: the page background `#05070B` (template-fixed) and the modal-container shadow `rgba(0,0,0,0.35)` (negative-constraint allowance).
 - [ ] All numeric sample values match the sample content section verbatim.
 - [ ] Every icon is inline SVG with `stroke="currentColor"` and `stroke-width="1.5"`.
 - [ ] No comments, no emoji, no `aria-*`.
