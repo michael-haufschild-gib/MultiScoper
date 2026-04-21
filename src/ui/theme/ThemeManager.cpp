@@ -304,29 +304,34 @@ bool ThemeManager::renameTheme(const juce::String& oldName, const juce::String& 
     if (themes_.contains(newName))
         return false;
 
-    auto theme = std::move(it->second);
-    theme.name = newName;
+    // Serialize a copy first; if XML generation or the disk write fails we
+    // must not mutate the in-memory map or currentTheme_ (Copilot: atomicity).
+    ColorTheme renamedCopy = it->second;
+    renamedCopy.name = newName;
+
+    auto xml = renamedCopy.toValueTree().createXml();
+    if (xml == nullptr)
+        return false;
+
+    const auto themesDir = getThemesDirectory();
+    themesDir.createDirectory();
+    auto newFile = themesDir.getChildFile(newName + ".xml");
+
+    // Persist the new file synchronously BEFORE touching in-memory state or
+    // deleting the old file. The previous ordering (swap in-memory → debounced
+    // save → delete old) left a 500 ms window where a crash could lose both
+    // names, and left caller-visible state inconsistent on write failures.
+    if (!newFile.replaceWithText(xml->toString()))
+        return false;
+
     themes_.erase(it);
-    themes_[newName] = std::move(theme);
+    themes_[newName] = std::move(renamedCopy);
 
     if (currentTheme_.name == oldName)
     {
         currentTheme_.name = newName;
         notifyListeners();
     }
-
-    // Persist the new file synchronously BEFORE deleting the old one. The
-    // previous ordering (delete old → debounced save of new) left a 500 ms
-    // window where a crash could lose both names. Writing new first keeps
-    // at least one valid copy on disk at every step.
-    const auto themesDir = getThemesDirectory();
-    auto newFile = themesDir.getChildFile(newName + ".xml");
-    auto xml = themes_[newName].toValueTree().createXml();
-    if (xml == nullptr)
-        return false;
-    themesDir.createDirectory();
-    if (!newFile.replaceWithText(xml->toString()))
-        return false;
 
     // The new name no longer has pending debounced work — we just persisted.
     pendingSaves_.erase(newName);

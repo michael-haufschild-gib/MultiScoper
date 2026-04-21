@@ -15,8 +15,9 @@ protected:
     void SetUp() override
     {
         tempDir_ = juce::File::getSpecialLocation(juce::File::tempDirectory)
-                       .getChildFile("multiscoper_theme_crud_" + juce::String(juce::Time::currentTimeMillis()));
-        tempDir_.createDirectory();
+                       .getChildFile("multiscoper_theme_crud_" + juce::Uuid().toString());
+        ASSERT_TRUE(tempDir_.createDirectory())
+            << "Failed to create temp theme directory: " << tempDir_.getFullPathName();
         themeManager_ = std::make_unique<ThemeManager>(tempDir_);
     }
 

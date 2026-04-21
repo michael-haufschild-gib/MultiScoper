@@ -32,9 +32,12 @@ MultiScoperColorPicker::MultiScoperColorPicker(IThemeService& themeService, cons
             auto color = juce::Colour::fromString("FF" + text);
             setColor(color);
         }
-        else if (text.length() >= 8)
+        else if (text.length() == 8)
         {
-            auto color = juce::Colour::fromString(text.substring(0, 8));
+            // Require exactly 8 hex chars — updateHexField only ever emits 6 or 8,
+            // so anything else is malformed and we reject it rather than silently
+            // truncate (e.g. a 9-char paste like "123456789").
+            auto color = juce::Colour::fromString(text);
             setColor(color);
         }
     };
@@ -237,8 +240,9 @@ void MultiScoperColorPicker::handleGradientDrag(juce::Point<int> pos)
     if (mode_ == Mode::Wheel)
     {
         // In wheel mode the gradient is a polar HSV wheel: angle → hue,
-        // distance-from-centre → saturation. (Brightness is set via a
-        // separate control in wheel mode and is not modulated by the drag.)
+        // distance-from-centre → saturation. Until a dedicated value control
+        // exists, we also map the vertical position onto brightness so the
+        // drag can't leave the picker in a frozen-value state (regression fix).
         const auto cx = static_cast<float>(bounds.getCentreX());
         const auto cy = static_cast<float>(bounds.getCentreY());
         const float radius = static_cast<float>(std::min(bounds.getWidth(), bounds.getHeight())) / 2.0f;
@@ -253,6 +257,8 @@ void MultiScoperColorPicker::handleGradientDrag(juce::Point<int> pos)
         hue_ =
             std::clamp((angle + juce::MathConstants<float>::pi) / (2.0f * juce::MathConstants<float>::pi), 0.0f, 1.0f);
         saturation_ = std::clamp(dist / radius, 0.0f, 1.0f);
+        brightness_ = std::clamp(
+            1.0f - (static_cast<float>(pos.y - bounds.getY()) / static_cast<float>(bounds.getHeight())), 0.0f, 1.0f);
     }
     else
     {

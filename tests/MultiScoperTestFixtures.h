@@ -268,11 +268,22 @@ class MultiScoperPluginTestFixture : public ::testing::Test
 protected:
     void SetUp() override
     {
+        // Per-fixture temp dirs so ThemeManager/PresetManager never touch the
+        // real user-data directory — keeps the processor test isolated and
+        // prevents cross-run state leaks.
+        const auto tempRoot = juce::File::getSpecialLocation(juce::File::tempDirectory);
+        themesTempDir_ = tempRoot.getChildFile("multiscoper_fixture_themes_" + juce::Uuid().toString());
+        presetsTempDir_ = tempRoot.getChildFile("multiscoper_fixture_presets_" + juce::Uuid().toString());
+        ASSERT_TRUE(themesTempDir_.createDirectory())
+            << "Failed to create fixture themes dir: " << themesTempDir_.getFullPathName();
+        ASSERT_TRUE(presetsTempDir_.createDirectory())
+            << "Failed to create fixture presets dir: " << presetsTempDir_.getFullPathName();
+
         // Create owned service instances (no singletons)
         registry_ = std::make_unique<InstanceRegistry>();
-        themeManager_ = std::make_unique<ThemeManager>();
+        themeManager_ = std::make_unique<ThemeManager>(themesTempDir_);
         shaderRegistry_ = std::make_unique<ShaderRegistry>();
-        presetManager_ = std::make_unique<PresetManager>();
+        presetManager_ = std::make_unique<PresetManager>(presetsTempDir_);
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
         // Create processor with owned services
@@ -313,6 +324,10 @@ protected:
 
         // Final cleanup
         pumpMessageQueue(50);
+
+        // Remove the per-fixture scratch dirs after services are gone.
+        themesTempDir_.deleteRecursively();
+        presetsTempDir_.deleteRecursively();
     }
 
     /**
@@ -331,6 +346,10 @@ protected:
     ThemeManager& getThemeManager() { return *themeManager_; }
     ShaderRegistry& getShaderRegistry() { return *shaderRegistry_; }
     MemoryBudgetManager& getMemoryBudgetManager() { return *memoryBudgetManager_; }
+
+    // Per-fixture scratch dirs backing the theme/preset managers
+    juce::File themesTempDir_;
+    juce::File presetsTempDir_;
 
     // Owned services
     std::unique_ptr<InstanceRegistry> registry_;

@@ -266,3 +266,41 @@ TEST_F(MultiScoperColorPickerTest, SetColorRoundtripPreservesAlpha)
     EXPECT_NEAR(picker.getColor().getFloatGreen(), 0.2f, 0.01f);
     EXPECT_NEAR(picker.getColor().getFloatBlue(), 0.1f, 0.01f);
 }
+
+// Regression: in wheel mode a vertical drag must update brightness. The old
+// implementation froze brightness_ on switching to wheel mode, so a top-to-
+// bottom drag left the value at its original level — exercise that path by
+// seeding a mid-value colour, simulating two drags on opposite ends of the
+// gradient rectangle, and verifying the brightness differs noticeably.
+TEST_F(MultiScoperColorPickerTest, WheelModeDragUpdatesBrightness)
+{
+    MultiScoperColorPicker picker(getThemeManager());
+    picker.setShowAlpha(false);
+    picker.setShowPreview(false);
+    picker.setShowHexInput(false);
+    picker.setBounds(0, 0, 200, picker.getPreferredHeight());
+    picker.setMode(MultiScoperColorPicker::Mode::Wheel);
+
+    // Pure red at mid-brightness so there's room to go brighter or darker.
+    picker.setColor(juce::Colour::fromHSV(0.0f, 1.0f, 0.5f, 1.0f), false);
+
+    auto makeClickAt = [&picker](juce::Point<int> position) {
+        const auto now = juce::Time::getCurrentTime();
+        return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(), position.toFloat(),
+                                juce::ModifierKeys::leftButtonModifier, juce::MouseInputSource::defaultPressure,
+                                juce::MouseInputSource::defaultOrientation, juce::MouseInputSource::defaultRotation,
+                                juce::MouseInputSource::defaultTiltX, juce::MouseInputSource::defaultTiltY, &picker,
+                                &picker, now, position.toFloat(), now, 1, /*mouseWasDragged*/ false);
+    };
+
+    // Click at the top of the gradient → brightness should climb near 1.
+    picker.mouseDown(makeClickAt({100, 1}));
+    const float brightnessTop = picker.getColor().getBrightness();
+
+    // And at the bottom → brightness should drop near 0.
+    picker.mouseDown(makeClickAt({100, 178}));
+    const float brightnessBottom = picker.getColor().getBrightness();
+
+    // With the fix, vertical drags drive brightness; difference must be non-trivial.
+    EXPECT_GT(brightnessTop - brightnessBottom, 0.5f);
+}

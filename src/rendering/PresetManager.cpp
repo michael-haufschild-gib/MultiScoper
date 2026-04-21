@@ -38,22 +38,51 @@ std::optional<juce::ValueTree> PresetManager::parsePresetFile(const juce::File& 
 
 namespace
 {
-juce::File defaultPresetsDirectory()
+juce::File userAppDataRoot()
 {
     return juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
 #if JUCE_MAC
         .getChildFile("Application Support")
 #endif
-        .getChildFile("MultiScoper")
-        .getChildFile("presets");
+        .getChildFile("MultiScoper");
+}
+
+juce::File defaultPresetsDirectory() { return userAppDataRoot().getChildFile("presets"); }
+
+/// Legacy location used by earlier builds (`Application Support/MultiScoper/MultiScoper/presets`).
+/// Kept as a read fallback so upgraders don't lose access to presets saved before
+/// the duplicate directory segment was removed.
+juce::File legacyPresetsDirectory() { return userAppDataRoot().getChildFile("MultiScoper").getChildFile("presets"); }
+
+void migrateLegacyPresets(const juce::File& legacyDir, const juce::File& newDir)
+{
+    if (!legacyDir.isDirectory())
+        return;
+    for (const auto& entry : juce::RangedDirectoryIterator(legacyDir, false, "*.oscpreset"))
+    {
+        const auto& srcFile = entry.getFile();
+        auto destFile = newDir.getChildFile(srcFile.getFileName());
+        if (destFile.existsAsFile())
+            continue; // don't clobber newer file
+        srcFile.copyFileTo(destFile);
+    }
 }
 } // namespace
 
-PresetManager::PresetManager() : PresetManager(defaultPresetsDirectory()) {}
+PresetManager::PresetManager() : PresetManager(defaultPresetsDirectory())
+{
+    // Default-constructor path only: copy forward from the legacy
+    // duplicate-segment directory if the new directory is empty so users
+    // upgrading from earlier builds don't lose access to saved presets.
+    migrateLegacyPresets(legacyPresetsDirectory(), presetsDir_);
+}
 
 PresetManager::PresetManager(juce::File presetsDir) : presetsDir_(std::move(presetsDir))
 {
-    presetsDir_.createDirectory();
+    const bool created = presetsDir_.createDirectory();
+    jassert(created || presetsDir_.isDirectory());
+    if (!created && !presetsDir_.isDirectory())
+        DBG("PresetManager: failed to create presets directory: " << presetsDir_.getFullPathName());
 }
 
 std::vector<PresetInfo> PresetManager::getAvailablePresets() const

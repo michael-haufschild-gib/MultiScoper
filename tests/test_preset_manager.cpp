@@ -17,8 +17,9 @@ protected:
     void SetUp() override
     {
         tempDir_ = juce::File::getSpecialLocation(juce::File::tempDirectory)
-                       .getChildFile("multiscoper_preset_test_" + juce::String(juce::Time::currentTimeMillis()));
-        tempDir_.createDirectory();
+                       .getChildFile("multiscoper_preset_test_" + juce::Uuid().toString());
+        ASSERT_TRUE(tempDir_.createDirectory())
+            << "Failed to create temp preset directory: " << tempDir_.getFullPathName();
         manager_ = std::make_unique<PresetManager>(tempDir_);
     }
 

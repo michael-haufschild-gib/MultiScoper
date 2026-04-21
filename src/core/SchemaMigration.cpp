@@ -34,8 +34,11 @@ struct MigrationEntry
 /// Stamp the version property on the state node.
 void stampVersion(juce::ValueTree& state, int version) { state.setProperty(StateIds::Version, version, nullptr); }
 
-/// Canonical current schema version. Update together with MultiScoperState::CURRENT_SCHEMA_VERSION.
+/// Canonical current schema version. Must match MultiScoperState::CURRENT_SCHEMA_VERSION —
+/// the static_assert below prevents drift at compile time.
 constexpr int kCurrentVersion = 3;
+static_assert(kCurrentVersion == MultiScoperState::CURRENT_SCHEMA_VERSION,
+              "SchemaMigration::kCurrentVersion must match MultiScoperState::CURRENT_SCHEMA_VERSION");
 
 const std::array<MigrationEntry, 0>& migrationTable()
 {

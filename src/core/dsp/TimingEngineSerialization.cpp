@@ -286,6 +286,9 @@ void TimingEngine::fromValueTree(const juce::ValueTree& state)
 {
     if (!state.hasType(TimingIds::Timing))
     {
+        // Invalid or missing payload: preserve current config (callers must
+        // decide whether to reset — see PluginProcessor::setStateInformation)
+        // and clear only the runtime latches.
         resetRuntimeStateForLoad();
         return;
     }

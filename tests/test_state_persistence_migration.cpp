@@ -17,7 +17,8 @@ class StatePersistenceMigrationTest : public StateTestFixture
 };
 
 // Test: Missing schema version (no "version" attribute) is rejected —
-// pre-v3 saves are no longer supported.
+// pre-v3 saves are no longer supported. Verify no partial apply: neither
+// theme nor schema version mutate on the failed load.
 TEST_F(StatePersistenceMigrationTest, MissingSchemaVersionRejected)
 {
     auto const themeBefore = state->getThemeName();
@@ -29,9 +30,10 @@ TEST_F(StatePersistenceMigrationTest, MissingSchemaVersionRejected)
     )";
     EXPECT_FALSE(state->fromXmlString(oldXml));
     EXPECT_EQ(state->getThemeName(), themeBefore);
+    EXPECT_EQ(state->getSchemaVersion(), MultiScoperState::CURRENT_SCHEMA_VERSION);
 }
 
-// Test: Pre-current schema version (e.g. v1) is rejected.
+// Test: Pre-current schema version (e.g. v1) is rejected. Verify no partial apply.
 TEST_F(StatePersistenceMigrationTest, OldSchemaVersionRejected)
 {
     auto const themeBefore = state->getThemeName();
@@ -43,6 +45,7 @@ TEST_F(StatePersistenceMigrationTest, OldSchemaVersionRejected)
     )";
     EXPECT_FALSE(state->fromXmlString(v1Xml));
     EXPECT_EQ(state->getThemeName(), themeBefore);
+    EXPECT_EQ(state->getSchemaVersion(), MultiScoperState::CURRENT_SCHEMA_VERSION);
 }
 
 // Test: Future schema version is rejected (fail-closed). State is preserved.

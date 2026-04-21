@@ -11,9 +11,8 @@
          deterministically from the trackIdentifier — same trackIdentifier
          across sessions -> same SourceId -> cross-instance oscillator
          bindings remain resolvable.
-      3. Legacy v2 saves (without TrackIdentifier) migrate cleanly but
-         surface an empty trackIdentifier (intentional — the plugin will
-         fall back to a fresh UUID for those legacy sessions).
+      3. Pre-v3 saves (v2 and older) are rejected at load time. See
+         PreV3StateIsRejected below; schema migration is fail-closed.
 */
 
 #include "core/InstanceRegistry.h"
