@@ -378,10 +378,17 @@ class MultiScoperComponentTestFixture : public ::testing::Test
 protected:
     void SetUp() override
     {
+        // Per-fixture preset scratch dir so component tests that happen to
+        // trigger preset operations cannot touch the real user presets dir.
+        presetsTempDir_ = juce::File::getSpecialLocation(juce::File::tempDirectory)
+                              .getChildFile("multiscoper_component_presets_" + juce::Uuid().toString());
+        ASSERT_TRUE(presetsTempDir_.createDirectory())
+            << "Failed to create component fixture presets dir: " << presetsTempDir_.getFullPathName();
+
         mockRegistry = std::make_unique<MockInstanceRegistry>();
         mockThemeService = std::make_unique<MockThemeService>();
         shaderRegistry_ = std::make_unique<ShaderRegistry>();
-        presetManager_ = std::make_unique<PresetManager>();
+        presetManager_ = std::make_unique<PresetManager>(presetsTempDir_);
     }
 
     void TearDown() override
@@ -393,6 +400,8 @@ protected:
         shaderRegistry_.reset();
         mockThemeService.reset();
         mockRegistry.reset();
+
+        presetsTempDir_.deleteRecursively();
     }
 
     /**
@@ -404,6 +413,7 @@ protected:
         return ServiceContext{*mockRegistry, *mockThemeService, *shaderRegistry_, *presetManager_};
     }
 
+    juce::File presetsTempDir_;
     std::unique_ptr<MockInstanceRegistry> mockRegistry;
     std::unique_ptr<MockThemeService> mockThemeService;
     std::unique_ptr<ShaderRegistry> shaderRegistry_;
