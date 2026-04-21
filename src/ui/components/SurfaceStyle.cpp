@@ -1,21 +1,12 @@
 /*
     MultiScoper - Surface Style (flat) — Implementation
 
-    Historical name: "GlassStyle" / "glassmorphism". The 2026 MultiScoper uplift
-    removed that aesthetic entirely. The struct was renamed to SurfaceStyle
-    but some *Glass* field names (`bgGlass`, `glassAlpha`) remain as stable
-    ValueTree serialization tokens — changing them would break user theme
-    files on disk.
-
-    Token semantics under the flat surface system:
-
+    Token semantics:
       * `bgGlass` and `bgPanel` are fully opaque surfaces.
-      * `bgHover` / `bgActive` are faint white overlays that tint a surface
-        on interaction without changing its hue.
+      * `bgHover` / `bgActive` are faint tints of the surface on interaction.
       * `accentSubtle` / `accentMuted` are tints of the accent used for
-        selection/hover tints, NOT button-background colours.
-      * Shadow parameters are zero by default; paint code should treat
-        them as optional.
+        selection/hover, NOT button-background colours.
+      * Shadow parameters default to zero; paint code treats them as optional.
 */
 
 #include "ui/components/SurfaceStyle.h"
@@ -27,8 +18,7 @@ namespace multiscoper
 
 void SurfaceStyle::computeFrom(const ColorTheme& theme)
 {
-    // Opaque surfaces — no translucency. `glassAlpha` / `panelAlpha` are
-    // retained in ColorTheme for serialization back-compat; ignored here.
+    // Opaque surfaces — no translucency.
     bgGlass = theme.backgroundPane;
     bgPanel = theme.backgroundPane;
 

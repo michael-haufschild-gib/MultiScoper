@@ -9,6 +9,7 @@
 #include "core/interfaces/IInstanceRegistry.h"
 #include "ui/theme/ThemeManager.h"
 
+#include "MultiScoperTestFixtures.h"
 #include "MultiScoperTestUtils.h"
 #include "plugin/PluginProcessor.h"
 #include "rendering/PresetManager.h"
@@ -39,8 +40,8 @@ protected:
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
         // Create processor with owned services
-        processor = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                                 *presetManager_, *memoryBudgetManager_);
+        processor = multiscoper::test::makeProcessor(*registry_, *themeManager_, *shaderRegistry_, *presetManager_,
+                                                     *memoryBudgetManager_);
         processor->prepareToPlay(44100.0, 512);
     }
 
@@ -208,8 +209,8 @@ TEST_F(PluginProcessorLifecycleTest, PrepareToPlay_DifferentSampleRates)
 
     for (double rate : sampleRates)
     {
-        processor = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                                 *presetManager_, *memoryBudgetManager_);
+        processor = multiscoper::test::makeProcessor(*registry_, *themeManager_, *shaderRegistry_, *presetManager_,
+                                                     *memoryBudgetManager_);
         processor->prepareToPlay(rate, 512);
 
         EXPECT_DOUBLE_EQ(processor->getSampleRate(), rate) << "Failed for sample rate: " << rate;
@@ -223,8 +224,8 @@ TEST_F(PluginProcessorLifecycleTest, PrepareToPlay_DifferentBlockSizes)
 
     for (int blockSize : blockSizes)
     {
-        processor = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                                 *presetManager_, *memoryBudgetManager_);
+        processor = multiscoper::test::makeProcessor(*registry_, *themeManager_, *shaderRegistry_, *presetManager_,
+                                                     *memoryBudgetManager_);
         processor->prepareToPlay(44100.0, blockSize);
         pumpMessageQueue(200);
 
@@ -389,8 +390,8 @@ TEST_F(PluginProcessorLifecycleTest, DestructorUnregistersFromRegistry)
 TEST_F(PluginProcessorLifecycleTest, SourceIdBeforePrepare)
 {
     // Create a fresh processor not yet prepared
-    auto freshProcessor = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                                       *presetManager_, *memoryBudgetManager_);
+    auto freshProcessor = multiscoper::test::makeProcessor(*registry_, *themeManager_, *shaderRegistry_,
+                                                           *presetManager_, *memoryBudgetManager_);
 
     // Source ID before prepareToPlay should be invalid
     SourceId sourceId = freshProcessor->getSourceId();

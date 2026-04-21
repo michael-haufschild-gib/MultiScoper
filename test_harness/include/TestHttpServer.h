@@ -253,15 +253,6 @@ private:
     std::optional<int> tryResolveTrackId(const httplib::Request& req, httplib::Response& res);
     int resolveTrackIdFromBody(const json& body);
 
-    // Legacy pointer-returning resolvers — retained for callers that still run
-    // entirely on the message thread (e.g., inside a lambda already dispatched
-    // via callAsync). Never call from an HTTP worker thread: concurrent
-    // addTrack/removeTrack on the MT can free the returned pointer before the
-    // caller dereferences it, causing pthread_mutex_lock(EINVAL) when the
-    // caller touches TestTrack::sourceIdMutex_.
-    TestTrack* resolveTrack(const httplib::Request& req);
-    TestTrack* resolveTrackFromBody(const json& body);
-
     // Result of a `runOnTrackSync` dispatch.
     enum class TrackCallResult
     {

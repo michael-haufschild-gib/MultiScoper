@@ -10,6 +10,30 @@
 namespace multiscoper
 {
 
+namespace
+{
+
+int sanitizeTimingMode(int value)
+{
+    if (value == static_cast<int>(TimingMode::TIME) || value == static_cast<int>(TimingMode::MELODIC))
+        return value;
+    return static_cast<int>(TimingMode::TIME);
+}
+
+int sanitizeEnumRange(int value, int minVal, int maxVal, int defaultVal)
+{
+    return (value >= minVal && value <= maxVal) ? value : defaultVal;
+}
+
+float sanitizeFloat(float value, float defaultVal, float minVal, float maxVal)
+{
+    if (!std::isfinite(value))
+        return defaultVal;
+    return juce::jlimit(minVal, maxVal, value);
+}
+
+} // namespace
+
 // === Configuration Getters ===
 
 EngineTimingConfig TimingEngine::getConfig() const
@@ -46,15 +70,18 @@ void TimingEngine::setConfig(const EngineTimingConfig& config)
     cfg.timingMode = config.timingMode;
     cfg.hostSyncEnabled = config.hostSyncEnabled;
     cfg.syncToPlayhead = config.syncToPlayhead;
-    cfg.timeIntervalMs = config.timeIntervalMs;
+    cfg.timeIntervalMs =
+        sanitizeFloat(config.timeIntervalMs, EngineTimingConfig::DEFAULT_TIME_INTERVAL_MS,
+                      EngineTimingConfig::MIN_TIME_INTERVAL_MS, EngineTimingConfig::MAX_TIME_INTERVAL_MS);
     cfg.noteInterval = config.noteInterval;
-    cfg.internalBPM = config.internalBPM;
+    cfg.internalBPM =
+        sanitizeFloat(config.internalBPM, 120.0f, EngineTimingConfig::MIN_BPM, EngineTimingConfig::MAX_BPM);
     cfg.triggerMode = config.triggerMode;
-    cfg.triggerChannel = config.triggerChannel;
-    cfg.triggerThreshold = config.triggerThreshold;
-    cfg.triggerHysteresis = config.triggerHysteresis;
-    cfg.midiTriggerNote = config.midiTriggerNote;
-    cfg.midiTriggerChannel = config.midiTriggerChannel;
+    cfg.triggerChannel = juce::jmax(0, config.triggerChannel);
+    cfg.triggerThreshold = sanitizeFloat(config.triggerThreshold, 0.1f, 0.0f, 1.0f);
+    cfg.triggerHysteresis = sanitizeFloat(config.triggerHysteresis, 0.01f, 0.0f, 1.0f);
+    cfg.midiTriggerNote = juce::jlimit(-1, 127, config.midiTriggerNote);
+    cfg.midiTriggerChannel = juce::jlimit(0, 16, config.midiTriggerChannel);
     configLock_.write(cfg);
 
     // Update host BPM in the host info (written from UI thread for setConfig)
@@ -150,12 +177,13 @@ void TimingEngine::setTriggerThreshold(float threshold)
 void TimingEngine::setTriggerChannel(int channel)
 {
     auto cfg = configLock_.readBlocking();
-    cfg.triggerChannel = channel;
+    cfg.triggerChannel = juce::jmax(0, channel);
     configLock_.write(cfg);
 }
 
 void TimingEngine::setTriggerHysteresis(float hysteresis)
 {
+    hysteresis = std::isfinite(hysteresis) ? juce::jlimit(0.0f, 1.0f, hysteresis) : 0.01f;
     auto cfg = configLock_.readBlocking();
     cfg.triggerHysteresis = hysteresis;
     configLock_.write(cfg);
@@ -164,14 +192,14 @@ void TimingEngine::setTriggerHysteresis(float hysteresis)
 void TimingEngine::setMidiTriggerNote(int note)
 {
     auto cfg = configLock_.readBlocking();
-    cfg.midiTriggerNote = note;
+    cfg.midiTriggerNote = juce::jlimit(-1, 127, note);
     configLock_.write(cfg);
 }
 
 void TimingEngine::setMidiTriggerChannel(int channel)
 {
     auto cfg = configLock_.readBlocking();
-    cfg.midiTriggerChannel = channel;
+    cfg.midiTriggerChannel = juce::jlimit(0, 16, channel);
     configLock_.write(cfg);
 }
 
@@ -220,25 +248,6 @@ void TimingEngine::resetRuntimeStateForLoad()
     resetTriggerHistoryPending_.store(true, std::memory_order_relaxed);
 }
 
-static int sanitizeTimingMode(int value)
-{
-    if (value == static_cast<int>(TimingMode::TIME) || value == static_cast<int>(TimingMode::MELODIC))
-        return value;
-    return static_cast<int>(TimingMode::TIME);
-}
-
-static int sanitizeEnumRange(int value, int minVal, int maxVal, int defaultVal)
-{
-    return (value >= minVal && value <= maxVal) ? value : defaultVal;
-}
-
-static float sanitizeFloat(float value, float defaultVal, float minVal, float maxVal)
-{
-    if (!std::isfinite(value))
-        return defaultVal;
-    return juce::jlimit(minVal, maxVal, value);
-}
-
 void TimingEngine::loadTimingProperties(const juce::ValueTree& state)
 {
     TimingConfigData cfg;
@@ -277,6 +286,9 @@ void TimingEngine::fromValueTree(const juce::ValueTree& state)
 {
     if (!state.hasType(TimingIds::Timing))
     {
+        // Invalid or missing payload: preserve current config (callers must
+        // decide whether to reset — see PluginProcessor::setStateInformation)
+        // and clear only the runtime latches.
         resetRuntimeStateForLoad();
         return;
     }
@@ -331,8 +343,8 @@ void TimingEngine::applyEntityConfig(const TimingConfig& entityConfig)
         thresholdLinear = 0.1f;
     cfg.triggerThreshold = juce::jlimit(0.0f, 1.0f, thresholdLinear);
 
-    cfg.midiTriggerNote = entityConfig.midiTriggerNote;
-    cfg.midiTriggerChannel = entityConfig.midiTriggerChannel;
+    cfg.midiTriggerNote = juce::jlimit(-1, 127, entityConfig.midiTriggerNote);
+    cfg.midiTriggerChannel = juce::jlimit(0, 16, entityConfig.midiTriggerChannel);
 
     configLock_.write(cfg);
 

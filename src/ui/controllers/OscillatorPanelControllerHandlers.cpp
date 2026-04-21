@@ -76,9 +76,12 @@ void OscillatorPanelController::oscillatorColorConfigRequested(const OscillatorI
     {
         if (osc.getId() == oscillatorId)
         {
-            dialogManager_->showColorDialog(osc.getColour(), [this, oscillatorId](juce::Colour color) {
-                applyOscillatorColor(oscillatorId, color);
-            });
+            dialogManager_->showColorDialog(
+                osc.getColour(),
+                [weakThis = juce::WeakReference<OscillatorPanelController>(this), oscillatorId](juce::Colour color) {
+                    if (auto* self = weakThis.get())
+                        self->applyOscillatorColor(oscillatorId, color);
+                });
             return;
         }
     }
@@ -183,9 +186,11 @@ void OscillatorPanelController::oscillatorPaneSelectionRequested(const Oscillato
 
     dialogManager_->showSelectPaneDialog(
         panes,
-        // onComplete callback
-        [this](const SelectPaneDialog::Result& result) {
-            auto& stateRef = dataProvider_.getState();
+        [weakThis = juce::WeakReference<OscillatorPanelController>(this)](const SelectPaneDialog::Result& result) {
+            auto* self = weakThis.get();
+            if (!self)
+                return;
+            auto& stateRef = self->dataProvider_.getState();
             auto& layoutMgr = stateRef.getLayoutManager();
             PaneId targetPaneId = result.paneId;
 
@@ -201,7 +206,7 @@ void OscillatorPanelController::oscillatorPaneSelectionRequested(const Oscillato
             auto oscList = stateRef.getOscillators();
             for (auto& osc : oscList)
             {
-                if (osc.getId() == pendingVisibilityOscillatorId_)
+                if (osc.getId() == self->pendingVisibilityOscillatorId_)
                 {
                     osc.setPaneId(targetPaneId);
                     osc.setVisible(true);
@@ -209,10 +214,12 @@ void OscillatorPanelController::oscillatorPaneSelectionRequested(const Oscillato
                     break;
                 }
             }
-            pendingVisibilityOscillatorId_ = OscillatorId::invalid();
+            self->pendingVisibilityOscillatorId_ = OscillatorId::invalid();
         },
-        // onCancel callback - clear pending ID when user cancels
-        [this]() { pendingVisibilityOscillatorId_ = OscillatorId::invalid(); });
+        [weakThis = juce::WeakReference<OscillatorPanelController>(this)]() {
+            if (auto* self = weakThis.get())
+                self->pendingVisibilityOscillatorId_ = OscillatorId::invalid();
+        });
 }
 
 void OscillatorPanelController::addOscillatorDialogRequested()
@@ -225,7 +232,11 @@ void OscillatorPanelController::addOscillatorDialogRequested()
     auto panes = layoutManager.getPanes();
 
     dialogManager_->showAddOscillatorDialog(
-        sources, panes, [this](const AddOscillatorDialog::Result& result) { addOscillatorRequested(result); });
+        sources, panes,
+        [weakThis = juce::WeakReference<OscillatorPanelController>(this)](const AddOscillatorDialog::Result& result) {
+            if (auto* self = weakThis.get())
+                self->addOscillatorRequested(result);
+        });
 }
 
 void OscillatorPanelController::addOscillatorRequested(const AddOscillatorDialog::Result& result)
@@ -336,21 +347,21 @@ void OscillatorPanelController::applyOscillatorPropertyChange(const OscillatorId
         if (osc.getId() != oscId)
             continue;
 
-        if (sidebar_)
-            sidebar_->refreshOscillatorList(oscillators);
-
         if (dispatchOscillatorPropertyToPane(osc, property))
         {
-            // GL context has continuous repaint disabled; silent audio would
-            // leave the new property (colour, processing mode, visibility)
-            // unseen until audio resumes.  Force one explicit repaint so the
-            // visual change is visible immediately.
+            // Fast-path handled the pane update; refresh the sidebar in-place
+            // and force one GL repaint (continuous repaint is disabled, so
+            // silent-audio edits would otherwise remain invisible).
+            if (sidebar_)
+                sidebar_->refreshOscillatorList(oscillators);
             gpuCoordinator_.forceRepaint();
             return;
         }
         break;
     }
 
+    // No pane matched — fall through to a full refresh, which itself refreshes
+    // the sidebar. No need to double-refresh here.
     triggerAsyncUpdate();
 }
 

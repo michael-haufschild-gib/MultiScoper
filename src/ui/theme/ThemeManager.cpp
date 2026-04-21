@@ -42,7 +42,22 @@ void ColorTheme::initializeDefaultWaveformColors()
 
 // === ThemeManager Implementation ===
 
-ThemeManager::ThemeManager()
+namespace
+{
+juce::File defaultThemesDirectory()
+{
+    return juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+#if JUCE_MAC
+        .getChildFile("Application Support")
+#endif
+        .getChildFile("MultiScoper")
+        .getChildFile("themes");
+}
+} // namespace
+
+ThemeManager::ThemeManager() : ThemeManager(defaultThemesDirectory()) {}
+
+ThemeManager::ThemeManager(juce::File themesDir) : themesDir_(std::move(themesDir))
 {
     initializeSystemThemes();
     loadThemes();
@@ -289,10 +304,28 @@ bool ThemeManager::renameTheme(const juce::String& oldName, const juce::String& 
     if (themes_.contains(newName))
         return false;
 
-    auto theme = std::move(it->second);
-    theme.name = newName;
+    // Serialize a copy first; if XML generation or the disk write fails we
+    // must not mutate the in-memory map or currentTheme_ (Copilot: atomicity).
+    ColorTheme renamedCopy = it->second;
+    renamedCopy.name = newName;
+
+    auto xml = renamedCopy.toValueTree().createXml();
+    if (xml == nullptr)
+        return false;
+
+    const auto themesDir = getThemesDirectory();
+    themesDir.createDirectory();
+    auto newFile = themesDir.getChildFile(newName + ".xml");
+
+    // Persist the new file synchronously BEFORE touching in-memory state or
+    // deleting the old file. The previous ordering (swap in-memory → debounced
+    // save → delete old) left a 500 ms window where a crash could lose both
+    // names, and left caller-visible state inconsistent on write failures.
+    if (!newFile.replaceWithText(xml->toString()))
+        return false;
+
     themes_.erase(it);
-    themes_[newName] = std::move(theme);
+    themes_[newName] = std::move(renamedCopy);
 
     if (currentTheme_.name == oldName)
     {
@@ -300,9 +333,10 @@ bool ThemeManager::renameTheme(const juce::String& oldName, const juce::String& 
         notifyListeners();
     }
 
+    // The new name no longer has pending debounced work — we just persisted.
+    pendingSaves_.erase(newName);
     pendingSaves_.erase(oldName);
     deleteThemeFile(oldName);
-    saveTheme(newName);
 
     return true;
 }
@@ -323,8 +357,14 @@ bool ThemeManager::importTheme(const juce::String& xmlString)
     if (!isValidThemeName(importedName))
         return false;
 
-    // Prevent imported themes from overwriting protected system themes
+    // Refuse to overwrite a protected system theme.
     if (isSystemTheme(importedName))
+        return false;
+
+    // Refuse to silently overwrite an existing custom theme. Callers that
+    // intend to replace must deleteTheme(name) first — this matches the
+    // PresetManager.importPreset collision contract.
+    if (themes_.contains(importedName))
         return false;
 
     theme.name = importedName;
@@ -332,13 +372,6 @@ bool ThemeManager::importTheme(const juce::String& xmlString)
     themes_[theme.name] = theme;
 
     saveTheme(theme.name);
-
-    // Refresh active theme if the import overwrites the currently selected theme
-    if (currentTheme_.name == theme.name)
-    {
-        currentTheme_ = theme;
-        notifyListeners();
-    }
 
     return true;
 }

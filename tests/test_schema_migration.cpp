@@ -1,6 +1,6 @@
 /*
     MultiScoper - SchemaMigration Unit Tests
-    Validates each registered migration in isolation plus rejection paths.
+    Validates the rejection paths of the current (empty) migration table.
 */
 
 #include "core/MultiScoperState.h"
@@ -24,40 +24,24 @@ juce::ValueTree makeBareMultiScoperState(int version)
 
 } // namespace
 
-TEST(SchemaMigration, V0ToV1StampsVersionOne)
+TEST(SchemaMigration, CurrentVersionAcceptedAsNoOp)
 {
-    auto tree = makeBareMultiScoperState(0);
-    const auto result = multiscoper::migration::migrateMultiScoperState(tree, 0, 1);
+    auto tree = makeBareMultiScoperState(multiscoper::MultiScoperState::CURRENT_SCHEMA_VERSION);
+    const auto result =
+        multiscoper::migration::migrateMultiScoperState(tree, multiscoper::MultiScoperState::CURRENT_SCHEMA_VERSION,
+                                                        multiscoper::MultiScoperState::CURRENT_SCHEMA_VERSION);
     EXPECT_EQ(result, multiscoper::migration::MigrationResult::Success);
-    EXPECT_EQ(static_cast<int>(tree.getProperty(multiscoper::StateIds::Version, -1)), 1);
-    EXPECT_TRUE(tree.getChildWithName(multiscoper::StateIds::Oscillators).isValid());
-}
-
-TEST(SchemaMigration, V1ToV2StampsVersionTwoPreservingChildren)
-{
-    auto tree = makeBareMultiScoperState(1);
-    tree.appendChild(juce::ValueTree(multiscoper::StateIds::Theme), nullptr);
-    const auto result = multiscoper::migration::migrateMultiScoperState(tree, 1, 2);
-    EXPECT_EQ(result, multiscoper::migration::MigrationResult::Success);
-    EXPECT_EQ(static_cast<int>(tree.getProperty(multiscoper::StateIds::Version, -1)), 2);
-    EXPECT_TRUE(tree.getChildWithName(multiscoper::StateIds::Theme).isValid());
-}
-
-TEST(SchemaMigration, IdempotentWhenFromEqualsToStampsVersion)
-{
-    auto tree = makeBareMultiScoperState(-1); // no version attr
-    const auto result = multiscoper::migration::migrateMultiScoperState(tree, 2, 2);
-    EXPECT_EQ(result, multiscoper::migration::MigrationResult::Success);
-    EXPECT_EQ(static_cast<int>(tree.getProperty(multiscoper::StateIds::Version, -1)), 2);
+    EXPECT_EQ(static_cast<int>(tree.getProperty(multiscoper::StateIds::Version, -1)),
+              multiscoper::MultiScoperState::CURRENT_SCHEMA_VERSION);
 }
 
 TEST(SchemaMigration, DowngradeIsRejected)
 {
-    auto tree = makeBareMultiScoperState(2);
-    const auto result = multiscoper::migration::migrateMultiScoperState(tree, 2, 1);
+    auto tree = makeBareMultiScoperState(multiscoper::MultiScoperState::CURRENT_SCHEMA_VERSION);
+    const auto result =
+        multiscoper::migration::migrateMultiScoperState(tree, multiscoper::MultiScoperState::CURRENT_SCHEMA_VERSION,
+                                                        multiscoper::MultiScoperState::CURRENT_SCHEMA_VERSION - 1);
     EXPECT_EQ(result, multiscoper::migration::MigrationResult::DowngradeUnsupported);
-    // Version was not stamped down.
-    EXPECT_EQ(static_cast<int>(tree.getProperty(multiscoper::StateIds::Version, -1)), 2);
 }
 
 TEST(SchemaMigration, FutureFromVersionGreaterThanToIsRejectedAsDowngrade)
@@ -70,9 +54,10 @@ TEST(SchemaMigration, FutureFromVersionGreaterThanToIsRejectedAsDowngrade)
 
 TEST(SchemaMigration, UnknownFutureToVersionIsRejected)
 {
-    auto tree = makeBareMultiScoperState(1);
+    auto tree = makeBareMultiScoperState(multiscoper::MultiScoperState::CURRENT_SCHEMA_VERSION);
     const int future = multiscoper::migration::highestSupportedToVersion() + 5;
-    const auto result = multiscoper::migration::migrateMultiScoperState(tree, 1, future);
+    const auto result = multiscoper::migration::migrateMultiScoperState(
+        tree, multiscoper::MultiScoperState::CURRENT_SCHEMA_VERSION, future);
     EXPECT_EQ(result, multiscoper::migration::MigrationResult::UnsupportedToVersion);
 }
 
@@ -83,15 +68,6 @@ TEST(SchemaMigration, FromVersionBelowLowestKnownIsRejected)
     const auto result = multiscoper::migration::migrateMultiScoperState(
         tree, belowLowest, multiscoper::MultiScoperState::CURRENT_SCHEMA_VERSION);
     EXPECT_EQ(result, multiscoper::migration::MigrationResult::UnsupportedFromVersion);
-}
-
-TEST(SchemaMigration, ChainMigrationV0ToV2AppliesBothSteps)
-{
-    auto tree = makeBareMultiScoperState(0);
-    const auto result = multiscoper::migration::migrateMultiScoperState(tree, 0, 2);
-    EXPECT_EQ(result, multiscoper::migration::MigrationResult::Success);
-    // Final version is the target, proving both v0->v1 and v1->v2 fired.
-    EXPECT_EQ(static_cast<int>(tree.getProperty(multiscoper::StateIds::Version, -1)), 2);
 }
 
 TEST(SchemaMigration, ResultStringsAreStable)

@@ -1,17 +1,11 @@
 /*
     MultiScoper - Surface Painter (flat) — Implementation
 
-    Historical name: "GlassPainter". The 2026 uplift replaced the glassmorphism
-    aesthetic with a flat surface system and the module was renamed to
-    SurfacePainter:
-
+    Flat surface system:
       * Single-layer drop shadow under raised surfaces (popups, modals).
-        No three-layer stack, no blur radii masquerading as shadows.
-      * Solid panel fills with a single 1px hairline border. No inset light
-        edge, no translucent glass.
-      * No accent glow. Focus is communicated by a 2px accent ring.
-      * Ripples and focus-ring painters remain — they are interaction
-        feedback, not glass ornamentation.
+      * Solid panel fills with a single 1px hairline border.
+      * Focus communicated by a 2px accent ring.
+      * Ripples and focus-ring painters are interaction feedback.
 */
 
 #include "ui/components/SurfacePainter.h"

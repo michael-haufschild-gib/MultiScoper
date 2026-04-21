@@ -25,6 +25,9 @@ GlobalPreferences::~GlobalPreferences() {}
 juce::File GlobalPreferences::getPreferencesFile() const
 {
     auto appDataDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory);
+#if JUCE_MAC
+    appDataDir = appDataDir.getChildFile("Application Support");
+#endif
     return appDataDir.getChildFile("MultiScoper").getChildFile("preferences.xml");
 }
 

@@ -35,7 +35,7 @@ TEST_F(StatePersistenceLoadTest, InvalidXmlHandling)
 TEST_F(StatePersistenceLoadTest, XmlWithMissingChildNodes)
 {
     // Valid MultiScoperState but missing all child nodes
-    juce::String minimalXml = "<MultiScoperState version=\"2\"/>";
+    juce::String minimalXml = "<MultiScoperState version=\"3\"/>";
     EXPECT_TRUE(state->fromXmlString(minimalXml));
 
     // Should have empty oscillators
@@ -50,7 +50,7 @@ TEST_F(StatePersistenceLoadTest, XmlWithMissingChildNodes)
 // Test: Setting theme after loading minimal state creates missing Theme node
 TEST_F(StatePersistenceLoadTest, SetThemeNameAfterMissingChildNodesCreatesThemeNode)
 {
-    ASSERT_TRUE(state->fromXmlString("<MultiScoperState version=\"2\"/>"));
+    ASSERT_TRUE(state->fromXmlString("<MultiScoperState version=\"3\"/>"));
 
     state->setThemeName("Recovered Theme");
 
@@ -60,7 +60,7 @@ TEST_F(StatePersistenceLoadTest, SetThemeNameAfterMissingChildNodesCreatesThemeN
 // Test: Setting layout after loading minimal state creates missing Layout node
 TEST_F(StatePersistenceLoadTest, SetColumnLayoutAfterMissingChildNodesCreatesLayoutNode)
 {
-    ASSERT_TRUE(state->fromXmlString("<MultiScoperState version=\"2\"/>"));
+    ASSERT_TRUE(state->fromXmlString("<MultiScoperState version=\"3\"/>"));
 
     state->setColumnLayout(ColumnLayout::Triple);
 
@@ -72,7 +72,7 @@ TEST_F(StatePersistenceLoadTest, XmlWithPartialChildNodes)
 {
     // Has Oscillators but missing Layout and Theme
     juce::String partialXml = R"(
-        <MultiScoperState version="2">
+        <MultiScoperState version="3">
             <Oscillators/>
         </MultiScoperState>
     )";
@@ -87,7 +87,7 @@ TEST_F(StatePersistenceLoadTest, CorruptedOscillatorDataRecovery)
 {
     // Oscillator with invalid/missing properties
     juce::String xmlWithBadOsc = R"(
-        <MultiScoperState version="2">
+        <MultiScoperState version="3">
             <Oscillators>
                 <Oscillator/>
                 <Oscillator id="valid-id" name="Valid Osc"/>
@@ -105,7 +105,7 @@ TEST_F(StatePersistenceLoadTest, CorruptedOscillatorDataRecovery)
 TEST_F(StatePersistenceLoadTest, ConstructFromValidXml)
 {
     juce::String xml = R"(
-        <MultiScoperState version="2">
+        <MultiScoperState version="3">
             <Oscillators/>
             <Theme themeName="Constructed Theme"/>
         </MultiScoperState>

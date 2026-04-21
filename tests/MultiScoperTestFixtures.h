@@ -31,6 +31,20 @@
 namespace multiscoper::test
 {
 
+/// Construct a MultiScoperPluginProcessor for tests using the config ctor.
+/// Tests that previously called the 5-arg legacy ctor should use this helper.
+inline std::unique_ptr<MultiScoperPluginProcessor>
+makeProcessor(IInstanceRegistry& registry, IThemeService& themeService, ShaderRegistry& shaderRegistry,
+              PresetManager& presetManager, MemoryBudgetManager& memoryBudgetManager)
+{
+    return std::make_unique<MultiScoperPluginProcessor>(
+        PluginProcessorConfig{.instanceRegistry = registry,
+                              .themeService = themeService,
+                              .shaderRegistry = shaderRegistry,
+                              .presetManager = presetManager,
+                              .memoryBudgetManager = memoryBudgetManager});
+}
+
 // =============================================================================
 // Mock Implementations for Isolated Testing
 // =============================================================================
@@ -254,16 +268,27 @@ class MultiScoperPluginTestFixture : public ::testing::Test
 protected:
     void SetUp() override
     {
+        // Per-fixture temp dirs so ThemeManager/PresetManager never touch the
+        // real user-data directory — keeps the processor test isolated and
+        // prevents cross-run state leaks.
+        const auto tempRoot = juce::File::getSpecialLocation(juce::File::tempDirectory);
+        themesTempDir_ = tempRoot.getChildFile("multiscoper_fixture_themes_" + juce::Uuid().toString());
+        presetsTempDir_ = tempRoot.getChildFile("multiscoper_fixture_presets_" + juce::Uuid().toString());
+        ASSERT_TRUE(themesTempDir_.createDirectory())
+            << "Failed to create fixture themes dir: " << themesTempDir_.getFullPathName();
+        ASSERT_TRUE(presetsTempDir_.createDirectory())
+            << "Failed to create fixture presets dir: " << presetsTempDir_.getFullPathName();
+
         // Create owned service instances (no singletons)
         registry_ = std::make_unique<InstanceRegistry>();
-        themeManager_ = std::make_unique<ThemeManager>();
+        themeManager_ = std::make_unique<ThemeManager>(themesTempDir_);
         shaderRegistry_ = std::make_unique<ShaderRegistry>();
-        presetManager_ = std::make_unique<PresetManager>();
+        presetManager_ = std::make_unique<PresetManager>(presetsTempDir_);
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
         // Create processor with owned services
-        processor = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                                 *presetManager_, *memoryBudgetManager_);
+        processor = multiscoper::test::makeProcessor(*registry_, *themeManager_, *shaderRegistry_, *presetManager_,
+                                                     *memoryBudgetManager_);
 
         // Disable GPU rendering for headless test environment
         // OpenGL context operations crash without a real display/window
@@ -299,6 +324,10 @@ protected:
 
         // Final cleanup
         pumpMessageQueue(50);
+
+        // Remove the per-fixture scratch dirs after services are gone.
+        themesTempDir_.deleteRecursively();
+        presetsTempDir_.deleteRecursively();
     }
 
     /**
@@ -317,6 +346,10 @@ protected:
     ThemeManager& getThemeManager() { return *themeManager_; }
     ShaderRegistry& getShaderRegistry() { return *shaderRegistry_; }
     MemoryBudgetManager& getMemoryBudgetManager() { return *memoryBudgetManager_; }
+
+    // Per-fixture scratch dirs backing the theme/preset managers
+    juce::File themesTempDir_;
+    juce::File presetsTempDir_;
 
     // Owned services
     std::unique_ptr<InstanceRegistry> registry_;
@@ -345,10 +378,17 @@ class MultiScoperComponentTestFixture : public ::testing::Test
 protected:
     void SetUp() override
     {
+        // Per-fixture preset scratch dir so component tests that happen to
+        // trigger preset operations cannot touch the real user presets dir.
+        presetsTempDir_ = juce::File::getSpecialLocation(juce::File::tempDirectory)
+                              .getChildFile("multiscoper_component_presets_" + juce::Uuid().toString());
+        ASSERT_TRUE(presetsTempDir_.createDirectory())
+            << "Failed to create component fixture presets dir: " << presetsTempDir_.getFullPathName();
+
         mockRegistry = std::make_unique<MockInstanceRegistry>();
         mockThemeService = std::make_unique<MockThemeService>();
         shaderRegistry_ = std::make_unique<ShaderRegistry>();
-        presetManager_ = std::make_unique<PresetManager>();
+        presetManager_ = std::make_unique<PresetManager>(presetsTempDir_);
     }
 
     void TearDown() override
@@ -360,6 +400,8 @@ protected:
         shaderRegistry_.reset();
         mockThemeService.reset();
         mockRegistry.reset();
+
+        presetsTempDir_.deleteRecursively();
     }
 
     /**
@@ -371,6 +413,7 @@ protected:
         return ServiceContext{*mockRegistry, *mockThemeService, *shaderRegistry_, *presetManager_};
     }
 
+    juce::File presetsTempDir_;
     std::unique_ptr<MockInstanceRegistry> mockRegistry;
     std::unique_ptr<MockThemeService> mockThemeService;
     std::unique_ptr<ShaderRegistry> shaderRegistry_;

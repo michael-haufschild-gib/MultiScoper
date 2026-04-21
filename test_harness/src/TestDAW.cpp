@@ -81,7 +81,7 @@ void TestDAW::start()
         initialize();
 
     transport_.play();
-    running_ = true;
+    running_.store(true, std::memory_order_release);
     startTimer(TIMER_INTERVAL_MS);
 }
 
@@ -91,7 +91,7 @@ void TestDAW::stop()
     // returns; because that callback synchronously waits on all pool jobs
     // before returning, this implicitly drains the pool for in-flight work.
     stopTimer();
-    running_ = false;
+    running_.store(false, std::memory_order_release);
     transport_.stop();
 
     // Explicit safety drain: if a caller invoked runSingleBlockSynchronously
@@ -277,7 +277,13 @@ private:
 
 bool TestDAW::setSampleRate(double newRate)
 {
-    if (!std::isfinite(newRate) || newRate <= 0.0)
+    // Accept only plausible audio rates. Real-world DAW support spans
+    // roughly 8 kHz (voice-grade) to 384 kHz (DXD). Outside this range
+    // downstream prepareToPlay computations (block-size in samples,
+    // timing-engine coefficients) overflow or become useless.
+    constexpr double kMinSampleRate = 8000.0;
+    constexpr double kMaxSampleRate = 384000.0;
+    if (!std::isfinite(newRate) || newRate < kMinSampleRate || newRate > kMaxSampleRate)
         return false;
 
     // Serialize with the audio dispatcher.  prepareToPlay mutates per-track
@@ -285,14 +291,15 @@ bool TestDAW::setSampleRate(double newRate)
     // the harness that provides that ordering guarantee.
     std::lock_guard<std::mutex> lock(dispatchMutex_);
 
-    sampleRate_ = newRate;
+    sampleRate_.store(newRate, std::memory_order_release);
     transport_.prepare(newRate);
 
-    auto runPrepare = [this, newRate]() {
+    const int currentBuffer = bufferSize_.load(std::memory_order_acquire);
+    auto runPrepare = [this, newRate, currentBuffer]() {
         for (auto& track : tracks_)
         {
             if (track != nullptr)
-                track->prepare(newRate, bufferSize_);
+                track->prepare(newRate, currentBuffer);
         }
     };
 
@@ -318,13 +325,14 @@ bool TestDAW::setBufferSize(int newSize)
 
     std::lock_guard<std::mutex> lock(dispatchMutex_);
 
-    bufferSize_ = newSize;
+    bufferSize_.store(newSize, std::memory_order_release);
 
-    auto runPrepare = [this, newSize]() {
+    const double currentRate = sampleRate_.load(std::memory_order_acquire);
+    auto runPrepare = [this, newSize, currentRate]() {
         for (auto& track : tracks_)
         {
             if (track != nullptr)
-                track->prepare(sampleRate_, newSize);
+                track->prepare(currentRate, newSize);
         }
     };
 
@@ -392,7 +400,7 @@ int TestDAW::scanCycle(const juce::String& trackName, int cycles)
 
 void TestDAW::hiResTimerCallback()
 {
-    if (running_)
+    if (running_.load(std::memory_order_acquire))
     {
         processAudioTick();
     }

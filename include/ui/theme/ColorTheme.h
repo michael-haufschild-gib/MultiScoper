@@ -108,13 +108,6 @@ struct ColorTheme
     float accentSaturation = 0.87f; // 0-1
     float accentLightness = 0.95f;  // HSV brightness/value
 
-    // Surface parameters (kept for serialization compatibility; the painter
-    // now uses flat surfaces. `glassAlpha` / `panelAlpha` = 1 means fully
-    // opaque panels. `blurRadius` is unused.)
-    float glassAlpha = 1.0f;
-    float panelAlpha = 1.0f;
-    float blurRadius = 0.0f;
-
     // Border alpha levels (textPrimary * alpha; SurfaceStyle composites
     // these onto the panel surface). Hairlines are still subtle but were
     // bumped from 0.06 / 0.10 / 0.20 because dark-theme borders disappeared
@@ -295,11 +288,10 @@ struct ColorTheme
         if (!meetsLargeTextContrastAA(statusError, backgroundPrimary))
             issues.emplace_back("statusError on background fails large text AA contrast");
 
-        // Glass background checks: effective bg behind glass panels
-        auto effectiveGlassBg = backgroundPrimary.interpolatedWith(backgroundPane, glassAlpha);
-        auto textPriOnGlass = compositeOnBackground(textPrimary, effectiveGlassBg);
-        if (!meetsContrastAA(textPriOnGlass, effectiveGlassBg))
-            issues.emplace_back("textPrimary on glass background fails AA contrast");
+        // Pane-background check: text over raised/pane surface.
+        auto textPriOnPane = compositeOnBackground(textPrimary, backgroundPane);
+        if (!meetsContrastAA(textPriOnPane, backgroundPane))
+            issues.emplace_back("textPrimary on pane background fails AA contrast");
 
         return issues;
     }

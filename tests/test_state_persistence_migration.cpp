@@ -16,37 +16,36 @@ class StatePersistenceMigrationTest : public StateTestFixture
 {
 };
 
-// Test: Missing schema version (pre-versioned v0 fixture) migrates forward.
-// SchemaMigration treats a missing "version" attribute as v0 and chain-migrates
-// v0 -> v1 -> CURRENT_SCHEMA_VERSION. Payload is preserved.
-TEST_F(StatePersistenceMigrationTest, MissingSchemaVersion)
+// Test: Missing schema version (no "version" attribute) is rejected —
+// pre-v3 saves are no longer supported. Verify no partial apply: neither
+// theme nor schema version mutate on the failed load.
+TEST_F(StatePersistenceMigrationTest, MissingSchemaVersionRejected)
 {
+    auto const themeBefore = state->getThemeName();
     juce::String oldXml = R"(
         <MultiScoperState>
             <Oscillators/>
             <Theme themeName="Classic Green"/>
         </MultiScoperState>
     )";
-    EXPECT_TRUE(state->fromXmlString(oldXml));
-
-    // Post-migration the version is stamped to current.
+    EXPECT_FALSE(state->fromXmlString(oldXml));
+    EXPECT_EQ(state->getThemeName(), themeBefore);
     EXPECT_EQ(state->getSchemaVersion(), MultiScoperState::CURRENT_SCHEMA_VERSION);
-    EXPECT_EQ(state->getThemeName(), "Classic Green");
 }
 
-// Test: Old schema version v1 migrates forward to current and preserves payload.
-TEST_F(StatePersistenceMigrationTest, OldSchemaVersion)
+// Test: Pre-current schema version (e.g. v1) is rejected. Verify no partial apply.
+TEST_F(StatePersistenceMigrationTest, OldSchemaVersionRejected)
 {
+    auto const themeBefore = state->getThemeName();
     juce::String v1Xml = R"(
         <MultiScoperState version="1">
             <Oscillators/>
             <Theme themeName="Old Theme"/>
         </MultiScoperState>
     )";
-    EXPECT_TRUE(state->fromXmlString(v1Xml));
-
+    EXPECT_FALSE(state->fromXmlString(v1Xml));
+    EXPECT_EQ(state->getThemeName(), themeBefore);
     EXPECT_EQ(state->getSchemaVersion(), MultiScoperState::CURRENT_SCHEMA_VERSION);
-    EXPECT_EQ(state->getThemeName(), "Old Theme");
 }
 
 // Test: Future schema version is rejected (fail-closed). State is preserved.

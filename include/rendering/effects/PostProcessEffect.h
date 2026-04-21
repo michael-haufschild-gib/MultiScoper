@@ -128,13 +128,13 @@ protected:
     /**
      * Helper to compile a shader program with fullscreen quad vertex shader.
      * @param program The shader program to compile into
-     * @param fragmentSource The fragment shader source (legacy GLSL syntax)
+     * @param fragmentSource The fragment shader source (GLSL 120)
      * @return true if compilation succeeded
      */
     static bool compileEffectShader(juce::OpenGLShaderProgram& program, const char* fragmentSource);
 
     /**
-     * Standard fullscreen quad vertex shader source (legacy GLSL).
+     * Standard fullscreen quad vertex shader source (GLSL 120).
      * Provides position attribute (0) and texCoord attribute (1).
      * Outputs vTexCoord varying.
      */

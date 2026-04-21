@@ -1,9 +1,6 @@
 /*
     MultiScoper - Button Component Painting
     Flat-surface rendering, colour resolution, and path caching for MultiScoperButton.
-    (Historical: this module was "glassmorphism rendering" prior to the 2026-Q2
-    flat-surface uplift; field names such as `bgGlass` remain for ColorTheme
-    serialization compatibility — see ui/components/SurfaceStyle.cpp.)
 */
 
 #include "ui/components/MultiScoperButton.h"
@@ -120,7 +117,7 @@ void MultiScoperButton::paintButtonContent(juce::Graphics& g, const juce::Rectan
         return;
     }
 
-    auto font = ComponentLayout::defaultFont();
+    auto font = Typography::headingRegular();
     g.setFont(font);
 
     if (icon_.isValid())

@@ -104,7 +104,7 @@ TEST_F(StatusBarComponentTest, LongHintIsElidedAndEndsWithEllipsis)
     // The core truncation contract: the rendered width of the elided string
     // must actually fit the budget. Asserting only the ellipsis suffix would
     // pass even if the binary-search bound were off by one.
-    const auto font = ComponentLayout::captionFont();
+    const auto font = Typography::caption();
     EXPECT_LE(juce::GlyphArrangement::getStringWidth(font, elided), kAvailableWidth);
 }
 

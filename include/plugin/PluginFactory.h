@@ -78,13 +78,19 @@ public:
     PresetManager& getPresetManager();
 
 private:
-    // Owned services - these are the single instances for the plugin
+    // Owned services. Construction order: GlobalPreferences comes first so
+    // ThemeManager can consult the persisted default theme when it's built.
+    std::unique_ptr<GlobalPreferences> globalPreferences_;
     std::unique_ptr<ThemeManager> themeManager_;
     std::unique_ptr<InstanceRegistry> instanceRegistry_;
     std::unique_ptr<ShaderRegistry> shaderRegistry_;
     std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
-    std::unique_ptr<GlobalPreferences> globalPreferences_;
     std::unique_ptr<PresetManager> presetManager_;
+
+    // Small adapter that listens to theme changes and writes them to
+    // GlobalPreferences. Owned here so it's destroyed before ThemeManager.
+    class ThemePreferenceSync;
+    std::unique_ptr<ThemePreferenceSync> themePreferenceSync_;
 
     // Prevent copying
     PluginFactory(const PluginFactory&) = delete;

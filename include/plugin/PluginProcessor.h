@@ -47,10 +47,6 @@ public:
     /// Construct with aggregated dependency config.
     explicit MultiScoperPluginProcessor(const PluginProcessorConfig& config);
 
-    /// Legacy constructor — delegates to the config constructor.
-    MultiScoperPluginProcessor(IInstanceRegistry& instanceRegistry, IThemeService& themeService,
-                               ShaderRegistry& shaderRegistry, PresetManager& presetManager,
-                               MemoryBudgetManager& memoryBudgetManager);
     ~MultiScoperPluginProcessor() override;
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;

@@ -7,6 +7,7 @@
 #include "core/ServiceContext.h"
 #include "ui/layout/SidebarComponent.h"
 
+#include "MultiScoperTestFixtures.h"
 #include "plugin/PluginProcessor.h"
 #include "rendering/PresetManager.h"
 #include "rendering/ShaderRegistry.h"
@@ -34,8 +35,8 @@ protected:
         presetManager_ = std::make_unique<PresetManager>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
-        processor_ = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                                  *presetManager_, *memoryBudgetManager_);
+        processor_ = multiscoper::test::makeProcessor(*registry_, *themeManager_, *shaderRegistry_, *presetManager_,
+                                                      *memoryBudgetManager_);
 
         ServiceContext context{*registry_, *themeManager_, *shaderRegistry_, *presetManager_};
         sidebar_ = std::make_unique<SidebarComponent>(context);

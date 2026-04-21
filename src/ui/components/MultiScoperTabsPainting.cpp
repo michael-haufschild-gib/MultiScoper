@@ -158,9 +158,7 @@ void MultiScoperTabs::paintIndicator(juce::Graphics& g)
             break;
 
         case Variant::Pills:
-            // accentSubtle bg + accentMuted border (sharp — "Pills" retains
-            // the legacy name; the shape is a flat rectangle under the 2026
-            // design language).
+            // accentSubtle bg + accentMuted border, flat rectangle.
             g.setColour(getSurface().accentSubtle);
             g.fillRect(indicatorBounds.reduced(2).toFloat());
             g.setColour(getSurface().accentMuted);

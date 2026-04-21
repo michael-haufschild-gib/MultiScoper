@@ -15,6 +15,7 @@
 #include "core/MemoryBudgetManager.h"
 #include "ui/theme/ThemeManager.h"
 
+#include "MultiScoperTestFixtures.h"
 #include "MultiScoperTestUtils.h"
 #include "plugin/PluginProcessor.h"
 #include "rendering/PresetManager.h"
@@ -44,8 +45,8 @@ protected:
         shaderRegistry_ = std::make_unique<ShaderRegistry>();
         presetManager_ = std::make_unique<PresetManager>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
-        processor = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                                 *presetManager_, *memoryBudgetManager_);
+        processor = multiscoper::test::makeProcessor(*registry_, *themeManager_, *shaderRegistry_, *presetManager_,
+                                                     *memoryBudgetManager_);
         processor->prepareToPlay(44100.0, 512);
         pumpMessageQueue(200);
     }

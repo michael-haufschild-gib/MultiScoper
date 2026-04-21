@@ -245,24 +245,6 @@ std::optional<int> TestHttpServer::tryResolveTrackId(const httplib::Request& req
 
 int TestHttpServer::resolveTrackIdFromBody(const json& body) { return body.value("trackId", 0); }
 
-TestTrack* TestHttpServer::resolveTrack(const httplib::Request& req)
-{
-    // Legacy — see header warning. Only safe on the message thread.
-    const int id = resolveTrackId(req);
-    if (auto* t = daw_.getTrack(id))
-        return t;
-    return daw_.getTrack(0);
-}
-
-TestTrack* TestHttpServer::resolveTrackFromBody(const json& body)
-{
-    // Legacy — see header warning. Only safe on the message thread.
-    const int id = resolveTrackIdFromBody(body);
-    if (auto* t = daw_.getTrack(id))
-        return t;
-    return daw_.getTrack(0);
-}
-
 bool TestHttpServer::runOnMessageThreadBlocking(std::function<void()> fn, int timeoutMs, const char* label)
 {
     // Same heap-own-state contract as runOnTrackSync: `fn` and `done` both

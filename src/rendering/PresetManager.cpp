@@ -10,6 +10,9 @@ namespace multiscoper
 {
 
 static const juce::Identifier PRESET_WRAPPER_TYPE("MultiScoperPreset");
+/// Current preset schema version. Bump when the on-disk format changes;
+/// loaders reject any preset whose `version` property is newer.
+static constexpr int PRESET_SCHEMA_VERSION = 1;
 
 std::optional<juce::ValueTree> PresetManager::parsePresetFile(const juce::File& file)
 {
@@ -24,27 +27,71 @@ std::optional<juce::ValueTree> PresetManager::parsePresetFile(const juce::File& 
     if (!tree.getChildWithName("VisualConfiguration").isValid())
         return std::nullopt;
 
+    // Reject preset files written by a newer schema. Missing `version` is
+    // treated as v1 (the only version that ever existed).
+    int const version = tree.getProperty("version", 1);
+    if (version > PRESET_SCHEMA_VERSION)
+        return std::nullopt;
+
     return tree;
 }
 
-PresetManager::PresetManager()
+namespace
 {
-    presetsDir_ = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+juce::File userAppDataRoot()
+{
+    return juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
 #if JUCE_MAC
-                      .getChildFile("Application Support")
+        .getChildFile("Application Support")
 #endif
-                      .getChildFile("MultiScoper")
-                      .getChildFile("MultiScoper")
-                      .getChildFile("presets");
+        .getChildFile("MultiScoper");
+}
 
-    presetsDir_.createDirectory();
+juce::File defaultPresetsDirectory() { return userAppDataRoot().getChildFile("presets"); }
+
+/// Legacy location used by earlier builds (`Application Support/MultiScoper/MultiScoper/presets`).
+/// Kept as a read fallback so upgraders don't lose access to presets saved before
+/// the duplicate directory segment was removed.
+juce::File legacyPresetsDirectory() { return userAppDataRoot().getChildFile("MultiScoper").getChildFile("presets"); }
+
+void migrateLegacyPresets(const juce::File& legacyDir, const juce::File& newDir)
+{
+    if (!legacyDir.isDirectory())
+        return;
+    for (const auto& entry : juce::RangedDirectoryIterator(legacyDir, false, "*.oscpreset"))
+    {
+        const auto& srcFile = entry.getFile();
+        auto destFile = newDir.getChildFile(srcFile.getFileName());
+        if (destFile.existsAsFile())
+            continue; // don't clobber newer file
+        srcFile.copyFileTo(destFile);
+    }
+}
+} // namespace
+
+PresetManager::PresetManager() : PresetManager(defaultPresetsDirectory())
+{
+    // Default-constructor path only: copy forward from the legacy
+    // duplicate-segment directory if the new directory is empty so users
+    // upgrading from earlier builds don't lose access to saved presets.
+    migrateLegacyPresets(legacyPresetsDirectory(), presetsDir_);
+}
+
+PresetManager::PresetManager(juce::File presetsDir) : presetsDir_(std::move(presetsDir))
+{
+    const bool created = presetsDir_.createDirectory();
+    jassert(created || presetsDir_.isDirectory());
+    if (!created && !presetsDir_.isDirectory())
+        DBG("PresetManager: failed to create presets directory: " << presetsDir_.getFullPathName());
 }
 
 std::vector<PresetInfo> PresetManager::getAvailablePresets() const
 {
+    if (listingCache_.has_value())
+        return *listingCache_;
+
     std::vector<PresetInfo> presets;
 
-    // Built-in presets first
     auto builtIn = VisualConfiguration::getAvailablePresets();
     auto files = getUserPresetFiles();
     presets.reserve(builtIn.size() + files.size());
@@ -53,7 +100,6 @@ std::vector<PresetInfo> PresetManager::getAvailablePresets() const
         presets.push_back({.id = id, .displayName = name, .isBuiltIn = true});
     }
 
-    // User presets from disk
     for (const auto& file : files)
     {
         auto tree = parsePresetFile(file);
@@ -68,8 +114,11 @@ std::vector<PresetInfo> PresetManager::getAvailablePresets() const
         presets.push_back({.id = id, .displayName = name.isEmpty() ? id : name, .isBuiltIn = false});
     }
 
+    listingCache_ = presets;
     return presets;
 }
+
+void PresetManager::invalidateListingCache() { listingCache_.reset(); }
 
 VisualConfiguration PresetManager::loadPreset(const juce::String& presetId) const
 {
@@ -90,34 +139,36 @@ VisualConfiguration PresetManager::loadPreset(const juce::String& presetId) cons
     return VisualConfiguration::getPreset(presetId);
 }
 
-bool PresetManager::saveUserPreset(const juce::String& name, const VisualConfiguration& config)
+std::optional<juce::String> PresetManager::saveUserPreset(const juce::String& name, const VisualConfiguration& config)
 {
     if (name.isEmpty())
-        return false;
+        return std::nullopt;
 
-    juce::String const id = generatePresetId(name);
+    juce::String id = generatePresetId(name);
+    if (id == "user_")
+        return std::nullopt; // sanitizeFilename reduced name to nothing
 
-    // Build wrapper tree: { presetId, displayName, VisualConfiguration }
     juce::ValueTree wrapper(PRESET_WRAPPER_TYPE);
     wrapper.setProperty("presetId", id, nullptr);
     wrapper.setProperty("displayName", name, nullptr);
-    wrapper.setProperty("version", 1, nullptr);
+    wrapper.setProperty("version", PRESET_SCHEMA_VERSION, nullptr);
     wrapper.addChild(config.toValueTree(), -1, nullptr);
 
     auto xml = wrapper.createXml();
     if (xml == nullptr)
     {
         DBG("PresetManager::saveUserPreset: failed to create XML for: " << name);
-        return false;
+        return std::nullopt;
     }
 
     auto file = getUserPresetFile(id);
     if (!xml->writeTo(file))
     {
         DBG("PresetManager::saveUserPreset: failed to write: " << file.getFullPathName());
-        return false;
+        return std::nullopt;
     }
-    return true;
+    invalidateListingCache();
+    return id;
 }
 
 bool PresetManager::deleteUserPreset(const juce::String& presetId)
@@ -126,17 +177,30 @@ bool PresetManager::deleteUserPreset(const juce::String& presetId)
         return false;
 
     auto file = getUserPresetFile(presetId);
-    return file.deleteFile();
+    const bool deleted = file.deleteFile();
+    if (deleted)
+        invalidateListingCache();
+    return deleted;
 }
 
 bool PresetManager::renameUserPreset(const juce::String& presetId, const juce::String& newName)
 {
+    if (newName.isEmpty())
+        return false;
+
     auto file = getUserPresetFile(presetId);
     auto wrapper = parsePresetFile(file);
     if (!wrapper.has_value())
         return false;
 
     juce::String const newId = generatePresetId(newName);
+    if (newId == "user_")
+        return false;
+
+    auto newFile = getUserPresetFile(newId);
+    if (presetId != newId && newFile.existsAsFile())
+        return false; // refuse to clobber a different user preset
+
     wrapper->setProperty("presetId", newId, nullptr);
     wrapper->setProperty("displayName", newName, nullptr);
 
@@ -144,13 +208,19 @@ bool PresetManager::renameUserPreset(const juce::String& presetId, const juce::S
     if (newXml == nullptr)
         return false;
 
-    auto newFile = getUserPresetFile(newId);
     if (!newXml->writeTo(newFile))
         return false;
 
     if (presetId != newId)
-        file.deleteFile();
+    {
+        if (!file.deleteFile())
+        {
+            newFile.deleteFile(); // rollback so we don't leak a duplicate
+            return false;
+        }
+    }
 
+    invalidateListingCache();
     return true;
 }
 
@@ -177,7 +247,7 @@ bool PresetManager::exportPreset(const juce::String& presetId, const juce::File&
         }
     }
 
-    wrapper.setProperty("version", 1, nullptr);
+    wrapper.setProperty("version", PRESET_SCHEMA_VERSION, nullptr);
     wrapper.addChild(config.toValueTree(), -1, nullptr);
 
     auto xml = wrapper.createXml();
@@ -196,16 +266,34 @@ bool PresetManager::importPreset(const juce::File& source)
     if (!wrapper.has_value())
         return false;
 
-    juce::String const id = wrapper->getProperty("presetId", "");
-    if (id.isEmpty())
+    // Re-derive the preset ID from the displayName (or filename stem fallback)
+    // so imported files cannot claim a reserved built-in ID or silently
+    // overwrite a user preset that happens to share the encoded ID.
+    juce::String displayName = wrapper->getProperty("displayName", "").toString();
+    if (displayName.isEmpty())
+        displayName = source.getFileNameWithoutExtension();
+    if (displayName.isEmpty())
         return false;
 
-    // Re-serialize the validated tree to the user presets directory
+    juce::String const id = generatePresetId(displayName);
+    if (id == "user_")
+        return false;
+    if (isBuiltInPresetId(id))
+        return false;
+    if (getUserPresetFile(id).existsAsFile())
+        return false; // refuse silent overwrite; caller may delete first
+
+    wrapper->setProperty("presetId", id, nullptr);
+    wrapper->setProperty("displayName", displayName, nullptr);
+
     auto xml = wrapper->createXml();
     if (xml == nullptr)
         return false;
 
-    return xml->writeTo(getUserPresetFile(id));
+    if (!xml->writeTo(getUserPresetFile(id)))
+        return false;
+    invalidateListingCache();
+    return true;
 }
 
 juce::File PresetManager::getPresetsDirectory() const { return presetsDir_; }
@@ -213,6 +301,23 @@ juce::File PresetManager::getPresetsDirectory() const { return presetsDir_; }
 bool PresetManager::isUserPreset(const juce::String& presetId) const
 {
     return getUserPresetFile(presetId).existsAsFile();
+}
+
+bool PresetManager::presetExists(const juce::String& presetId) const
+{
+    if (isUserPreset(presetId))
+        return true;
+    return isBuiltInPresetId(presetId);
+}
+
+bool PresetManager::isBuiltInPresetId(const juce::String& presetId)
+{
+    for (const auto& [id, name] : VisualConfiguration::getAvailablePresets())
+    {
+        if (id == presetId)
+            return true;
+    }
+    return false;
 }
 
 juce::String PresetManager::sanitizeFilename(const juce::String& name)

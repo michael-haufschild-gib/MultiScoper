@@ -60,9 +60,10 @@ void MultiScoperColorPicker::paintWheelMode(juce::Graphics& g)
 {
     auto bounds = getGradientBounds();
 
-    // Check if cache is stale: bounds changed, image invalid, or mode changed from square to wheel
+    // Cache is stale on: bounds change, image invalid, mode switch to wheel,
+    // or brightness change (wheel samples per-pixel with current brightness_).
     bool const needsUpdate = cachedGradientBounds_ != bounds || !cachedGradientImage_.isValid() ||
-                             !cachedIsWheelMode_; // Was in square mode, need to regenerate for wheel
+                             !cachedIsWheelMode_ || std::abs(cachedBrightness_ - brightness_) > 0.001f;
 
     if (needsUpdate)
     {
@@ -111,6 +112,7 @@ void MultiScoperColorPicker::updateSquareGradient(const juce::Rectangle<int>& bo
 void MultiScoperColorPicker::updateWheelGradient(const juce::Rectangle<int>& bounds)
 {
     cachedHue_ = -10.0f;
+    cachedBrightness_ = brightness_;
     cachedIsWheelMode_ = true;
     float const radius = std::max(1.0f, static_cast<float>(std::min(bounds.getWidth(), bounds.getHeight())) / 2.0f);
     float const cx = static_cast<float>(bounds.getWidth()) / 2.0f;

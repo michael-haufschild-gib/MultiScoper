@@ -26,15 +26,10 @@ void TestHttpServer::handleStateDeleteOscillator(const httplib::Request& req, ht
             return;
         const int trackId = *trackIdOpt;
         auto body = json::parse(req.body);
-        // Accept either "id" or "oscillatorId". Historical callers used
-        // "id"; newer scale tests (test_sixteen_instances) use
-        // "oscillatorId" to mirror the /state/oscillator/add contract.
-        std::string idStr = body.value("id", "");
-        if (idStr.empty())
-            idStr = body.value("oscillatorId", "");
+        const std::string idStr = body.value("oscillatorId", "");
         if (idStr.empty())
         {
-            res.set_content(errorResponse("Oscillator 'id' or 'oscillatorId' is required").dump(), "application/json");
+            res.set_content(errorResponse("Oscillator 'oscillatorId' is required").dump(), "application/json");
             return;
         }
 

@@ -116,9 +116,10 @@ VisualConfiguration VisualConfiguration::getPreset(const juce::String& presetNam
     if (it != presets.end())
         return it->second;
 
-    VisualConfiguration config;
-    config.presetId = presetName;
-    return config;
+    // Unknown preset name — return the real "default" preset rather than a
+    // fabricated-ID default. Silently tagging a default config with the
+    // requested ID masked lookup failures from callers.
+    return presets.at("default");
 }
 
 std::vector<std::pair<juce::String, juce::String>> VisualConfiguration::getAvailablePresets()

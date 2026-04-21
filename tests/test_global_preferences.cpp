@@ -48,9 +48,11 @@ protected:
 
     static juce::File getPreferencesFilePath()
     {
-        return juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
-            .getChildFile("MultiScoper")
-            .getChildFile("preferences.xml");
+        auto appDataDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory);
+#if JUCE_MAC
+        appDataDir = appDataDir.getChildFile("Application Support");
+#endif
+        return appDataDir.getChildFile("MultiScoper").getChildFile("preferences.xml");
     }
 
     std::unique_ptr<GlobalPreferences> prefs_;

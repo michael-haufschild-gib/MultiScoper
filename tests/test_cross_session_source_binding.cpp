@@ -11,9 +11,8 @@
          deterministically from the trackIdentifier — same trackIdentifier
          across sessions -> same SourceId -> cross-instance oscillator
          bindings remain resolvable.
-      3. Legacy v2 saves (without TrackIdentifier) migrate cleanly but
-         surface an empty trackIdentifier (intentional — the plugin will
-         fall back to a fresh UUID for those legacy sessions).
+      3. Pre-v3 saves (v2 and older) are rejected at load time. See
+         PreV3StateIsRejected below; schema migration is fail-closed.
 */
 
 #include "core/InstanceRegistry.h"
@@ -165,19 +164,14 @@ TEST_F(CrossSessionFixture, OscillatorBindingSurvivesSaveLoadAcrossTwoInstances)
     EXPECT_EQ(resolved->name, "Track B");
 }
 
-TEST_F(CrossSessionFixture, LegacyV2StateWithoutTrackIdentifierLoadsWithEmptyIdentifier)
+TEST_F(CrossSessionFixture, PreV3StateIsRejected)
 {
-    // v2 XML omitted TrackIdentifier. The migration must accept it, and
-    // getTrackIdentifier() must return an empty string so the caller (the
-    // plugin processor) can detect "legacy save" and fall back to a fresh
-    // UUID rather than registering with an empty trackIdentifier.
+    // Pre-v3 saves are no longer supported.
     const juce::String v2Xml =
         R"(<MultiScoperState version="2"><Oscillators/><Panes/><Layout columns="1"/><Theme themeName="Dark"/><Timing/></MultiScoperState>)";
 
     MultiScoperState state;
-    ASSERT_TRUE(state.fromXmlString(v2Xml));
-    EXPECT_EQ(state.getSchemaVersion(), MultiScoperState::CURRENT_SCHEMA_VERSION);
-    EXPECT_TRUE(state.getTrackIdentifier().isEmpty());
+    EXPECT_FALSE(state.fromXmlString(v2Xml));
 }
 
 TEST_F(CrossSessionFixture, SetTrackIdentifierPersistsThroughRoundTrip)

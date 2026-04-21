@@ -27,12 +27,12 @@ void MultiScoperRadioButton::paint(juce::Graphics& g)
         auto labelBounds = bounds.toFloat().withLeft(RADIO_SIZE + ComponentLayout::SPACING_SM);
 
         g.setColour(getTheme().textPrimary.withAlpha(opacity));
-        g.setFont(ComponentLayout::defaultFont());
+        g.setFont(Typography::headingRegular());
         g.drawText(label_, labelBounds, juce::Justification::centredLeft);
     }
     else
     {
-        auto font = ComponentLayout::defaultFont();
+        auto font = Typography::headingRegular();
         juce::GlyphArrangement glyphs;
         glyphs.addLineOfText(font, label_, 0, 0);
         int const labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());

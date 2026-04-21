@@ -149,6 +149,7 @@ set(MULTISCOPER_TEST_SOURCES
     tests/test_multiscoper_button.cpp
     tests/test_multiscoper_toggle.cpp
     tests/test_multiscoper_dropdown.cpp
+    tests/test_multiscoper_dropdown_callbacks.cpp
     tests/test_multiscoper_accordion.cpp
     tests/test_multiscoper_badge.cpp
     tests/test_multiscoper_checkbox.cpp

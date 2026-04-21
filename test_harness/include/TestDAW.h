@@ -64,7 +64,7 @@ public:
     /**
      * Check if running
      */
-    bool isRunning() const { return running_; }
+    bool isRunning() const { return running_.load(std::memory_order_acquire); }
 
     /**
      * Get transport
@@ -80,7 +80,28 @@ public:
 
     /// Slot count of the internal track vector, including null slots left by
     /// removeTrack. Pair with `getTrack(i)` + nullptr skip when iterating.
-    int getNumTracks() const { return static_cast<int>(tracks_.size()); }
+    /// Takes dispatchMutex_ so cross-thread callers (HTTP workers) observe a
+    /// coherent size vs. concurrent addTrack/removeTrack on the message thread.
+    int getNumTracks() const
+    {
+        std::lock_guard<std::mutex> lock(dispatchMutex_);
+        return static_cast<int>(tracks_.size());
+    }
+
+    /// Thread-safe snapshot of non-null track pointers. Returned pointers are
+    /// valid only as long as the caller ensures no concurrent `removeTrack`
+    /// from the message thread — the common pattern is to call this from the
+    /// message thread itself, or from inside a `runOnTrackSync` lambda.
+    std::vector<TestTrack*> getTrackSnapshot() const
+    {
+        std::lock_guard<std::mutex> lock(dispatchMutex_);
+        std::vector<TestTrack*> out;
+        out.reserve(tracks_.size());
+        for (const auto& t : tracks_)
+            if (t != nullptr)
+                out.push_back(t.get());
+        return out;
+    }
 
     /// Live track count (non-null slots). Use for external "current tracks"
     /// reporting — health endpoint, scan-cycle post-condition, etc.
@@ -134,12 +155,12 @@ public:
     /**
      * Get sample rate
      */
-    double getSampleRate() const { return sampleRate_; }
+    double getSampleRate() const { return sampleRate_.load(std::memory_order_acquire); }
 
     /**
      * Get buffer size
      */
-    int getBufferSize() const { return bufferSize_; }
+    int getBufferSize() const { return bufferSize_.load(std::memory_order_acquire); }
 
     /**
      * Run one block on the given track synchronously from the caller's thread,
@@ -259,9 +280,13 @@ private:
     TestTransport transport_;
     std::vector<std::unique_ptr<TestTrack>> tracks_;
 
-    double sampleRate_ = DEFAULT_SAMPLE_RATE;
-    int bufferSize_ = DEFAULT_BUFFER_SIZE;
-    bool running_ = false;
+    // Scalars with cross-thread readers (HTTP workers via getters, timer
+    // thread via hiResTimerCallback) are atomics to avoid formal data races
+    // with message-thread writers. `initialized_` stays non-atomic: only
+    // message-thread callers (initialize, start) read/write it.
+    std::atomic<double> sampleRate_{DEFAULT_SAMPLE_RATE};
+    std::atomic<int> bufferSize_{DEFAULT_BUFFER_SIZE};
+    std::atomic<bool> running_{false};
     bool initialized_ = false;
 
     // Multi-core DAW model: one pool shared by the whole graph, one job per track per tick.
