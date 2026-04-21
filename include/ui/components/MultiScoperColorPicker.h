@@ -132,6 +132,7 @@ private:
     // Cached gradient
     juce::Image cachedGradientImage_;
     float cachedHue_ = -1.0f;
+    float cachedBrightness_ = -1.0f; // Wheel gradient samples brightness per pixel
     bool cachedIsWheelMode_ = false; // Explicit flag for cache mode
     juce::Rectangle<int> cachedGradientBounds_;
     void updateGradientCache(const juce::Rectangle<int>& bounds);

@@ -427,13 +427,13 @@ class MultiScoperTestClient:
 
     def delete_oscillator(self, osc_id: str) -> bool:
         """Delete an oscillator by ID via state API."""
-        return self._post_ok("/state/oscillator/delete", {"id": osc_id})
+        return self._post_ok("/state/oscillator/delete", {"oscillatorId": osc_id})
 
     def delete_oscillator_on_track(self, osc_id: str, track_id: int) -> bool:
         """Delete an oscillator by ID on a specific track."""
         return self._post_ok(
             f"/state/oscillator/delete?trackId={track_id}",
-            {"id": osc_id, "trackId": track_id},
+            {"oscillatorId": osc_id, "trackId": track_id},
         )
 
     def reorder_oscillators(self, from_index: int, to_index: int) -> bool:

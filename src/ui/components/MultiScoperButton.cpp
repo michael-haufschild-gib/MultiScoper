@@ -151,7 +151,7 @@ int MultiScoperButton::getPreferredWidth() const
     if (variant_ == ButtonVariant::Icon)
         return ComponentLayout::BUTTON_HEIGHT;
 
-    auto font = ComponentLayout::defaultFont();
+    auto font = Typography::headingRegular();
     juce::GlyphArrangement glyphs;
     glyphs.addLineOfText(font, label_, 0, 0);
     float const textWidth = glyphs.getBoundingBox(0, -1, false).getWidth();

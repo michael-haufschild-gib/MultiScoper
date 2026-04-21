@@ -73,8 +73,8 @@ protected:
         presetManager_ = std::make_unique<PresetManager>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
-        processor = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                                 *presetManager_, *memoryBudgetManager_);
+        processor = multiscoper::test::makeProcessor(*registry_, *themeManager_, *shaderRegistry_, *presetManager_,
+                                                     *memoryBudgetManager_);
 
         // Disable GPU so prepareToPlay does not try to attach an OpenGL context
         // on a headless CI box.
@@ -307,8 +307,8 @@ TEST_F(PluginProcessorStateRaceTest, SetStateInformation_BeforePrepareToPlay_Sam
     // Build a known state blob on a separate, prepared processor.
     juce::MemoryBlock savedState;
     {
-        auto donor = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                                  *presetManager_, *memoryBudgetManager_);
+        auto donor = multiscoper::test::makeProcessor(*registry_, *themeManager_, *shaderRegistry_, *presetManager_,
+                                                      *memoryBudgetManager_);
         donor->getState().setGpuRenderingEnabled(false);
         donor->prepareToPlay(44100.0, 512);
         pumpMessageQueue(50);

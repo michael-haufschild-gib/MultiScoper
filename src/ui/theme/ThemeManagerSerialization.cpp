@@ -48,15 +48,12 @@ void saveButtonColors(juce::ValueTree& state, const ColorTheme& t)
     saveColour(state, "btnTerTxtD", t.btnTertiaryTextDisabled);
 }
 
-void saveGlassParams(juce::ValueTree& state, const ColorTheme& t)
+void saveAccentAndSurfaceParams(juce::ValueTree& state, const ColorTheme& t)
 {
     auto set = [&](const char* key, float val) { state.setProperty(key, static_cast<double>(val), nullptr); };
     set("accentHue", t.accentHue);
     set("accentSaturation", t.accentSaturation);
     set("accentLightness", t.accentLightness);
-    set("glassAlpha", t.glassAlpha);
-    set("panelAlpha", t.panelAlpha);
-    set("blurRadius", t.blurRadius);
     set("borderSubtleAlpha", t.borderSubtleAlpha);
     set("borderDefaultAlpha", t.borderDefaultAlpha);
     set("borderStrongAlpha", t.borderStrongAlpha);
@@ -73,8 +70,8 @@ void loadButtonColors(ColorTheme& t, const ColourReader& getColour)
     t.btnPrimaryBgActive = getColour("btnPriBgA", t.btnPrimaryBgActive);
     t.btnPrimaryBgDisabled = getColour("btnPriBgD", t.btnPrimaryBgDisabled);
     t.btnPrimaryText = getColour("btnPriTxt", t.btnPrimaryText);
-    t.btnPrimaryTextHover = getColour("btnPriTxtH", t.btnPrimaryText);
-    t.btnPrimaryTextActive = getColour("btnPriTxtA", t.btnPrimaryText);
+    t.btnPrimaryTextHover = getColour("btnPriTxtH", t.btnPrimaryTextHover);
+    t.btnPrimaryTextActive = getColour("btnPriTxtA", t.btnPrimaryTextActive);
     t.btnPrimaryTextDisabled = getColour("btnPriTxtD", t.btnPrimaryTextDisabled);
 
     t.btnSecondaryBg = getColour("btnSecBg", t.btnSecondaryBg);
@@ -82,8 +79,8 @@ void loadButtonColors(ColorTheme& t, const ColourReader& getColour)
     t.btnSecondaryBgActive = getColour("btnSecBgA", t.btnSecondaryBgActive);
     t.btnSecondaryBgDisabled = getColour("btnSecBgD", t.btnSecondaryBgDisabled);
     t.btnSecondaryText = getColour("btnSecTxt", t.btnSecondaryText);
-    t.btnSecondaryTextHover = getColour("btnSecTxtH", t.btnSecondaryText);
-    t.btnSecondaryTextActive = getColour("btnSecTxtA", t.btnSecondaryText);
+    t.btnSecondaryTextHover = getColour("btnSecTxtH", t.btnSecondaryTextHover);
+    t.btnSecondaryTextActive = getColour("btnSecTxtA", t.btnSecondaryTextActive);
     t.btnSecondaryTextDisabled = getColour("btnSecTxtD", t.btnSecondaryTextDisabled);
 
     t.btnTertiaryBg = getColour("btnTerBg", t.btnTertiaryBg);
@@ -91,8 +88,8 @@ void loadButtonColors(ColorTheme& t, const ColourReader& getColour)
     t.btnTertiaryBgActive = getColour("btnTerBgA", t.btnTertiaryBgActive);
     t.btnTertiaryBgDisabled = getColour("btnTerBgD", t.btnTertiaryBgDisabled);
     t.btnTertiaryText = getColour("btnTerTxt", t.btnTertiaryText);
-    t.btnTertiaryTextHover = getColour("btnTerTxtH", t.btnTertiaryText);
-    t.btnTertiaryTextActive = getColour("btnTerTxtA", t.btnTertiaryText);
+    t.btnTertiaryTextHover = getColour("btnTerTxtH", t.btnTertiaryTextHover);
+    t.btnTertiaryTextActive = getColour("btnTerTxtA", t.btnTertiaryTextActive);
     t.btnTertiaryTextDisabled = getColour("btnTerTxtD", t.btnTertiaryTextDisabled);
 }
 
@@ -135,7 +132,7 @@ juce::ValueTree ColorTheme::toValueTree() const
     saveColour(state, "statusWarning", statusWarning);
     saveColour(state, "statusError", statusError);
     saveButtonColors(state, *this);
-    saveGlassParams(state, *this);
+    saveAccentAndSurfaceParams(state, *this);
 
     juce::String colorStr;
     for (const auto& color : waveformColors)
@@ -182,7 +179,6 @@ void ColorTheme::fromValueTree(const juce::ValueTree& state)
 
     loadButtonColors(*this, getColour);
 
-    // Glass / Accent system — use struct defaults when fields are missing (backward compat)
     const ColorTheme defaults;
     auto getFloat = [&state](const char* prop, float defaultVal) {
         return static_cast<float>(static_cast<double>(state.getProperty(prop, static_cast<double>(defaultVal))));
@@ -190,9 +186,6 @@ void ColorTheme::fromValueTree(const juce::ValueTree& state)
     accentHue = getFloat("accentHue", defaults.accentHue);
     accentSaturation = getFloat("accentSaturation", defaults.accentSaturation);
     accentLightness = getFloat("accentLightness", defaults.accentLightness);
-    glassAlpha = getFloat("glassAlpha", defaults.glassAlpha);
-    panelAlpha = getFloat("panelAlpha", defaults.panelAlpha);
-    blurRadius = getFloat("blurRadius", defaults.blurRadius);
     borderSubtleAlpha = getFloat("borderSubtleAlpha", defaults.borderSubtleAlpha);
     borderDefaultAlpha = getFloat("borderDefaultAlpha", defaults.borderDefaultAlpha);
     borderStrongAlpha = getFloat("borderStrongAlpha", defaults.borderStrongAlpha);
@@ -228,11 +221,7 @@ bool ColorTheme::fromXmlString(const juce::String& xmlString)
 
 // === ThemeManager File I/O ===
 
-juce::File ThemeManager::getThemesDirectory() const
-{
-    auto appDataDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory);
-    return appDataDir.getChildFile("MultiScoper").getChildFile("themes");
-}
+juce::File ThemeManager::getThemesDirectory() const { return themesDir_; }
 
 void ThemeManager::loadThemes()
 {
@@ -256,18 +245,6 @@ void ThemeManager::loadThemes()
             }
         }
     }
-}
-
-void ThemeManager::saveThemes()
-{
-    for (const auto& [name, theme] : themes_)
-    {
-        if (!theme.isSystemTheme)
-        {
-            pendingSaves_.insert(name);
-        }
-    }
-    startTimer(500);
 }
 
 void ThemeManager::saveTheme(const juce::String& themeName)

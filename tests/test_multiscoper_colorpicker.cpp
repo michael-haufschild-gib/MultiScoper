@@ -249,3 +249,20 @@ TEST_F(MultiScoperColorPickerTest, ThemeChangePreservesDisplayOptions)
     EXPECT_FALSE(picker.getShowAlpha());
     EXPECT_FALSE(picker.getShowPreview());
 }
+
+// Regression: setColor with a non-trivial alpha must roundtrip through the
+// internal state (hue/saturation/brightness/alpha) and back to getColor.
+// Previously untested — covers the alpha path through updateFromHSV.
+TEST_F(MultiScoperColorPickerTest, SetColorRoundtripPreservesAlpha)
+{
+    MultiScoperColorPicker picker(getThemeManager());
+    picker.setShowAlpha(true);
+
+    auto input = juce::Colour::fromFloatRGBA(0.7f, 0.2f, 0.1f, 0.5f);
+    picker.setColor(input, false);
+
+    EXPECT_NEAR(picker.getColor().getFloatAlpha(), 0.5f, 0.01f);
+    EXPECT_NEAR(picker.getColor().getFloatRed(), 0.7f, 0.01f);
+    EXPECT_NEAR(picker.getColor().getFloatGreen(), 0.2f, 0.01f);
+    EXPECT_NEAR(picker.getColor().getFloatBlue(), 0.1f, 0.01f);
+}

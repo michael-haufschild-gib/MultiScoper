@@ -12,13 +12,24 @@ using namespace multiscoper;
 class ThemeManagerCRUDTest : public ::testing::Test
 {
 protected:
-    void SetUp() override { themeManager_ = std::make_unique<ThemeManager>(); }
+    void SetUp() override
+    {
+        tempDir_ = juce::File::getSpecialLocation(juce::File::tempDirectory)
+                       .getChildFile("multiscoper_theme_crud_" + juce::String(juce::Time::currentTimeMillis()));
+        tempDir_.createDirectory();
+        themeManager_ = std::make_unique<ThemeManager>(tempDir_);
+    }
 
-    void TearDown() override { themeManager_.reset(); }
+    void TearDown() override
+    {
+        themeManager_.reset();
+        tempDir_.deleteRecursively();
+    }
 
     ThemeManager& getThemeManager() { return *themeManager_; }
 
 private:
+    juce::File tempDir_;
     std::unique_ptr<ThemeManager> themeManager_;
 };
 

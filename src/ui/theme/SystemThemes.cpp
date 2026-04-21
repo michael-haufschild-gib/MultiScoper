@@ -115,9 +115,6 @@ void setDarkProfessionalPalette(ColorTheme& theme)
     theme.accentHue = 188.0f;
     theme.accentSaturation = 0.87f;
     theme.accentLightness = 0.95f;
-    theme.glassAlpha = 1.0f;
-    theme.panelAlpha = 1.0f;
-    theme.blurRadius = 0.0f;
     theme.shadowIntensity = 0.18f;
     theme.shadowSpread = 4.0f;
 
@@ -287,9 +284,6 @@ ColorTheme createHighContrast()
     theme.controlActive = juce::Colour(0xFFFFFF00);
     theme.crosshairLine = juce::Colour(0xCCFFFFFF);
 
-    // High Contrast: full opacity glass for accessibility — no translucency
-    theme.glassAlpha = 1.0f;
-    theme.panelAlpha = 1.0f;
     theme.borderSubtleAlpha = 0.30f;
     theme.borderDefaultAlpha = 0.50f;
     theme.borderStrongAlpha = 0.80f;
@@ -337,9 +331,6 @@ ColorTheme createLightMode()
     theme.statusWarning = juce::Colour(0xFF886600); // Dark amber
     theme.statusError = juce::Colour(0xFFAA0000);   // Dark red
 
-    // Light mode: higher glass alpha for readability, dark-text borders
-    theme.glassAlpha = 0.75f;
-    theme.panelAlpha = 0.90f;
     theme.accentHue = 215.0f;
     theme.accentSaturation = 0.8f;
     theme.accentLightness = 0.45f;
@@ -394,9 +385,6 @@ void applyFlatBase(ColorTheme& theme, float hue, float saturation, float lightne
     theme.accentLightness = lightness;
     theme.controlActive = juce::Colour::fromHSV(hue / 360.0f, saturation, lightness, 1.0f);
 
-    theme.glassAlpha = 1.0f;
-    theme.panelAlpha = 1.0f;
-    theme.blurRadius = 0.0f;
     theme.shadowIntensity = 0.18f;
     theme.shadowSpread = 4.0f;
     theme.borderSubtleAlpha = 0.12f;

@@ -25,7 +25,11 @@ class OscillatorPanelControllerTest : public ::testing::Test
 {
 protected:
     OscillatorPanelControllerTest()
-        : processor_(instanceRegistry_, themeService_, shaderRegistry_, presetManager_, memoryBudgetManager_)
+        : processor_(PluginProcessorConfig{.instanceRegistry = instanceRegistry_,
+                                           .themeService = themeService_,
+                                           .shaderRegistry = shaderRegistry_,
+                                           .presetManager = presetManager_,
+                                           .memoryBudgetManager = memoryBudgetManager_})
         , serviceContext_{instanceRegistry_, themeService_, shaderRegistry_, presetManager_}
     {
     }

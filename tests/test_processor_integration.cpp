@@ -46,8 +46,8 @@ protected:
         presetManager_ = std::make_unique<PresetManager>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
-        processor = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                                 *presetManager_, *memoryBudgetManager_);
+        processor = multiscoper::test::makeProcessor(*registry_, *themeManager_, *shaderRegistry_, *presetManager_,
+                                                     *memoryBudgetManager_);
         processor->getState().setGpuRenderingEnabled(false);
         processor->prepareToPlay(44100.0, 512);
         pumpMessageQueue(200);
@@ -122,8 +122,8 @@ TEST_F(ProcessorIntegrationTest, OscillatorSourceIdMatchesRegisteredSource)
 // source or causes ID collision.
 TEST_F(ProcessorIntegrationTest, TwoProcessorsRegisterDistinctSources)
 {
-    auto processor2 = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                                   *presetManager_, *memoryBudgetManager_);
+    auto processor2 = multiscoper::test::makeProcessor(*registry_, *themeManager_, *shaderRegistry_, *presetManager_,
+                                                       *memoryBudgetManager_);
     processor2->getState().setGpuRenderingEnabled(false);
     processor2->prepareToPlay(48000.0, 256);
     pumpMessageQueue(200);
@@ -172,8 +172,8 @@ TEST_F(ProcessorIntegrationTest, StateRoundTripPreservesOscillators)
     ASSERT_GT(stateData.getSize(), 0u);
 
     // Create a new processor and restore state
-    auto processor2 = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                                   *presetManager_, *memoryBudgetManager_);
+    auto processor2 = multiscoper::test::makeProcessor(*registry_, *themeManager_, *shaderRegistry_, *presetManager_,
+                                                       *memoryBudgetManager_);
     processor2->getState().setGpuRenderingEnabled(false);
     processor2->setStateInformation(stateData.getData(), static_cast<int>(stateData.getSize()));
     processor2->prepareToPlay(44100.0, 512);

@@ -16,7 +16,6 @@ namespace multiscoper::test
 
 // Forward declarations for native window capture functions
 juce::Image captureNativeWindowMac(juce::Component* component, const juce::String& outputPath);
-juce::Image captureNativeWindowMac(juce::Component* component);
 
 juce::Image captureNativeWindowMac(juce::Component* component, const juce::String& outputPath)
 {
@@ -78,12 +77,6 @@ juce::Image captureNativeWindowMac(juce::Component* component, const juce::Strin
         imageFile.deleteFile();
 
     return capturedImage;
-}
-
-// Overload for backward compatibility - just capture without saving
-juce::Image captureNativeWindowMac(juce::Component* component)
-{
-    return captureNativeWindowMac(component, juce::String());
 }
 
 }  // namespace multiscoper::test

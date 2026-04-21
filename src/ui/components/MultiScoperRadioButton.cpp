@@ -110,7 +110,7 @@ int MultiScoperRadioButton::getPreferredWidth() const
 
     if (label_.isNotEmpty())
     {
-        auto font = ComponentLayout::defaultFont();
+        auto font = Typography::headingRegular();
         juce::GlyphArrangement glyphs;
         glyphs.addLineOfText(font, label_, 0, 0);
         int const labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
@@ -122,7 +122,7 @@ int MultiScoperRadioButton::getPreferredWidth() const
 
 int MultiScoperRadioButton::getPreferredHeight() const
 {
-    return std::max(RADIO_SIZE, static_cast<int>(ComponentLayout::defaultFont().getHeight()));
+    return std::max(RADIO_SIZE, static_cast<int>(Typography::headingRegular().getHeight()));
 }
 
 // paint, paintCircle, paintDot, paintFocusRing are in MultiScoperRadioButtonPainting.cpp

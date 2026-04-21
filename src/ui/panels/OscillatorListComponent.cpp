@@ -58,7 +58,7 @@ void OscillatorListComponent::registerTestId() { MULTISCOPER_REGISTER_TEST_ID(te
 void OscillatorListComponent::paint(juce::Graphics& g)
 {
     const auto& theme = getThemeService().getCurrentTheme();
-    g.fillAll(theme.backgroundPane.withAlpha(theme.panelAlpha));
+    g.fillAll(theme.backgroundPane);
 
     // Draw drag indicator line
     if (dragTargetIndex_ >= 0)

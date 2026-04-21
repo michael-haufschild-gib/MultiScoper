@@ -146,7 +146,13 @@ public:
 
     juce::String getHelp() const override
     {
-        return "Press Space or Enter to open dropdown. Use arrow keys to navigate.";
+        // Keyboard contract matches keyPressed():
+        //   - When popup is closed, Up/Down change the selection in-place
+        //     (Space/Enter deliberately bypass to the DAW for transport).
+        //   - Assistive-tech "press" and "showMenu" actions open the popup.
+        //   - Escape closes an open popup.
+        return "Use arrow keys to navigate options. Screen reader 'press' action opens "
+               "the full list; Escape closes it.";
     }
 
 private:

@@ -165,19 +165,14 @@ TEST_F(CrossSessionFixture, OscillatorBindingSurvivesSaveLoadAcrossTwoInstances)
     EXPECT_EQ(resolved->name, "Track B");
 }
 
-TEST_F(CrossSessionFixture, LegacyV2StateWithoutTrackIdentifierLoadsWithEmptyIdentifier)
+TEST_F(CrossSessionFixture, PreV3StateIsRejected)
 {
-    // v2 XML omitted TrackIdentifier. The migration must accept it, and
-    // getTrackIdentifier() must return an empty string so the caller (the
-    // plugin processor) can detect "legacy save" and fall back to a fresh
-    // UUID rather than registering with an empty trackIdentifier.
+    // Pre-v3 saves are no longer supported.
     const juce::String v2Xml =
         R"(<MultiScoperState version="2"><Oscillators/><Panes/><Layout columns="1"/><Theme themeName="Dark"/><Timing/></MultiScoperState>)";
 
     MultiScoperState state;
-    ASSERT_TRUE(state.fromXmlString(v2Xml));
-    EXPECT_EQ(state.getSchemaVersion(), MultiScoperState::CURRENT_SCHEMA_VERSION);
-    EXPECT_TRUE(state.getTrackIdentifier().isEmpty());
+    EXPECT_FALSE(state.fromXmlString(v2Xml));
 }
 
 TEST_F(CrossSessionFixture, SetTrackIdentifierPersistsThroughRoundTrip)

@@ -31,6 +31,20 @@
 namespace multiscoper::test
 {
 
+/// Construct a MultiScoperPluginProcessor for tests using the config ctor.
+/// Tests that previously called the 5-arg legacy ctor should use this helper.
+inline std::unique_ptr<MultiScoperPluginProcessor>
+makeProcessor(IInstanceRegistry& registry, IThemeService& themeService, ShaderRegistry& shaderRegistry,
+              PresetManager& presetManager, MemoryBudgetManager& memoryBudgetManager)
+{
+    return std::make_unique<MultiScoperPluginProcessor>(
+        PluginProcessorConfig{.instanceRegistry = registry,
+                              .themeService = themeService,
+                              .shaderRegistry = shaderRegistry,
+                              .presetManager = presetManager,
+                              .memoryBudgetManager = memoryBudgetManager});
+}
+
 // =============================================================================
 // Mock Implementations for Isolated Testing
 // =============================================================================
@@ -262,8 +276,8 @@ protected:
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
         // Create processor with owned services
-        processor = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                                 *presetManager_, *memoryBudgetManager_);
+        processor = multiscoper::test::makeProcessor(*registry_, *themeManager_, *shaderRegistry_, *presetManager_,
+                                                     *memoryBudgetManager_);
 
         // Disable GPU rendering for headless test environment
         // OpenGL context operations crash without a real display/window

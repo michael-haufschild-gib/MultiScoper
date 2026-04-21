@@ -1,7 +1,6 @@
 /*
     MultiScoper - Checkbox Component Implementation
     Flat-surface rendering with spring scale animation.
-    (Historical: "glassmorphism rendering" prior to the 2026-Q2 uplift.)
 */
 
 #include "ui/components/MultiScoperCheckbox.h"
@@ -124,7 +123,7 @@ int MultiScoperCheckbox::getPreferredWidth() const
 
     if (label_.isNotEmpty())
     {
-        auto font = ComponentLayout::defaultFont();
+        auto font = Typography::headingRegular();
         juce::GlyphArrangement glyphs;
         glyphs.addLineOfText(font, label_, 0, 0);
         int const labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
@@ -136,7 +135,7 @@ int MultiScoperCheckbox::getPreferredWidth() const
 
 int MultiScoperCheckbox::getPreferredHeight() const
 {
-    return std::max(ComponentLayout::CHECKBOX_SIZE, static_cast<int>(ComponentLayout::defaultFont().getHeight()));
+    return std::max(ComponentLayout::CHECKBOX_SIZE, static_cast<int>(Typography::headingRegular().getHeight()));
 }
 
 void MultiScoperCheckbox::paint(juce::Graphics& g)
@@ -162,12 +161,12 @@ void MultiScoperCheckbox::paint(juce::Graphics& g)
         auto labelBounds = bounds.toFloat().withLeft(ComponentLayout::CHECKBOX_SIZE + ComponentLayout::SPACING_SM);
 
         g.setColour(getTheme().textPrimary.withAlpha(opacity));
-        g.setFont(ComponentLayout::defaultFont());
+        g.setFont(Typography::headingRegular());
         g.drawText(label_, labelBounds, juce::Justification::centredLeft);
     }
     else
     {
-        auto font = ComponentLayout::defaultFont();
+        auto font = Typography::headingRegular();
         juce::GlyphArrangement glyphs;
         glyphs.addLineOfText(font, label_, 0, 0);
         float const labelWidthF = glyphs.getBoundingBox(0, -1, false).getWidth();

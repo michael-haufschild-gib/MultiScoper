@@ -1,10 +1,7 @@
 /*
     MultiScoper - Surface Style
     Computed color/parameter pack derived from a ColorTheme. Used by the
-    flat-surface paint system. Note: the struct retains some *Glass* field
-    names (bgGlass, glassAlpha, etc.) as stable ValueTree serialization
-    tokens — ColorTheme exports them and user themes on disk reference
-    them. Production paint code treats these as opaque surface tokens.
+    flat-surface paint system.
 */
 
 #pragma once

@@ -12,11 +12,22 @@ using namespace multiscoper;
 class ThemeManagerApplyTest : public ::testing::Test
 {
 protected:
+    juce::File tempDir_;
     std::unique_ptr<ThemeManager> themeManager_;
 
-    void SetUp() override { themeManager_ = std::make_unique<ThemeManager>(); }
+    void SetUp() override
+    {
+        tempDir_ = juce::File::getSpecialLocation(juce::File::tempDirectory)
+                       .getChildFile("multiscoper_theme_apply_" + juce::String(juce::Time::currentTimeMillis()));
+        tempDir_.createDirectory();
+        themeManager_ = std::make_unique<ThemeManager>(tempDir_);
+    }
 
-    void TearDown() override { themeManager_.reset(); }
+    void TearDown() override
+    {
+        themeManager_.reset();
+        tempDir_.deleteRecursively();
+    }
 
     ThemeManager& getThemeManager() { return *themeManager_; }
 };
@@ -286,18 +297,8 @@ TEST_F(ThemeManagerApplyTest, SwitchBetweenGlassThemesUpdatesFields)
     EXPECT_NE(blueHue, brownHue);
 }
 
-// Test: High Contrast theme has full opacity glass (accessibility)
-TEST_F(ThemeManagerApplyTest, HighContrastThemeHasFullOpacityGlass)
-{
-    getThemeManager().setCurrentTheme("High Contrast");
-    const auto& theme = getThemeManager().getCurrentTheme();
-
-    EXPECT_NEAR(theme.glassAlpha, 1.0f, 0.001f);
-    EXPECT_NEAR(theme.panelAlpha, 1.0f, 0.001f);
-}
-
-// Test: Glass theme clone preserves glass fields
-TEST_F(ThemeManagerApplyTest, ClonePreservesGlassFields)
+// Glass-theme clone preserves the accent / surface parameters.
+TEST_F(ThemeManagerApplyTest, ClonePreservesAccentAndSurfaceFields)
 {
     getThemeManager().cloneTheme("Glass Dark Purple", "GlassCloneTest");
 
@@ -309,29 +310,20 @@ TEST_F(ThemeManagerApplyTest, ClonePreservesGlassFields)
 
     EXPECT_NEAR(cloned->accentHue, original->accentHue, 0.01f);
     EXPECT_NEAR(cloned->accentSaturation, original->accentSaturation, 0.001f);
-    EXPECT_NEAR(cloned->glassAlpha, original->glassAlpha, 0.001f);
     EXPECT_NEAR(cloned->borderSubtleAlpha, original->borderSubtleAlpha, 0.001f);
     EXPECT_NEAR(cloned->shadowIntensity, original->shadowIntensity, 0.001f);
 
     getThemeManager().deleteTheme("GlassCloneTest");
 }
 
-// Test: Listener is notified with correct accent fields on theme change.
-// Glass-era `glassAlpha < 1.0` was dropped when the aesthetic flattened —
-// the field is kept for serialization back-compat but now always 1.0 on
-// system themes. The hue is the identity and is still load-bearing.
-TEST_F(ThemeManagerApplyTest, ListenerReceivesGlassFieldsOnChange)
+// Listener receives the new accent hue on theme change.
+TEST_F(ThemeManagerApplyTest, ListenerReceivesAccentOnChange)
 {
     struct CapturingListener : ThemeManagerListener
     {
         float capturedHue = -1.0f;
-        float capturedGlassAlpha = -1.0f;
 
-        void themeChanged(const ColorTheme& newTheme) override
-        {
-            capturedHue = newTheme.accentHue;
-            capturedGlassAlpha = newTheme.glassAlpha;
-        }
+        void themeChanged(const ColorTheme& newTheme) override { capturedHue = newTheme.accentHue; }
     };
 
     CapturingListener listener;
@@ -340,7 +332,6 @@ TEST_F(ThemeManagerApplyTest, ListenerReceivesGlassFieldsOnChange)
     getThemeManager().setCurrentTheme("Glass Dark Brown");
 
     EXPECT_NEAR(listener.capturedHue, 40.0f, 0.01f);
-    EXPECT_NEAR(listener.capturedGlassAlpha, 1.0f, 0.001f);
 
     getThemeManager().removeListener(&listener);
 }

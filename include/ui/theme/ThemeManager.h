@@ -38,6 +38,13 @@ class ThemeManager
 {
 public:
     ThemeManager();
+
+    /// Construct a ThemeManager with an explicit themes directory.
+    /// Enables test isolation — tests must not use the default ctor
+    /// because it points at the real user data directory and persists
+    /// newly-created themes to disk.
+    explicit ThemeManager(juce::File themesDir);
+
     ~ThemeManager() override;
 
     /**
@@ -111,11 +118,6 @@ public:
     void loadThemes();
 
     /**
-     * Save custom themes to disk
-     */
-    void saveThemes();
-
-    /**
      * Add/remove listeners
      */
     void addListener(ThemeManagerListener* listener) override;
@@ -157,6 +159,7 @@ private:
      */
     void deleteThemeFile(const juce::String& themeName) const;
 
+    juce::File themesDir_;
     ColorTheme currentTheme_;
     std::unordered_map<juce::String, ColorTheme> themes_;
     std::set<juce::String> pendingSaves_;

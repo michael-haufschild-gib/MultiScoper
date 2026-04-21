@@ -42,7 +42,22 @@ void ColorTheme::initializeDefaultWaveformColors()
 
 // === ThemeManager Implementation ===
 
-ThemeManager::ThemeManager()
+namespace
+{
+juce::File defaultThemesDirectory()
+{
+    return juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+#if JUCE_MAC
+        .getChildFile("Application Support")
+#endif
+        .getChildFile("MultiScoper")
+        .getChildFile("themes");
+}
+} // namespace
+
+ThemeManager::ThemeManager() : ThemeManager(defaultThemesDirectory()) {}
+
+ThemeManager::ThemeManager(juce::File themesDir) : themesDir_(std::move(themesDir))
 {
     initializeSystemThemes();
     loadThemes();
@@ -300,9 +315,23 @@ bool ThemeManager::renameTheme(const juce::String& oldName, const juce::String& 
         notifyListeners();
     }
 
+    // Persist the new file synchronously BEFORE deleting the old one. The
+    // previous ordering (delete old → debounced save of new) left a 500 ms
+    // window where a crash could lose both names. Writing new first keeps
+    // at least one valid copy on disk at every step.
+    const auto themesDir = getThemesDirectory();
+    auto newFile = themesDir.getChildFile(newName + ".xml");
+    auto xml = themes_[newName].toValueTree().createXml();
+    if (xml == nullptr)
+        return false;
+    themesDir.createDirectory();
+    if (!newFile.replaceWithText(xml->toString()))
+        return false;
+
+    // The new name no longer has pending debounced work — we just persisted.
+    pendingSaves_.erase(newName);
     pendingSaves_.erase(oldName);
     deleteThemeFile(oldName);
-    saveTheme(newName);
 
     return true;
 }
@@ -323,8 +352,14 @@ bool ThemeManager::importTheme(const juce::String& xmlString)
     if (!isValidThemeName(importedName))
         return false;
 
-    // Prevent imported themes from overwriting protected system themes
+    // Refuse to overwrite a protected system theme.
     if (isSystemTheme(importedName))
+        return false;
+
+    // Refuse to silently overwrite an existing custom theme. Callers that
+    // intend to replace must deleteTheme(name) first — this matches the
+    // PresetManager.importPreset collision contract.
+    if (themes_.contains(importedName))
         return false;
 
     theme.name = importedName;
@@ -332,13 +367,6 @@ bool ThemeManager::importTheme(const juce::String& xmlString)
     themes_[theme.name] = theme;
 
     saveTheme(theme.name);
-
-    // Refresh active theme if the import overwrites the currently selected theme
-    if (currentTheme_.name == theme.name)
-    {
-        currentTheme_ = theme;
-        notifyListeners();
-    }
 
     return true;
 }

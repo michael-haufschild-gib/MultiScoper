@@ -24,12 +24,17 @@ MultiScoperColorPicker::MultiScoperColorPicker(IThemeService& themeService, cons
         if (text.startsWithChar('#'))
             text = text.substring(1);
 
-        if (text.length() >= 6)
+        // updateHexField() writes the hex as `toDisplayString(showAlpha_)`
+        // which uses "RRGGBB" when alpha is hidden and "AARRGGBB" when shown
+        // — alpha first. Accept both forms symmetrically.
+        if (text.length() == 6)
         {
-            auto color = juce::Colour::fromString("FF" + text.substring(0, 6));
-            if (text.length() >= 8)
-                color = juce::Colour::fromString(text.substring(6, 8) + text.substring(0, 6));
-
+            auto color = juce::Colour::fromString("FF" + text);
+            setColor(color);
+        }
+        else if (text.length() >= 8)
+        {
+            auto color = juce::Colour::fromString(text.substring(0, 8));
             setColor(color);
         }
     };
@@ -77,6 +82,9 @@ void MultiScoperColorPicker::setShowAlpha(bool show)
     if (showAlpha_ != show)
     {
         showAlpha_ = show;
+        // Hex display format depends on showAlpha_ (AARRGGBB vs RRGGBB);
+        // refresh the field so toggling doesn't leave stale text.
+        updateHexField();
         resized();
     }
 }
@@ -223,14 +231,36 @@ void MultiScoperColorPicker::handleGradientDrag(juce::Point<int> pos)
 {
     auto bounds = getGradientBounds();
 
-    // Guard against division by zero if bounds are invalid
     if (bounds.getWidth() <= 0 || bounds.getHeight() <= 0)
         return;
 
-    saturation_ =
-        std::clamp(static_cast<float>(pos.x - bounds.getX()) / static_cast<float>(bounds.getWidth()), 0.0f, 1.0f);
-    brightness_ = std::clamp(
-        1.0f - (static_cast<float>(pos.y - bounds.getY()) / static_cast<float>(bounds.getHeight())), 0.0f, 1.0f);
+    if (mode_ == Mode::Wheel)
+    {
+        // In wheel mode the gradient is a polar HSV wheel: angle → hue,
+        // distance-from-centre → saturation. (Brightness is set via a
+        // separate control in wheel mode and is not modulated by the drag.)
+        const auto cx = static_cast<float>(bounds.getCentreX());
+        const auto cy = static_cast<float>(bounds.getCentreY());
+        const float radius = static_cast<float>(std::min(bounds.getWidth(), bounds.getHeight())) / 2.0f;
+        if (radius <= 0.0f)
+            return;
+
+        const float dx = static_cast<float>(pos.x) - cx;
+        const float dy = static_cast<float>(pos.y) - cy;
+        const float angle = std::atan2(dy, dx);
+        const float dist = std::sqrt((dx * dx) + (dy * dy));
+
+        hue_ =
+            std::clamp((angle + juce::MathConstants<float>::pi) / (2.0f * juce::MathConstants<float>::pi), 0.0f, 1.0f);
+        saturation_ = std::clamp(dist / radius, 0.0f, 1.0f);
+    }
+    else
+    {
+        saturation_ =
+            std::clamp(static_cast<float>(pos.x - bounds.getX()) / static_cast<float>(bounds.getWidth()), 0.0f, 1.0f);
+        brightness_ = std::clamp(
+            1.0f - (static_cast<float>(pos.y - bounds.getY()) / static_cast<float>(bounds.getHeight())), 0.0f, 1.0f);
+    }
 
     updateFromHSV();
 }

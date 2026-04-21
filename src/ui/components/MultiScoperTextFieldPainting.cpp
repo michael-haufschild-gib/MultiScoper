@@ -186,10 +186,10 @@ void MultiScoperTextField::updateEditorStyle()
     editor_->setColour(juce::TextEditor::highlightColourId, getSurface().accent.withAlpha(0.3f));
     editor_->setColour(juce::CaretComponent::caretColourId, getSurface().accent);
 
-    editor_->setFont(ComponentLayout::defaultFont());
+    editor_->setFont(Typography::headingRegular());
     editor_->setTextToShowWhenEmpty(placeholder_, getTheme().textSecondary);
 
-    cachedErrorFont_ = ComponentLayout::captionFont();
+    cachedErrorFont_ = Typography::caption();
 }
 
 std::unique_ptr<juce::AccessibilityHandler> MultiScoperTextField::createAccessibilityHandler()

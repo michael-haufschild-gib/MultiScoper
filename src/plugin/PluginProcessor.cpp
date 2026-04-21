@@ -33,17 +33,6 @@ juce::String normaliseSourceDisplayName(const juce::AudioProcessor::TrackPropert
 }
 } // namespace
 
-MultiScoperPluginProcessor::MultiScoperPluginProcessor(IInstanceRegistry& instanceRegistry, IThemeService& themeService,
-                                                       ShaderRegistry& shaderRegistry, PresetManager& presetManager,
-                                                       MemoryBudgetManager& memoryBudgetManager)
-    : MultiScoperPluginProcessor(PluginProcessorConfig{.instanceRegistry = instanceRegistry,
-                                                       .themeService = themeService,
-                                                       .shaderRegistry = shaderRegistry,
-                                                       .presetManager = presetManager,
-                                                       .memoryBudgetManager = memoryBudgetManager})
-{
-}
-
 MultiScoperPluginProcessor::MultiScoperPluginProcessor(const PluginProcessorConfig& config)
     : AudioProcessor(BusesProperties()
                          .withInput("Input", juce::AudioChannelSet::stereo(), true)

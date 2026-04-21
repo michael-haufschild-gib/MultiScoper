@@ -105,7 +105,7 @@ void SectionHeader::paint(juce::Graphics& g)
     }
 
     g.setColour(titleColour);
-    g.setFont(ComponentLayout::captionFont().boldened().withExtraKerningFactor(kTitleKerning));
+    g.setFont(Typography::caption().boldened().withExtraKerningFactor(kTitleKerning));
     g.drawText(title_, titleRect, titleJustification, /*useEllipsesIfTooBig*/ true);
 
     if (chevronsVisible_)

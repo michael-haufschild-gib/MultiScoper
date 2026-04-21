@@ -14,19 +14,22 @@ class ThemeManagerPersistenceTest : public ::testing::Test
 protected:
     void SetUp() override
     {
-        // Create ThemeManager instance for each test
-        themeManager_ = std::make_unique<ThemeManager>();
+        tempDir_ = juce::File::getSpecialLocation(juce::File::tempDirectory)
+                       .getChildFile("multiscoper_theme_persist_" + juce::String(juce::Time::currentTimeMillis()));
+        tempDir_.createDirectory();
+        themeManager_ = std::make_unique<ThemeManager>(tempDir_);
     }
 
     void TearDown() override
     {
-        // Clean up ThemeManager instance
         themeManager_.reset();
+        tempDir_.deleteRecursively();
     }
 
     ThemeManager& getThemeManager() { return *themeManager_; }
 
 private:
+    juce::File tempDir_;
     std::unique_ptr<ThemeManager> themeManager_;
 };
 
@@ -97,12 +100,15 @@ TEST_F(ThemeManagerPersistenceTest, ExportNonexistentTheme)
     EXPECT_TRUE(exported.isEmpty());
 }
 
-// Test: Export then import roundtrip verifies data survives serialization
+// Test: Export then import roundtrip verifies data survives serialization.
+// Import refuses silent overwrite, so the test deletes the original first.
 TEST_F(ThemeManagerPersistenceTest, ExportImportRoundtrip)
 {
     EXPECT_TRUE(getThemeManager().createTheme("RoundtripTest"));
     juce::String exported = getThemeManager().exportTheme("RoundtripTest");
     EXPECT_FALSE(exported.isEmpty());
+
+    EXPECT_TRUE(getThemeManager().deleteTheme("RoundtripTest"));
 
     // Import the exported theme — should succeed and theme should exist
     bool imported = getThemeManager().importTheme(exported);
@@ -114,6 +120,24 @@ TEST_F(ThemeManagerPersistenceTest, ExportImportRoundtrip)
     EXPECT_TRUE(exportedAgain.contains("RoundtripTest"));
 
     getThemeManager().deleteTheme("RoundtripTest");
+}
+
+// Test: import rejects an XML whose declared name collides with an existing
+// custom theme. Callers must delete the existing theme first.
+TEST_F(ThemeManagerPersistenceTest, ImportRefusesExistingCustomThemeCollision)
+{
+    EXPECT_TRUE(getThemeManager().createTheme("CollisionTarget"));
+    juce::String exported = getThemeManager().exportTheme("CollisionTarget");
+    EXPECT_FALSE(exported.isEmpty());
+
+    // Existing theme with same name must block the import.
+    EXPECT_FALSE(getThemeManager().importTheme(exported));
+
+    // Deleting allows the import.
+    EXPECT_TRUE(getThemeManager().deleteTheme("CollisionTarget"));
+    EXPECT_TRUE(getThemeManager().importTheme(exported));
+
+    getThemeManager().deleteTheme("CollisionTarget");
 }
 
 // Test: ColorTheme XML export/import with valid data
@@ -265,16 +289,13 @@ TEST_F(ThemeManagerPersistenceTest, AllColorFieldsRoundtrip)
 // =============================================================================
 
 // Test: glass fields survive round-trip through ValueTree
-TEST_F(ThemeManagerPersistenceTest, GlassFieldsRoundtrip)
+TEST_F(ThemeManagerPersistenceTest, AccentAndSurfaceFieldsRoundtrip)
 {
     ColorTheme original;
-    original.name = "GlassRoundtrip";
+    original.name = "AccentRoundtrip";
     original.accentHue = 270.0f;
     original.accentSaturation = 0.85f;
     original.accentLightness = 0.55f;
-    original.glassAlpha = 0.65f;
-    original.panelAlpha = 0.88f;
-    original.blurRadius = 24.0f;
     original.borderSubtleAlpha = 0.10f;
     original.borderDefaultAlpha = 0.15f;
     original.borderStrongAlpha = 0.25f;
@@ -288,9 +309,6 @@ TEST_F(ThemeManagerPersistenceTest, GlassFieldsRoundtrip)
     EXPECT_NEAR(restored.accentHue, 270.0f, 0.01f);
     EXPECT_NEAR(restored.accentSaturation, 0.85f, 0.001f);
     EXPECT_NEAR(restored.accentLightness, 0.55f, 0.001f);
-    EXPECT_NEAR(restored.glassAlpha, 0.65f, 0.001f);
-    EXPECT_NEAR(restored.panelAlpha, 0.88f, 0.001f);
-    EXPECT_NEAR(restored.blurRadius, 24.0f, 0.01f);
     EXPECT_NEAR(restored.borderSubtleAlpha, 0.10f, 0.001f);
     EXPECT_NEAR(restored.borderDefaultAlpha, 0.15f, 0.001f);
     EXPECT_NEAR(restored.borderStrongAlpha, 0.25f, 0.001f);
@@ -298,15 +316,13 @@ TEST_F(ThemeManagerPersistenceTest, GlassFieldsRoundtrip)
     EXPECT_NEAR(restored.shadowSpread, 16.0f, 0.01f);
 }
 
-// Test: glass fields survive round-trip through XML (export/import)
-TEST_F(ThemeManagerPersistenceTest, GlassFieldsXmlRoundtrip)
+TEST_F(ThemeManagerPersistenceTest, AccentFieldsXmlRoundtrip)
 {
     ColorTheme original;
-    original.name = "GlassXmlRoundtrip";
+    original.name = "AccentXmlRoundtrip";
     original.accentHue = 40.0f;
     original.accentSaturation = 0.8f;
     original.accentLightness = 0.6f;
-    original.glassAlpha = 0.70f;
     original.shadowIntensity = 0.6f;
 
     juce::String xml = original.toXmlString();
@@ -318,35 +334,56 @@ TEST_F(ThemeManagerPersistenceTest, GlassFieldsXmlRoundtrip)
     EXPECT_NEAR(restored.accentHue, 40.0f, 0.01f);
     EXPECT_NEAR(restored.accentSaturation, 0.8f, 0.001f);
     EXPECT_NEAR(restored.accentLightness, 0.6f, 0.001f);
-    EXPECT_NEAR(restored.glassAlpha, 0.70f, 0.001f);
     EXPECT_NEAR(restored.shadowIntensity, 0.6f, 0.001f);
 }
 
-// Test: deserializing an old theme (no glass fields) produces struct defaults
-TEST_F(ThemeManagerPersistenceTest, OldThemeWithoutGlassFieldsGetsDefaults)
+// When a ValueTree omits the accent/surface-parameter keys, fromValueTree
+// falls back to the struct defaults without crashing.
+TEST_F(ThemeManagerPersistenceTest, ThemeWithoutAccentFieldsGetsDefaults)
 {
-    // Build a ValueTree that only has classic color fields, no glass params
     juce::ValueTree state("Theme");
-    state.setProperty("name", "LegacyTheme", nullptr);
+    state.setProperty("name", "MinimalTheme", nullptr);
     state.setProperty("bgPrimary", static_cast<int>(juce::Colour(0xFF1E1E1E).getARGB()), nullptr);
     state.setProperty("textPrimary", static_cast<int>(juce::Colour(0xFFE0E0E0).getARGB()), nullptr);
-    // Intentionally omit all glass properties
 
     ColorTheme theme;
     theme.fromValueTree(state);
 
-    // Glass fields should have their struct defaults
     ColorTheme defaults;
     EXPECT_NEAR(theme.accentHue, defaults.accentHue, 0.01f);
     EXPECT_NEAR(theme.accentSaturation, defaults.accentSaturation, 0.001f);
     EXPECT_NEAR(theme.accentLightness, defaults.accentLightness, 0.001f);
-    EXPECT_NEAR(theme.glassAlpha, defaults.glassAlpha, 0.001f);
-    EXPECT_NEAR(theme.panelAlpha, defaults.panelAlpha, 0.001f);
     EXPECT_NEAR(theme.borderSubtleAlpha, defaults.borderSubtleAlpha, 0.001f);
     EXPECT_NEAR(theme.borderDefaultAlpha, defaults.borderDefaultAlpha, 0.001f);
     EXPECT_NEAR(theme.borderStrongAlpha, defaults.borderStrongAlpha, 0.001f);
     EXPECT_NEAR(theme.shadowIntensity, defaults.shadowIntensity, 0.001f);
     EXPECT_NEAR(theme.shadowSpread, defaults.shadowSpread, 0.01f);
+}
+
+// Test: button Hover/Active text colors fall back to their matching struct
+// default (not the plain text variant) when absent from the ValueTree.
+// Regression guard for the previous bug where "btnPriTxtH" defaulted to
+// btnPrimaryText, masking hover coloration for legacy theme files.
+TEST_F(ThemeManagerPersistenceTest, LegacyThemeWithoutButtonHoverActiveTextKeysKeepsDefaults)
+{
+    juce::ValueTree state("Theme");
+    state.setProperty("name", "LegacyButtonTheme", nullptr);
+    // Intentionally write ONLY the plain text keys — omit all hover/active
+    // variants so the loader must fall back to struct defaults.
+    state.setProperty("btnPriTxt", static_cast<int>(juce::Colour(0xFF010203).getARGB()), nullptr);
+    state.setProperty("btnSecTxt", static_cast<int>(juce::Colour(0xFF040506).getARGB()), nullptr);
+    state.setProperty("btnTerTxt", static_cast<int>(juce::Colour(0xFF070809).getARGB()), nullptr);
+
+    ColorTheme theme;
+    theme.fromValueTree(state);
+
+    ColorTheme defaults;
+    EXPECT_EQ(theme.btnPrimaryTextHover.getARGB(), defaults.btnPrimaryTextHover.getARGB());
+    EXPECT_EQ(theme.btnPrimaryTextActive.getARGB(), defaults.btnPrimaryTextActive.getARGB());
+    EXPECT_EQ(theme.btnSecondaryTextHover.getARGB(), defaults.btnSecondaryTextHover.getARGB());
+    EXPECT_EQ(theme.btnSecondaryTextActive.getARGB(), defaults.btnSecondaryTextActive.getARGB());
+    EXPECT_EQ(theme.btnTertiaryTextHover.getARGB(), defaults.btnTertiaryTextHover.getARGB());
+    EXPECT_EQ(theme.btnTertiaryTextActive.getARGB(), defaults.btnTertiaryTextActive.getARGB());
 }
 
 // Test: all four new glass system themes are listed in getAvailableThemes()

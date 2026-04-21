@@ -235,7 +235,7 @@ void MultiScoperAccordionSection::paintHeader(juce::Graphics& g, juce::Rectangle
 
     // Title
     g.setColour(getTheme().textPrimary.withAlpha(opacity));
-    g.setFont(ComponentLayout::defaultFont().boldened());
+    g.setFont(Typography::headingRegular().boldened());
     g.drawText(title_, contentBounds, juce::Justification::centredLeft);
 
     // Focus ring

@@ -102,11 +102,10 @@ TEST_F(ThemeAccessibilityTest, ValidThemeNameRejectsPathTraversal)
 }
 
 // =============================================================================
-// Glass-Contrast Validation
+// Pane-surface Contrast Validation
 // =============================================================================
 
-// Test: textPrimary on effective glass background passes AA for all system themes
-TEST_F(ThemeAccessibilityTest, TextOnGlassBackgroundPassesAAForAllThemes)
+TEST_F(ThemeAccessibilityTest, TextOnPaneBackgroundPassesAAForAllThemes)
 {
     auto themes = getThemeManager().getAvailableThemes();
 
@@ -115,18 +114,12 @@ TEST_F(ThemeAccessibilityTest, TextOnGlassBackgroundPassesAAForAllThemes)
         auto* theme = getThemeManager().getTheme(themeName);
         ASSERT_NE(theme, nullptr) << "Theme '" << themeName << "' is null";
 
-        // Effective glass bg: backgroundPrimary blended with backgroundPane at glassAlpha
-        auto effectiveGlassBg = theme->backgroundPrimary.interpolatedWith(theme->backgroundPane, theme->glassAlpha);
-
-        EXPECT_TRUE(ColorTheme::meetsContrastAA(theme->textPrimary, effectiveGlassBg))
-            << "Theme '" << themeName << "': textPrimary (0x"
-            << juce::String::toHexString(static_cast<int>(theme->textPrimary.getARGB())) << ") on glass bg (0x"
-            << juce::String::toHexString(static_cast<int>(effectiveGlassBg.getARGB()))
-            << ") fails AA. Ratio: " << ColorTheme::calculateContrastRatio(theme->textPrimary, effectiveGlassBg);
+        EXPECT_TRUE(ColorTheme::meetsContrastAA(theme->textPrimary, theme->backgroundPane))
+            << "Theme '" << themeName << "': textPrimary fails AA on backgroundPane. Ratio: "
+            << ColorTheme::calculateContrastRatio(theme->textPrimary, theme->backgroundPane);
     }
 }
 
-// Test: all four new glass system themes individually pass full accessibility validation
 TEST_F(ThemeAccessibilityTest, GlassSystemThemesPassAccessibility)
 {
     auto validateTheme = [&](const juce::String& name) {
@@ -144,31 +137,23 @@ TEST_F(ThemeAccessibilityTest, GlassSystemThemesPassAccessibility)
     validateTheme("Glass Dark Black");
 }
 
-// Test: High Contrast theme with glassAlpha=1.0 still passes accessibility
-TEST_F(ThemeAccessibilityTest, HighContrastFullOpacityGlassPassesAccessibility)
+TEST_F(ThemeAccessibilityTest, HighContrastThemePassesAccessibility)
 {
     auto* theme = getThemeManager().getTheme("High Contrast");
     ASSERT_NE(theme, nullptr);
-
-    // Verify it uses full opacity
-    EXPECT_NEAR(theme->glassAlpha, 1.0f, 0.001f);
 
     auto issues = theme->validateAccessibility();
     EXPECT_TRUE(issues.empty()) << "High Contrast fails: " << (issues.empty() ? "" : issues[0].toStdString());
 }
 
-// Test: glass validateAccessibility catches low contrast on glass bg
-TEST_F(ThemeAccessibilityTest, GlassContrastCheckCatchesLowContrast)
+TEST_F(ThemeAccessibilityTest, PaneContrastCheckCatchesLowContrast)
 {
     ColorTheme bad;
-    // Near-identical background and text on glass
     bad.backgroundPrimary = juce::Colour(0xFF202020);
     bad.backgroundPane = juce::Colour(0xFF222222);
-    bad.textPrimary = juce::Colour(0xFF303030); // very low contrast against ~0xFF212121
+    bad.textPrimary = juce::Colour(0xFF303030); // very low contrast vs backgroundPane
     bad.textSecondary = juce::Colour(0xFF808080);
-    bad.glassAlpha = 0.55f;
 
-    // Need valid button colors to avoid button false positives
     bad.btnPrimaryText = juce::Colour(0xFFFFFFFF);
     bad.btnPrimaryBg = juce::Colour(0xFF0000AA);
     bad.btnSecondaryText = juce::Colour(0xFFFFFFFF);
@@ -176,19 +161,16 @@ TEST_F(ThemeAccessibilityTest, GlassContrastCheckCatchesLowContrast)
 
     auto issues = bad.validateAccessibility();
 
-    // The effective glass bg is ~0xFF212121 and textPrimary is 0xFF303030: ratio < 4.5
-    auto effectiveGlassBg = bad.backgroundPrimary.interpolatedWith(bad.backgroundPane, bad.glassAlpha);
-    float glassRatio = ColorTheme::calculateContrastRatio(bad.textPrimary, effectiveGlassBg);
-    EXPECT_LT(glassRatio, 4.5f) << "Test setup: textPrimary vs glass bg should fail AA (ratio=" << glassRatio << ")";
+    float paneRatio = ColorTheme::calculateContrastRatio(bad.textPrimary, bad.backgroundPane);
+    EXPECT_LT(paneRatio, 4.5f) << "Test setup: textPrimary vs pane bg should fail AA (ratio=" << paneRatio << ")";
 
-    // The validator must report this specific failure
-    int glassIssueCount = 0;
+    int paneIssueCount = 0;
     for (const auto& issue : issues)
     {
-        if (issue.contains("glass"))
-            glassIssueCount++;
+        if (issue.contains("pane background"))
+            paneIssueCount++;
     }
-    EXPECT_EQ(glassIssueCount, 1) << "Should detect exactly one glass-background contrast failure";
+    EXPECT_EQ(paneIssueCount, 1) << "Should detect exactly one pane-background contrast failure";
 }
 
 // Test: accent color on all glass themes has reasonable visibility on background.

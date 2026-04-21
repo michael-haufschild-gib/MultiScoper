@@ -112,6 +112,12 @@ void MultiScoperDropdown::setSelectedIndices(const std::set<int>& indices, bool 
     updateDisplayText();
     repaint();
 
+    // Propagate to an open popup — the popup cached the selection at show()
+    // time and would otherwise render stale selection highlights until the
+    // user re-opens it.
+    if (popup_)
+        popup_->setSelectedIndices(selectedIndices_);
+
     if (notify)
     {
         if (!multiSelect_ && onSelectionChanged)
@@ -120,7 +126,10 @@ void MultiScoperDropdown::setSelectedIndices(const std::set<int>& indices, bool 
         if (multiSelect_ && onMultiSelectionChanged)
             onMultiSelectionChanged(selectedIndices_);
 
-        if (onSelectionChangedId)
+        // Only fire the by-ID callback in single-select mode. In multi-select
+        // getSelectedId() returns just the first ID, which would mislead any
+        // listener that assumes it reflects the full selection.
+        if (!multiSelect_ && onSelectionChangedId)
             onSelectionChangedId(getSelectedId());
     }
 }
@@ -166,7 +175,9 @@ void MultiScoperDropdown::setMultiSelect(bool multiSelect)
         updateDisplayText();
 
         // Selection cardinality changed from N → 1 — notify listeners so
-        // they don't carry a stale view of the multi-selection.
+        // they don't carry a stale view of the multi-selection. After this
+        // block multiSelect_ is false, so onSelectionChangedId now reflects
+        // the single surviving selection and is safe to fire.
         if (onMultiSelectionChanged)
             onMultiSelectionChanged(selectedIndices_);
         if (onSelectionChanged)

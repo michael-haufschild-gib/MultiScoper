@@ -1,20 +1,10 @@
 /*
     MultiScoper - Schema Migration Framework Implementation
 
-    Migration table (current):
-      v0 -> v1: no-op. v0 denotes a pre-versioned MultiScoperState XML (no "version"
-                attribute). Structurally identical to v1; no field drift.
-      v1 -> v2: no-op at the MultiScoperState level. Oscillator handles its own
-                v1 -> v2 migration internally (OscillatorState field synthesis).
-      v2 -> v3: additive only — introduces the optional TrackIdentifier property
-                on the root MultiScoperState node. Legacy v2 saves load with an
-                absent TrackIdentifier; the plugin treats the absence as "no
-                persistent identity" and falls back to a fresh UUID (preserving
-                pre-existing behavior for legacy saves).
-
-    Both migrations stamp the "version" property to their target version so that
-    chained calls correctly observe the intermediate state and downstream code
-    (e.g. getSchemaVersion()) reports the post-migration version.
+    The framework exists so we can register stepwise migrations as the
+    persisted format evolves. No migration steps are registered today —
+    only the current schema version (v3) is accepted. Older saves are
+    rejected at load time.
 */
 
 #include "core/SchemaMigration.h"
@@ -44,40 +34,12 @@ struct MigrationEntry
 /// Stamp the version property on the state node.
 void stampVersion(juce::ValueTree& state, int version) { state.setProperty(StateIds::Version, version, nullptr); }
 
-/// v0 -> v1: pre-versioned XML had no "version" attribute. Structurally
-/// identical to v1. Stamp version property; no field changes.
-MigrationResult migrateV0toV1(juce::ValueTree& state)
-{
-    stampVersion(state, 1);
-    return MigrationResult::Success;
-}
+/// Canonical current schema version. Update together with MultiScoperState::CURRENT_SCHEMA_VERSION.
+constexpr int kCurrentVersion = 3;
 
-/// v1 -> v2: no MultiScoperState-level schema change. The v2 addition
-/// (OscillatorState enum on child Oscillator nodes) is handled inside
-/// Oscillator::fromValueTree via its own migrateOscillatorState helper.
-MigrationResult migrateV1toV2(juce::ValueTree& state)
+const std::array<MigrationEntry, 0>& migrationTable()
 {
-    stampVersion(state, 2);
-    return MigrationResult::Success;
-}
-
-/// v2 -> v3: additive only. v3 introduces the optional TrackIdentifier
-/// property on the root node. Legacy v2 saves simply lack it; callers must
-/// treat an empty TrackIdentifier as "no persistent identity" (they fall
-/// back to a freshly generated UUID, preserving pre-fix behavior).
-MigrationResult migrateV2toV3(juce::ValueTree& state)
-{
-    stampVersion(state, 3);
-    return MigrationResult::Success;
-}
-
-const std::array<MigrationEntry, 3>& migrationTable()
-{
-    static const std::array<MigrationEntry, 3> table{{
-        {.fromVersion = 0, .toVersion = 1, .step = &migrateV0toV1},
-        {.fromVersion = 1, .toVersion = 2, .step = &migrateV1toV2},
-        {.fromVersion = 2, .toVersion = 3, .step = &migrateV2toV3},
-    }};
+    static const std::array<MigrationEntry, 0> table{};
     return table;
 }
 
@@ -134,25 +96,13 @@ const char* migrationResultToString(MigrationResult result) noexcept
     return "Unknown";
 }
 
-int lowestSupportedFromVersion() noexcept
-{
-    int lowest = migrationTable().front().fromVersion;
-    for (const auto& entry : migrationTable())
-        lowest = std::min(lowest, entry.fromVersion);
-    return lowest;
-}
+int lowestSupportedFromVersion() noexcept { return kCurrentVersion; }
 
-int highestSupportedToVersion() noexcept
-{
-    int highest = migrationTable().front().toVersion;
-    for (const auto& entry : migrationTable())
-        highest = std::max(highest, entry.toVersion);
-    return highest;
-}
+int highestSupportedToVersion() noexcept { return kCurrentVersion; }
 
 MigrationResult migrateMultiScoperState(juce::ValueTree& state, int fromVersion, int toVersion)
 {
-    if (fromVersion == toVersion)
+    if (fromVersion == toVersion && fromVersion == kCurrentVersion)
     {
         stampVersion(state, toVersion);
         return MigrationResult::Success;

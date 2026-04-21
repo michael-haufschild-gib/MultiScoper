@@ -1,7 +1,6 @@
 /*
     MultiScoper - Slider Component Painting
     Flat-surface rendering for MultiScoperSlider (track, thumb, tooltip, focus ring).
-    (Historical: "glassmorphism rendering" prior to the 2026-Q2 uplift.)
 */
 
 #include "ui/components/MultiScoperSlider.h"

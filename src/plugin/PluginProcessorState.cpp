@@ -106,18 +106,11 @@ void MultiScoperPluginProcessor::setStateInformation(const void* data, int sizeI
         const auto persistedTrackId = processor->state_.getTrackIdentifier();
         processor->reRegisterUnderPersistedTrackIdentifier(persistedTrackId);
 
-        // Apply restored timing state (TimingEngine uses atomics internally)
+        // Apply restored timing state. `fromValueTree` treats an invalid tree
+        // as "reset to defaults + clear runtime latches", which is the correct
+        // behavior when the state payload omits Timing entirely.
         auto timingTree = processor->state_.getState().getChildWithName(StateIds::Timing);
-        if (timingTree.isValid())
-        {
-            processor->timingEngine_.fromValueTree(timingTree);
-        }
-        else
-        {
-            // Legacy/malformed payloads may omit Timing node.
-            // Re-apply current persisted config to clear runtime-only timing latches.
-            processor->timingEngine_.fromValueTree(processor->timingEngine_.toValueTree());
-        }
+        processor->timingEngine_.fromValueTree(timingTree);
 
         // Sync restored capture quality config to MemoryBudgetManager
         auto captureConfig = processor->state_.getCaptureQualityConfig();

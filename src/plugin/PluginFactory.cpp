@@ -25,14 +25,48 @@ namespace
 std::atomic<PluginFactory*> currentFactory{nullptr};
 } // namespace
 
+/// Bridges ThemeManager → GlobalPreferences so the user's active theme
+/// survives across DAW sessions.
+class PluginFactory::ThemePreferenceSync final : public ThemeManagerListener
+{
+public:
+    ThemePreferenceSync(ThemeManager& themes, GlobalPreferences& prefs) : themes_(themes), prefs_(prefs)
+    {
+        themes_.addListener(this);
+    }
+
+    ~ThemePreferenceSync() override { themes_.removeListener(this); }
+
+    void themeChanged(const ColorTheme& newTheme) override { prefs_.setDefaultTheme(newTheme.name); }
+
+    ThemePreferenceSync(const ThemePreferenceSync&) = delete;
+    ThemePreferenceSync& operator=(const ThemePreferenceSync&) = delete;
+
+private:
+    ThemeManager& themes_;
+    GlobalPreferences& prefs_;
+};
+
 PluginFactory::PluginFactory()
-    : themeManager_(std::make_unique<ThemeManager>())
+    // Construct globalPreferences_ first so ThemeManager can consult the
+    // persisted default theme; declaration order in PluginFactory.h is
+    // authoritative for member init, so it must match this intent.
+    : globalPreferences_(std::make_unique<GlobalPreferences>())
+    , themeManager_(std::make_unique<ThemeManager>())
     , instanceRegistry_(std::make_unique<InstanceRegistry>())
     , shaderRegistry_(std::make_unique<ShaderRegistry>())
     , memoryBudgetManager_(std::make_unique<MemoryBudgetManager>())
-    , globalPreferences_(std::make_unique<GlobalPreferences>())
     , presetManager_(std::make_unique<PresetManager>())
 {
+    // Restore the user's last-selected theme if the preference names one.
+    const auto savedTheme = globalPreferences_->getDefaultTheme();
+    if (savedTheme.isNotEmpty() && themeManager_->getTheme(savedTheme) != nullptr)
+    {
+        themeManager_->setCurrentTheme(savedTheme);
+    }
+
+    // Persist future theme changes back to preferences.
+    themePreferenceSync_ = std::make_unique<ThemePreferenceSync>(*themeManager_, *globalPreferences_);
 }
 
 PluginFactory::~PluginFactory() = default;

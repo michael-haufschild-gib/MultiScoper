@@ -29,8 +29,6 @@ protected:
         theme.accentSaturation = 0.7f;
         theme.accentLightness = 0.65f;
 
-        theme.glassAlpha = 1.0f;
-        theme.panelAlpha = 1.0f;
         theme.borderSubtleAlpha = 0.06f;
         theme.borderDefaultAlpha = 0.10f;
         theme.borderStrongAlpha = 0.20f;
@@ -65,27 +63,6 @@ TEST_F(SurfaceStyleTest, BgPanelIsOpaqueBackgroundPane)
 
     EXPECT_EQ(surface.bgPanel.getRed(), theme.backgroundPane.getRed());
     EXPECT_NEAR(surface.bgPanel.getFloatAlpha(), 1.0f, 0.01f);
-}
-
-// Regression guard: glass-era behaviour baked theme.glassAlpha into bgGlass,
-// so a translucent panel could appear over the window chrome. The flat
-// replacement ignores theme.glassAlpha entirely — surface colours are
-// always opaque. If a future change re-couples them, this fails.
-TEST_F(SurfaceStyleTest, GlassAlphaHasNoEffectOnBgGlass)
-{
-    auto theme = makeTestTheme();
-    SurfaceStyle surface;
-
-    theme.glassAlpha = 0.3f;
-    surface.computeFrom(theme);
-    float const alphaAtLowSetting = surface.bgGlass.getFloatAlpha();
-
-    theme.glassAlpha = 0.9f;
-    surface.computeFrom(theme);
-    float const alphaAtHighSetting = surface.bgGlass.getFloatAlpha();
-
-    EXPECT_NEAR(alphaAtLowSetting, 1.0f, 0.01f);
-    EXPECT_NEAR(alphaAtHighSetting, 1.0f, 0.01f);
 }
 
 // =============================================================================
@@ -268,7 +245,7 @@ TEST_F(SurfaceStyleTest, AllSystemThemesProduceValidSurfaceStyle)
         SurfaceStyle surface;
         surface.computeFrom(theme);
 
-        // Flat surfaces must be opaque — regardless of any legacy glassAlpha.
+        // Flat surfaces must be opaque.
         EXPECT_NEAR(surface.bgGlass.getFloatAlpha(), 1.0f, 0.01f)
             << "Theme '" << theme.name << "' bgGlass is not opaque";
         EXPECT_NEAR(surface.bgPanel.getFloatAlpha(), 1.0f, 0.01f)

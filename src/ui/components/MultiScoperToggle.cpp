@@ -1,7 +1,6 @@
 /*
     MultiScoper - Toggle Component Implementation
     Flat-surface rendering with spring-physics toggle animation.
-    (Historical: "glassmorphism rendering" prior to the 2026-Q2 uplift.)
 */
 
 #include "ui/components/MultiScoperToggle.h"
@@ -125,7 +124,7 @@ int MultiScoperToggle::getPreferredWidth() const
 
     if (label_.isNotEmpty())
     {
-        auto font = ComponentLayout::defaultFont();
+        auto font = Typography::headingRegular();
         juce::GlyphArrangement glyphs;
         glyphs.addLineOfText(font, label_, 0, 0);
         int const labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
@@ -137,7 +136,7 @@ int MultiScoperToggle::getPreferredWidth() const
 
 int MultiScoperToggle::getPreferredHeight() const
 {
-    return std::max(ComponentLayout::TOGGLE_HEIGHT, static_cast<int>(ComponentLayout::defaultFont().getHeight()));
+    return std::max(ComponentLayout::TOGGLE_HEIGHT, static_cast<int>(Typography::headingRegular().getHeight()));
 }
 
 void MultiScoperToggle::paint(juce::Graphics& g)
@@ -162,12 +161,12 @@ void MultiScoperToggle::paint(juce::Graphics& g)
         auto labelBounds = bounds.toFloat().withLeft(ComponentLayout::TOGGLE_WIDTH + ComponentLayout::SPACING_SM);
 
         g.setColour(getTheme().textPrimary.withAlpha(opacity));
-        g.setFont(ComponentLayout::defaultFont());
+        g.setFont(Typography::headingRegular());
         g.drawText(label_, labelBounds, juce::Justification::centredLeft);
     }
     else
     {
-        auto font = ComponentLayout::defaultFont();
+        auto font = Typography::headingRegular();
         juce::GlyphArrangement glyphs;
         glyphs.addLineOfText(font, label_, 0, 0);
         int const labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());

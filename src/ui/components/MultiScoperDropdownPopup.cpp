@@ -417,6 +417,11 @@ void MultiScoperDropdownPopup::updateFilteredItems()
     {
         int const contentHeight = std::max(ITEM_HEIGHT, static_cast<int>(filteredIndices_.size() * ITEM_HEIGHT));
         listComponent_->setSize(listComponent_->getWidth(), contentHeight);
+        // setSize only triggers repaint on dimension change. When the filter
+        // changes the item set but not the count — e.g. typing narrows from
+        // one group of matches to another of equal size — the list must be
+        // repainted explicitly or stale item labels remain on screen.
+        listComponent_->repaint();
     }
 
     focusedIndex_ = juce::jlimit(-1, static_cast<int>(filteredIndices_.size()) - 1, focusedIndex_);

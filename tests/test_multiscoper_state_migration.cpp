@@ -54,28 +54,24 @@ protected:
     multiscoper::MultiScoperState state;
 };
 
-TEST_F(MultiScoperStateMigrationFixturesTest, V0FixtureLoadsAndIsStampedCurrent)
+TEST_F(MultiScoperStateMigrationFixturesTest, V0FixtureIsRejected)
 {
     const auto xml = loadFixtureText("multiscoper_state_v0.xml");
     ASSERT_FALSE(xml.isEmpty()) << "v0 fixture not found on disk";
 
-    EXPECT_TRUE(state.fromXmlString(xml));
-    EXPECT_EQ(state.getSchemaVersion(), multiscoper::MultiScoperState::CURRENT_SCHEMA_VERSION);
-    EXPECT_EQ(state.getThemeName(), "Pre-Version Theme");
-    // Default-fill: schema upgrade must not drop payload fields that did exist.
-    EXPECT_EQ(static_cast<int>(state.getColumnLayout()), 2);
+    const auto themeBefore = state.getThemeName();
+    EXPECT_FALSE(state.fromXmlString(xml));
+    EXPECT_EQ(state.getThemeName(), themeBefore);
 }
 
-TEST_F(MultiScoperStateMigrationFixturesTest, V1FixtureLoadsAndIsStampedCurrent)
+TEST_F(MultiScoperStateMigrationFixturesTest, V1FixtureIsRejected)
 {
     const auto xml = loadFixtureText("multiscoper_state_v1.xml");
     ASSERT_FALSE(xml.isEmpty()) << "v1 fixture not found on disk";
 
-    EXPECT_TRUE(state.fromXmlString(xml));
-    EXPECT_EQ(state.getSchemaVersion(), multiscoper::MultiScoperState::CURRENT_SCHEMA_VERSION);
-    EXPECT_EQ(state.getThemeName(), "V1 Theme");
-    EXPECT_EQ(static_cast<int>(state.getColumnLayout()), 3);
-    EXPECT_TRUE(state.isShowGridEnabled());
+    const auto themeBefore = state.getThemeName();
+    EXPECT_FALSE(state.fromXmlString(xml));
+    EXPECT_EQ(state.getThemeName(), themeBefore);
 }
 
 TEST_F(MultiScoperStateMigrationFixturesTest, FutureFixtureIsRejectedAndPreservesState)

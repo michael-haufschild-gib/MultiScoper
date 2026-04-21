@@ -8,6 +8,7 @@
 #include "core/SharedCaptureBuffer.h"
 #include "ui/theme/ThemeManager.h"
 
+#include "MultiScoperTestFixtures.h"
 #include "MultiScoperTestUtils.h"
 #include "plugin/PluginProcessor.h"
 #include "rendering/PresetManager.h"
@@ -39,8 +40,8 @@ protected:
         presetManager_ = std::make_unique<PresetManager>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
-        processor = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                                 *presetManager_, *memoryBudgetManager_);
+        processor = multiscoper::test::makeProcessor(*registry_, *themeManager_, *shaderRegistry_, *presetManager_,
+                                                     *memoryBudgetManager_);
     }
 
     void TearDown() override
@@ -71,8 +72,8 @@ TEST_F(PluginProcessorStateTest, StateInformation_SaveAndRestore)
     EXPECT_GT(savedState.getSize(), 0u);
 
     // Create new processor and restore state
-    auto newProcessor = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                                     *presetManager_, *memoryBudgetManager_);
+    auto newProcessor = multiscoper::test::makeProcessor(*registry_, *themeManager_, *shaderRegistry_, *presetManager_,
+                                                         *memoryBudgetManager_);
     newProcessor->prepareToPlay(44100.0, 512);
 
     newProcessor->setStateInformation(savedState.getData(), static_cast<int>(savedState.getSize()));
@@ -272,8 +273,8 @@ TEST_F(PluginProcessorStateTest, StateInformation_VeryLargeState)
     EXPECT_GT(savedState.getSize(), 1000u); // Should be reasonably large
 
     // Create new processor and restore
-    auto newProcessor = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                                     *presetManager_, *memoryBudgetManager_);
+    auto newProcessor = multiscoper::test::makeProcessor(*registry_, *themeManager_, *shaderRegistry_, *presetManager_,
+                                                         *memoryBudgetManager_);
     newProcessor->prepareToPlay(44100.0, 512);
 
     newProcessor->setStateInformation(savedState.getData(), static_cast<int>(savedState.getSize()));

@@ -55,8 +55,7 @@ juce::Colour modalTitlebarSteadyStateFill(const ColorTheme& theme)
 {
     SurfaceStyle glass;
     glass.computeFrom(theme);
-    auto panel =
-        ColorTheme::compositeOnBackground(theme.backgroundPane.withAlpha(theme.glassAlpha), theme.backgroundPrimary);
+    auto panel = ColorTheme::compositeOnBackground(theme.backgroundPane, theme.backgroundPrimary);
     return ColorTheme::compositeOnBackground(glass.bgHover, panel);
 }
 } // namespace

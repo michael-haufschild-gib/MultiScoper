@@ -1,7 +1,6 @@
 /*
     MultiScoper - Segmented Button Bar Implementation
     Flat-surface segmented control with a spring-animated sliding indicator.
-    (Historical: "glassmorphism-styled" prior to the 2026-Q2 uplift.)
 */
 
 #include "ui/components/SegmentedButtonBar.h"
